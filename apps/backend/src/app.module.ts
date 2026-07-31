@@ -1,9 +1,28 @@
 import { Module } from '@nestjs/common';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './modules/users/users.module';
+import { ConfigModule } from '@nestjs/config';
+import databaseConfig from './config/database.config';
+import { environmentValidationSchema } from './config/environment.validation';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
-  imports: [HealthModule, UsersModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+      envFilePath: ['apps/backend/.env', '.env'],
+      load: [databaseConfig],
+      validationSchema: environmentValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    }),
+    DatabaseModule,
+    HealthModule,
+    UsersModule,
+  ],
   controllers: [],
   providers: [],
 })
