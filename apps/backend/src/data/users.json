@@ -1,0 +1,68 @@
+[
+  {
+    "id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1031",
+    "role_id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1001",
+    "username": "admin.sistema",
+    "full_name": "Mariana Torres Herrera",
+    "password_hash": "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+    "is_active": true,
+    "last_login_at": "2026-07-29T15:42:18.000Z",
+    "created_at": "2026-01-05T14:00:00.000Z",
+    "updated_at": "2026-07-29T15:42:18.000Z"
+  },
+  {
+    "id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1032",
+    "role_id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1002",
+    "username": "recursos.humanos",
+    "full_name": "Jorge Luis Mendoza Silva",
+    "password_hash": "$2b$10$6CqW5zQJ3P6VQyWwYxD6Le8D5z5LJ1h4f4tP8Qxw2o7q6h6f7m3Qe",
+    "is_active": true,
+    "last_login_at": "2026-07-28T17:10:05.000Z",
+    "created_at": "2026-01-06T14:30:00.000Z",
+    "updated_at": "2026-07-28T17:10:05.000Z"
+  },
+  {
+    "id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1033",
+    "role_id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1003",
+    "username": "captura.nomina",
+    "full_name": "Fernanda Paola Cruz Ramírez",
+    "password_hash": "$2b$10$u3nJ4s8Q2vW6xY9zA1bCDe7fG5hI3jK9lM2nO4pQ6rS8tU0vW2xY4",
+    "is_active": true,
+    "last_login_at": "2026-07-30T13:25:44.000Z",
+    "created_at": "2026-01-08T16:15:00.000Z",
+    "updated_at": "2026-07-30T13:25:44.000Z"
+  },
+  {
+    "id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1034",
+    "role_id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1003",
+    "username": "ana.martinez",
+    "full_name": "Ana Sofía Martínez Gómez",
+    "password_hash": "$2b$10$w7xY9zA1bCDe3fG5hI7jK9lM2nO4pQ6rS8tU0vW2xY4zA1bC3dE5f",
+    "is_active": true,
+    "last_login_at": "2026-07-27T16:08:31.000Z",
+    "created_at": "2026-02-12T18:00:00.000Z",
+    "updated_at": "2026-07-27T16:08:31.000Z"
+  },
+  {
+    "id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1035",
+    "role_id": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1003",
+    "username": "carlos.rivera",
+    "full_name": "Carlos Alberto Rivera Núñez",
+    "password_hash": "$2b$10$zA1bC3dE5fG7hI9jK2lM4nO6pQ8rS0tU2vW4xY6zA8bC0dE2fG4hI",
+    "is_active": false,
+    "last_login_at": "2026-06-18T14:52:09.000Z",
+    "created_at": "2026-02-15T15:45:00.000Z",
+    "updated_at": "2026-07-01T12:20:00.000Z"
+  },
+  {
+    "id": "019fb53e-f3af-7300-b4cf-358a2282cc10",
+    "roleId": "019c3a7e-7b21-7c4d-8f12-4a6d9e2b1001",
+    "username": "admin.hzomel",
+    "fullName": "Hozmel de la Rosa",
+    "password": "$argon2id$v=19$m=65536,p=4,t=3$KESJmoK8IU8iujQoKv4b0A$AFoY9+RozQ4uwoNEv6sv1Unzdtl3yoj1njHZxd0oiHw",
+    "isActive": true,
+    "lastLoginAt": null,
+    "createdAt": "2026-07-30T22:57:09.551Z",
+    "updatedAt": "2026-07-30T22:57:09.551Z"
+  }
+]
