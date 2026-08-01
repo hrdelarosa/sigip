@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -22,8 +23,7 @@ import { DatabaseModule } from './database/database.module';
     DatabaseModule,
     HealthModule,
     UsersModule,
+    RolesModule,
   ],
-  controllers: [],
-  providers: [],
 })
 export class AppModule {}
