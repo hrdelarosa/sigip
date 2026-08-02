@@ -6,6 +6,7 @@ import databaseConfig from './config/database.config';
 import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RolesModule } from './modules/roles/roles.module';
     HealthModule,
     UsersModule,
     RolesModule,
+    PermissionsModule,
   ],
 })
 export class AppModule {}
