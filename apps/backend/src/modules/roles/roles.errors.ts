@@ -31,3 +31,11 @@ export class InvalidPermissionError extends BadRequestException {
     );
   }
 }
+
+export class InactiveRoleError extends ConflictException {
+  constructor() {
+    super(
+      'No se pueden asignar permisos a un rol desactivado. Por favor, active el rol antes de asignar permisos.',
+    );
+  }
+}

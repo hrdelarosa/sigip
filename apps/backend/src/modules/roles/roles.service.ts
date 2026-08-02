@@ -2,15 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RolesRepository } from './repositories/roles.repository';
+import { UpdateRoleStatusDto } from './dto/update-role-status.dto';
+import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 import {
+  InactiveRoleError,
   InvalidPermissionError,
   RoleCodeAlreadyExistsError,
   RoleHasAssignedUsersError,
   RoleNotFoundError,
 } from './roles.errors';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
-import { UpdateRoleStatusDto } from './dto/update-role-status.dto';
-import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
 
 @Injectable()
 export class RolesService {
@@ -24,8 +25,8 @@ export class RolesService {
     return normalized.length > 0 ? normalized : null;
   }
 
-  findAll() {
-    return this.roleRepository.findAll();
+  async findAll() {
+    return await this.roleRepository.findAll();
   }
 
   async findById(id: string) {
@@ -102,7 +103,7 @@ export class RolesService {
   async replacePermissions(id: string, dto: ReplaceRolePermissionsDto) {
     const role = await this.findById(id);
 
-    if (!role.isActive) throw new InvalidPermissionError();
+    if (!role.isActive) throw new InactiveRoleError();
 
     const existingPermissions =
       await this.roleRepository.countExistingPermissions(dto.permissionIds);
