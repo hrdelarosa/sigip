@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { UpdatePermissionInput } from '../types/permission.types'
+import type {
+  PermissionDetails,
+  UpdatePermissionInput,
+} from '../types/permission.types'
 import { updatePermission } from '../api/permissions.api'
 import { permissionQueryKeys } from '../queries/permission-query-keys'
 
@@ -15,9 +18,12 @@ export function useUpdatePermission() {
     mutationFn: ({ id, input }: UpdatePermissionVariables) =>
       updatePermission({ id, input }),
     onSuccess: async (permission) => {
-      queryClient.setQueryData(
+      queryClient.setQueryData<PermissionDetails>(
         permissionQueryKeys.detail(permission.id),
-        permission,
+        (currentPermission) =>
+          currentPermission
+            ? { ...currentPermission, ...permission }
+            : currentPermission,
       )
 
       await queryClient.invalidateQueries({
