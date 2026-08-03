@@ -27,7 +27,7 @@ export function AppLayout({ children }: PropsWithChildren) {
           />
         </header>
 
-        <div className="flex flex-1 flex-col p-4">{children}</div>
+        <main className="flex flex-1 flex-col gap-6 p-4">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )
