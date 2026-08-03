@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
+import { PermissionIdParamDto } from './dto/permission-id-param.dto';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -13,8 +14,8 @@ export class PermissionsController {
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.permissionsService.findById(id);
+  findById(@Param() params: PermissionIdParamDto) {
+    return this.permissionsService.findById(params.id);
   }
 
   @Post()
@@ -23,7 +24,10 @@ export class PermissionsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdatePermissionDto) {
-    return this.permissionsService.update(id, dto);
+  update(
+    @Param() params: PermissionIdParamDto,
+    @Body() dto: UpdatePermissionDto,
+  ) {
+    return this.permissionsService.update(params.id, dto);
   }
 }

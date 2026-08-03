@@ -3,9 +3,12 @@ import { desc, eq } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
-import { permissions } from '../../../database/schema';
+import { permissions, rolePermissions, roles } from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
-import { PermissionModel } from '../models/permission.model';
+import {
+  PermissionModel,
+  PermissionRoleModel,
+} from '../models/permission.model';
 import {
   CreatePermissionData,
   PermissionsRepository,
@@ -47,6 +50,27 @@ export class DrizzlePermissionsRepository implements PermissionsRepository {
     return row ? this.toModel(row) : null;
   }
 
+  async findRolesByPermissionId(id: string): Promise<PermissionRoleModel[]> {
+    const rows = await this.db
+      .select({
+        id: roles.id,
+        code: roles.code,
+        name: roles.name,
+        isActive: roles.isActive,
+      })
+      .from(rolePermissions)
+      .innerJoin(roles, eq(rolePermissions.roleId, roles.id))
+      .where(eq(rolePermissions.permissionId, uuidToBuffer(id)))
+      .orderBy(roles.name);
+
+    return rows.map((row) => ({
+      id: bufferToUuid(row.id),
+      code: row.code,
+      name: row.name,
+      isActive: row.isActive,
+    }));
+  }
+
   async findByCode(code: string): Promise<PermissionModel | null> {
     const [row] = await this.db
       .select()
@@ -82,7 +106,7 @@ export class DrizzlePermissionsRepository implements PermissionsRepository {
 
     if (data.description !== undefined) values.description = data.description;
 
-    if (Object.keys(values).length === 0) {
+    if (Object.keys(values).length > 0) {
       await this.db
         .update(permissions)
         .set(values)

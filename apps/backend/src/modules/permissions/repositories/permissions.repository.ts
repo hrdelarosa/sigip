@@ -1,4 +1,7 @@
-import { PermissionModel } from '../models/permission.model';
+import {
+  PermissionModel,
+  PermissionRoleModel,
+} from '../models/permission.model';
 
 export interface CreatePermissionData {
   id: string;
@@ -13,6 +16,7 @@ export interface UpdatePermissionData {
 export abstract class PermissionsRepository {
   abstract findAll(): Promise<PermissionModel[]>;
   abstract findById(id: string): Promise<PermissionModel | null>;
+  abstract findRolesByPermissionId(id: string): Promise<PermissionRoleModel[]>;
   abstract findByCode(code: string): Promise<PermissionModel | null>;
   abstract create(data: CreatePermissionData): Promise<PermissionModel>;
   abstract update(

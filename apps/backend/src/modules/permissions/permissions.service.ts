@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { PermissionsRepository } from './repositories/permissions.repository';
+import { PermissionDetailsModel } from './models/permission.model';
 import {
   PermissionCodeAlreadyExistsError,
   PermissionNotFoundError,
@@ -24,12 +25,18 @@ export class PermissionsService {
     return await this.permissionsRepository.findAll();
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<PermissionDetailsModel> {
     const permission = await this.permissionsRepository.findById(id);
 
     if (!permission) throw new PermissionNotFoundError();
 
-    return permission;
+    const roles = await this.permissionsRepository.findRolesByPermissionId(id);
+
+    return {
+      ...permission,
+      assignmentCount: roles.length,
+      roles,
+    };
   }
 
   async create(dto: CreatePermissionDto) {
@@ -47,7 +54,9 @@ export class PermissionsService {
   }
 
   async update(id: string, dto: UpdatePermissionDto) {
-    await this.findById(id);
+    const existingPermission = await this.permissionsRepository.findById(id);
+
+    if (!existingPermission) throw new PermissionNotFoundError();
 
     const permission = await this.permissionsRepository.update(id, {
       description:
