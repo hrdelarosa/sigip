@@ -3,6 +3,7 @@
     "*.css": "tailwindcss"
   },
   "symbols.files.associations": {
+    "app.module.ts": "nest",
     "*.module.ts": "nest",
     "*.controller.ts": "nest-controller",
     "*.service.ts": "nest-service",
