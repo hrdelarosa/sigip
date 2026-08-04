@@ -1,17 +1,9 @@
+import type { DataTableColumn } from '../types/table.types'
+import type { Permission } from '../types/permission.types'
 import { formatDate } from '@/lib/formatters'
 
+import { DataTable } from '@/components/data-table'
 import PageHeader from '@/components/page-header'
-import { Errorstate } from '@/components/table/error-state'
-import { EmptyState } from '@/components/table/empty-state'
-import { TableSkeleton } from '@/components/skeletons/table-skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import PermissionCreate from '../components/PermissionCreate'
 import PermissionActions from '../components/PermissionActions'
 import { usePermissions } from '../hooks/usePermissions'
@@ -19,6 +11,28 @@ import { usePermissions } from '../hooks/usePermissions'
 export function PermissionsPage() {
   const permissionsQuery = usePermissions()
   const permissions = permissionsQuery.data ?? []
+  const columns: DataTableColumn<Permission>[] = [
+    {
+      key: 'code',
+      header: 'Código',
+      cellClassName: 'font-medium',
+      skeletonClassName: 'w-36',
+      render: (permission) => permission.code,
+    },
+    {
+      key: 'description',
+      header: 'Descripción',
+      cellClassName: 'max-w-md whitespace-normal',
+      skeletonClassName: 'w-full max-w-80',
+      render: (permission) => permission.description || 'Sin descripción',
+    },
+    {
+      key: 'createdAt',
+      header: 'Creado en',
+      skeletonClassName: 'w-28',
+      render: (permission) => formatDate(permission.createdAt),
+    },
+  ]
 
   return (
     <>
@@ -31,63 +45,21 @@ export function PermissionsPage() {
         <PermissionCreate />
       </div>
 
-      <div className="overflow-hidden rounded-md border">
-        <Table aria-busy={permissionsQuery.isPending}>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Código</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead>Creado en</TableHead>
-              <TableHead className="w-16">
-                <span className="sr-only">Acciones</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {permissionsQuery.isPending ? (
-              <TableSkeleton
-                rows={9}
-                columns={[
-                  { className: 'w-36' },
-                  { className: 'w-full max-w-80' },
-                  { className: 'w-28' },
-                ]}
-                actions
-              />
-            ) : null}
-
-            {permissionsQuery.isError ? (
-              <Errorstate
-                colSpan={4}
-                message="No fue posible cargar los permisos."
-                onRetry={() => permissionsQuery.refetch()}
-              />
-            ) : null}
-
-            {permissionsQuery.isSuccess && permissions.length === 0 ? (
-              <EmptyState colSpan={4} message="No hay permisos registrados." />
-            ) : null}
-
-            {permissionsQuery.isSuccess
-              ? permissions.map((permission) => (
-                  <TableRow key={permission.id}>
-                    <TableCell className="font-medium">
-                      {permission.code}
-                    </TableCell>
-                    <TableCell className="max-w-md whitespace-normal">
-                      {permission.description || 'Sin descripción'}
-                    </TableCell>
-                    <TableCell>{formatDate(permission.createdAt)}</TableCell>
-                    <TableCell>
-                      <PermissionActions permission={permission} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              : null}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={permissions}
+        isPending={permissionsQuery.isPending}
+        isError={permissionsQuery.isError}
+        isSuccess={permissionsQuery.isSuccess}
+        onRetry={() => permissionsQuery.refetch()}
+        getRowKey={(permission) => permission.id}
+        emptyMessage="No hay permisos registrados."
+        errorMessage="No fue posible cargar los permisos."
+        skeletonRows={9}
+        renderActions={(permission) => (
+          <PermissionActions permission={permission} />
+        )}
+      />
     </>
   )
 }
