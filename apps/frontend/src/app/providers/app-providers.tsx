@@ -8,7 +8,7 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryProvider>
       <TooltipProvider>{children}</TooltipProvider>
-      <Toaster closeButton position="top-right" />
+      <Toaster closeButton position="top-right" richColors />
     </QueryProvider>
   )
 }
