@@ -110,7 +110,7 @@ export default function RolePermissionsDialog({
 
         <form className="flex min-h-0 flex-col gap-5" onSubmit={handleSubmit}>
           {!currentRole.isActive ? (
-            <Alert>
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
               <CircleAlert aria-hidden="true" />
               <AlertTitle>Rol inactivo</AlertTitle>
               <AlertDescription>
