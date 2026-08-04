@@ -7,8 +7,9 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import type { CreateUserRequest } from '@sigip/shared';
 
-export class CreateUserDto {
+export class CreateUserDto implements CreateUserRequest {
   @IsUUID()
   roleId!: string;
 

@@ -8,8 +8,9 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import type { UpdateUserRequest } from '@sigip/shared';
 
-export class UpdateUserDto {
+export class UpdateUserDto implements UpdateUserRequest {
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsUUID()
   roleId?: string;

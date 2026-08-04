@@ -5,49 +5,83 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleIdParamDto } from './dto/role-id-param.dto';
 import { UpdateRoleStatusDto } from './dto/update-role-status.dto';
 import { ReplaceRolePermissionsDto } from './dto/replace-role-permissions.dto';
+import {
+  toRoleResponse,
+  toPermissionSummaryResponse,
+} from './presenters/role.presenter';
+import type {
+  RoleResponse,
+  PermissionSummaryResponse,
+  RolePermissionsResponse,
+} from '@sigip/shared';
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
-  findAll() {
-    return this.rolesService.findAll();
+  async findAll(): Promise<RoleResponse[]> {
+    const roles = await this.rolesService.findAll();
+
+    return roles.map(toRoleResponse);
   }
 
   @Get(':id')
-  findById(@Param() params: RoleIdParamDto) {
-    return this.rolesService.findById(params.id);
+  async findById(@Param() params: RoleIdParamDto): Promise<RoleResponse> {
+    const role = await this.rolesService.findById(params.id);
+
+    return toRoleResponse(role);
   }
 
   @Post()
-  create(@Body() dto: CreateRoleDto) {
-    return this.rolesService.create(dto);
+  async create(@Body() dto: CreateRoleDto): Promise<RoleResponse> {
+    const role = await this.rolesService.create(dto);
+
+    return toRoleResponse(role);
   }
 
   @Patch(':id')
-  update(@Param() params: RoleIdParamDto, @Body() dto: UpdateRoleDto) {
-    return this.rolesService.update(params.id, dto);
+  async update(
+    @Param() params: RoleIdParamDto,
+    @Body() dto: UpdateRoleDto,
+  ): Promise<RoleResponse> {
+    const role = await this.rolesService.update(params.id, dto);
+
+    return toRoleResponse(role);
   }
 
   @Patch(':id/status')
-  updateStatus(
+  async updateStatus(
     @Param() params: RoleIdParamDto,
     @Body() dto: UpdateRoleStatusDto,
-  ) {
-    return this.rolesService.updateStatus(params.id, dto);
+  ): Promise<RoleResponse> {
+    const role = await this.rolesService.updateStatus(params.id, dto);
+
+    return toRoleResponse(role);
   }
 
   @Get(':id/permissions')
-  findPermissions(@Param() params: RoleIdParamDto) {
-    return this.rolesService.findPermissions(params.id);
+  async findPermissions(
+    @Param() params: RoleIdParamDto,
+  ): Promise<RolePermissionsResponse> {
+    const result = await this.rolesService.findPermissions(params.id);
+
+    return {
+      role: toRoleResponse(result.role),
+      permissions: result.permissions.map(toPermissionSummaryResponse),
+    };
   }
 
   @Put(':id/permissions')
-  replacePermissions(
+  async replacePermissions(
     @Param() params: RoleIdParamDto,
     @Body() dto: ReplaceRolePermissionsDto,
-  ) {
-    return this.rolesService.replacePermissions(params.id, dto);
+  ): Promise<PermissionSummaryResponse[]> {
+    const permissions = await this.rolesService.replacePermissions(
+      params.id,
+      dto,
+    );
+
+    return permissions.map(toPermissionSummaryResponse);
   }
 }

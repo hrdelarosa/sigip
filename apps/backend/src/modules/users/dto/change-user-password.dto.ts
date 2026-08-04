@@ -1,6 +1,7 @@
 import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import type { ChangeUserPasswordRequest } from '@sigip/shared';
 
-export class ChangeUserPasswordDto {
+export class ChangeUserPasswordDto implements ChangeUserPasswordRequest {
   @IsString()
   @IsNotEmpty()
   @MinLength(8)

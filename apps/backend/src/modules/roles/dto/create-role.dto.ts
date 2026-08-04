@@ -5,8 +5,9 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import type { CreateRoleRequest } from '@sigip/shared';
 
-export class CreateRoleDto {
+export class CreateRoleDto implements CreateRoleRequest {
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
