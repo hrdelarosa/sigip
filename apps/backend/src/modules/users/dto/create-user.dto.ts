@@ -14,7 +14,7 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3)
-  @MaxLength(25)
+  @MaxLength(50)
   @Matches(/^[a-zA-Z0-9._-]+$/, {
     message:
       'username solo puede contener letras, números, puntos, guiones y guiones bajos',
@@ -23,11 +23,11 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(200)
+  @MaxLength(150)
   fullName!: string;
 
   @IsString()
   @MinLength(8)
-  @MaxLength(100)
+  @MaxLength(255)
   password!: string;
 }

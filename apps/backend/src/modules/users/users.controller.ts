@@ -9,12 +9,6 @@ import { ChangeUserPasswordDto } from './dto/change-user-password.dto';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  async create(@Body() createUserDto: CreateUserDto) {
-    console.log(createUserDto);
-    return await this.usersService.create(createUserDto);
-  }
-
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -22,27 +16,29 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+    return this.usersService.findById(id);
+  }
+
+  @Post()
+  async create(@Body() dto: CreateUserDto) {
+    return await this.usersService.create(dto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.usersService.update(id, dto);
   }
 
   @Patch(':id/status')
-  changeStatus(
-    @Param('id') id: string,
-    @Body() changeUserStatusDto: ChangeUserStatusDto,
-  ) {
-    return this.usersService.changeStatus(id, changeUserStatusDto);
+  changeStatus(@Param('id') id: string, @Body() dto: ChangeUserStatusDto) {
+    return this.usersService.changeStatus(id, dto);
   }
 
   @Patch(':id/password')
   async changePassword(
     @Param('id') id: string,
-    @Body() changeUserPasswordDto: ChangeUserPasswordDto,
+    @Body() dto: ChangeUserPasswordDto,
   ) {
-    return await this.usersService.changePassword(id, changeUserPasswordDto);
+    return await this.usersService.changePassword(id, dto);
   }
 }

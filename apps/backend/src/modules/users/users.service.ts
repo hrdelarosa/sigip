@@ -1,148 +1,100 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './entities/user.entity';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { v7 as uuidv7 } from 'uuid';
-import * as argon2 from 'argon2';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { ChangeUserPasswordDto } from './dto/change-user-password.dto';
+import {
+  UserChangePasswordError,
+  UsernameAlreadyExistsError,
+  UserNotFoundError,
+} from './users.errors';
+import { UsersRepository } from './repositories/users.repository';
+import { CryptoService } from '../../common/crypto/crypto.service';
 
 @Injectable()
 export class UsersService {
-  private readonly filePath = join(process.cwd(), 'src/data/users.json');
-  private readonly users: User[] = JSON.parse(
-    readFileSync(this.filePath, 'utf-8'),
-  ) as User[];
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly cryptoService: CryptoService,
+  ) {}
 
-  async create(createUserDto: CreateUserDto) {
-    console.log('creando user');
-    const userExists = this.users.some(
-      (user) => user.username === createUserDto.username,
+  async findAll() {
+    return await this.usersRepository.findAll();
+  }
+
+  async findById(id: string) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) throw new UserNotFoundError();
+
+    return user;
+  }
+
+  async create(dto: CreateUserDto) {
+    const normalizedUsername = dto.username.trim();
+    const existingUser =
+      await this.usersRepository.findByUsername(normalizedUsername);
+
+    if (existingUser) throw new UsernameAlreadyExistsError();
+
+    return this.usersRepository.create({
+      id: generateUuidV7(),
+      roleId: dto.roleId,
+      username: normalizedUsername,
+      fullName: dto.fullName,
+      password: await this.cryptoService.hashPassword(dto.password),
+    });
+  }
+
+  async update(id: string, dto: UpdateUserDto) {
+    await this.findById(id);
+
+    const updatedUser = await this.usersRepository.update(id, {
+      roleId: dto.roleId !== undefined ? dto.roleId : undefined,
+      username: dto.username !== undefined ? dto.username.trim() : undefined,
+      fullName: dto.fullName !== undefined ? dto.fullName.trim() : undefined,
+      updatedAt: new Date(),
+    });
+
+    if (!updatedUser) throw new UserNotFoundError();
+
+    return updatedUser;
+  }
+
+  async changeStatus(id: string, dto: ChangeUserStatusDto) {
+    const user = await this.findById(id);
+
+    if (user.isActive === dto.isActive) return user;
+
+    const updateUser = await this.usersRepository.updateStatus(
+      id,
+      dto.isActive,
+      new Date(),
     );
 
-    if (userExists) throw new ConflictException('El username ya existe');
+    if (!updateUser) throw new UserNotFoundError();
 
-    const passwordHash = await argon2.hash(createUserDto.password);
-
-    const user: User = {
-      id: uuidv7(),
-      roleId: createUserDto.roleId,
-      username: createUserDto.username,
-      fullName: createUserDto.fullName,
-      password: passwordHash,
-      isActive: true,
-      lastLoginAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.users.push(user);
-
-    writeFileSync(this.filePath, JSON.stringify(this.users, null, 2), 'utf-8');
-
-    const { password: _, ...safeUser } = user;
-
-    return safeUser;
+    return updateUser;
   }
 
-  findAll() {
-    return this.users.map(({ password: _, ...user }) => user);
-  }
+  async changePassword(id: string, dto: ChangeUserPasswordDto) {
+    const user = await this.findById(id);
 
-  findOne(id: string) {
-    return this.users.find((user) => user.id === id);
-  }
-
-  update(id: string, updateUserDto: UpdateUserDto) {
-    const userFind = this.findOne(id);
-
-    if (!userFind) {
-      throw new ConflictException('El usuario no existe');
+    if (await this.cryptoService.verifyPassword(dto.password, user.password)) {
+      return user;
     }
 
-    if (
-      updateUserDto.username &&
-      this.users.some(
-        (user) => user.username === updateUserDto.username && user.id !== id,
-      )
-    ) {
-      throw new BadRequestException(
-        `El nombre de usuario '${updateUserDto.username}' ya está en uso`,
-      );
-    }
+    if (!user.isActive) throw new UserChangePasswordError();
 
-    const updatedUser: User = {
-      ...userFind,
-      ...updateUserDto,
-      updatedAt: new Date(),
-    };
+    const updatedUser = await this.usersRepository.updatePassword(
+      id,
+      await this.cryptoService.hashPassword(dto.password),
+      new Date(),
+    );
 
-    this.users[userFind.id] = updatedUser;
+    if (!updatedUser) throw new UserNotFoundError();
 
-    writeFileSync(this.filePath, JSON.stringify(this.users, null, 2), 'utf-8');
-
-    const { password: _, ...safeUser } = updatedUser;
-    return safeUser;
-  }
-
-  changeStatus(id: string, changeUserStatusDto: ChangeUserStatusDto) {
-    const userFind = this.findOne(id);
-
-    if (!userFind) {
-      throw new ConflictException('El usuario no existe');
-    }
-
-    const updatedUser: User = {
-      ...userFind,
-      isActive: changeUserStatusDto.isActive,
-      updatedAt: new Date(),
-    };
-
-    this.users[userFind.id] = updatedUser;
-
-    writeFileSync(this.filePath, JSON.stringify(this.users, null, 2), 'utf-8');
-
-    const { password: _, ...safeUser } = updatedUser;
-
-    return {
-      message: 'Estado del usuario actualizado correctamente',
-      data: safeUser,
-    };
-  }
-
-  async changePassword(
-    id: string,
-    changeUserPasswordDto: ChangeUserPasswordDto,
-  ) {
-    const userFind = this.findOne(id);
-
-    if (!userFind) {
-      throw new ConflictException('El usuario no existe');
-    }
-
-    const hashedPassword = await argon2.hash(changeUserPasswordDto.password);
-
-    const updatedUser: User = {
-      ...userFind,
-      password: hashedPassword,
-      updatedAt: new Date(),
-    };
-
-    this.users[userFind.id] = updatedUser;
-
-    writeFileSync(this.filePath, JSON.stringify(this.users, null, 2), 'utf-8');
-
-    const { password: _, ...safeUser } = updatedUser;
-
-    return {
-      message: 'Contraseña actualizada correctamente',
-      data: safeUser,
-    };
+    return updatedUser;
   }
 }

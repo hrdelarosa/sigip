@@ -1,0 +1,20 @@
+import { UserModel } from '../models/user.model';
+import { CreateUserData, UpdateUserData } from '../types/user.types';
+
+export abstract class UsersRepository {
+  abstract findAll(): Promise<UserModel[]>;
+  abstract findById(id: string): Promise<UserModel | null>;
+  abstract findByUsername(username: string): Promise<UserModel | null>;
+  abstract create(data: CreateUserData): Promise<UserModel>;
+  abstract update(id: string, data: UpdateUserData): Promise<UserModel | null>;
+  abstract updateStatus(
+    id: string,
+    isActive: boolean,
+    updatedAt: Date,
+  ): Promise<UserModel | null>;
+  abstract updatePassword(
+    id: string,
+    password: string,
+    updatedAt: Date,
+  ): Promise<UserModel | null>;
+}
