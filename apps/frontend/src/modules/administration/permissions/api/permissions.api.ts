@@ -41,3 +41,9 @@ export function updatePermission({
     body: input,
   })
 }
+
+export function deletePermission({ id }: { id: string }): Promise<void> {
+  return apiRequest<void>(`/permissions/${id}`, {
+    method: 'DELETE',
+  })
+}
