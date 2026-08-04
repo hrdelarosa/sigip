@@ -9,12 +9,12 @@ import {
   PermissionModel,
   PermissionRoleModel,
 } from '../models/permission.model';
+import { PermissionsRepository } from './permissions.repository';
 import {
   CreatePermissionData,
   DeletePermissionResult,
-  PermissionsRepository,
   UpdatePermissionData,
-} from './permissions.repository';
+} from '../types/permission.types';
 
 @Injectable()
 export class DrizzlePermissionsRepository implements PermissionsRepository {

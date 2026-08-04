@@ -11,11 +11,8 @@ import {
 } from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import type { PermissionSummaryModel, RoleModel } from '../models/role.model';
-import {
-  type CreateRoleData,
-  RolesRepository,
-  type UpdateRoleData,
-} from './roles.repository';
+import { RolesRepository } from './roles.repository';
+import { CreateRoleData, UpdateRoleData } from '../types/role.types';
 
 @Injectable()
 export class DrizzleRolesRepository implements RolesRepository {

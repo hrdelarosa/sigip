@@ -1,17 +1,5 @@
 import { PermissionSummaryModel, RoleModel } from '../models/role.model';
-
-export interface CreateRoleData {
-  id: string;
-  code: string;
-  name: string;
-  description?: string | null;
-}
-
-export interface UpdateRoleData {
-  name?: string;
-  description?: string | null;
-  updatedAt?: Date;
-}
+import { CreateRoleData, UpdateRoleData } from '../types/role.types';
 
 export abstract class RolesRepository {
   abstract findAll(): Promise<RoleModel[]>;
