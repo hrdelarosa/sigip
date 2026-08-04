@@ -1,28 +1,29 @@
-import { apiRequest } from '@/lib/api/api-client'
 import type {
-  CreateRoleInput,
-  PermissionSummary,
-  ReplaceRolePermissionsInput,
-  Role,
+  CreateRoleRequest,
+  PermissionsSummaryResponse,
+  ReplaceRolePermissionsRequest,
   RolePermissionsResponse,
-  UpdateRoleInput,
-  UpdateRoleStatusInput,
-} from '../types/roles.types'
+  RoleResponse,
+  RolesResponse,
+  UpdateRoleRequest,
+  UpdateRoleStatusRequest,
+} from '@sigip/shared'
+import { apiRequest } from '@/lib/api/api-client'
 
-export function getRoles(): Promise<Role[]> {
-  return apiRequest<Role[]>('/roles')
+export function getRoles(): Promise<RolesResponse> {
+  return apiRequest<RolesResponse>('/roles')
 }
 
-export function getRoleById({ id }: { id: string }): Promise<Role> {
-  return apiRequest<Role>(`/roles/${id}`)
+export function getRoleById({ id }: { id: string }): Promise<RoleResponse> {
+  return apiRequest<RoleResponse>(`/roles/${id}`)
 }
 
 export function createRole({
   input,
 }: {
-  input: CreateRoleInput
-}): Promise<Role> {
-  return apiRequest<Role>('/roles', {
+  input: CreateRoleRequest
+}): Promise<RoleResponse> {
+  return apiRequest<RoleResponse>('/roles', {
     method: 'POST',
     body: input,
   })
@@ -33,9 +34,9 @@ export function updateRole({
   input,
 }: {
   id: string
-  input: UpdateRoleInput
-}): Promise<Role> {
-  return apiRequest<Role>(`/roles/${id}`, {
+  input: UpdateRoleRequest
+}): Promise<RoleResponse> {
+  return apiRequest<RoleResponse>(`/roles/${id}`, {
     method: 'PATCH',
     body: input,
   })
@@ -46,9 +47,9 @@ export function updateRoleStatus({
   input,
 }: {
   id: string
-  input: UpdateRoleStatusInput
-}): Promise<Role> {
-  return apiRequest<Role>(`/roles/${id}/status`, {
+  input: UpdateRoleStatusRequest
+}): Promise<RoleResponse> {
+  return apiRequest<RoleResponse>(`/roles/${id}/status`, {
     method: 'PATCH',
     body: input,
   })
@@ -67,9 +68,9 @@ export function replaceRolePermissions({
   input,
 }: {
   id: string
-  input: ReplaceRolePermissionsInput
-}): Promise<PermissionSummary[]> {
-  return apiRequest<PermissionSummary[]>(`/roles/${id}/permissions`, {
+  input: ReplaceRolePermissionsRequest
+}): Promise<PermissionsSummaryResponse> {
+  return apiRequest<PermissionsSummaryResponse>(`/roles/${id}/permissions`, {
     method: 'PUT',
     body: input,
   })

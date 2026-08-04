@@ -1,6 +1,7 @@
 import { Redirect, Route, Switch } from 'wouter'
 import { PermissionsPage } from '@/modules/administration/permissions'
 import { RolesPage } from '@/modules/administration/roles'
+import { UsersPage } from '@/modules/administration/users'
 
 import { AppLayout } from '../layouts/AppLayout'
 import { ProtectedRoute } from './protected-route'
@@ -25,6 +26,14 @@ export function AppRouter() {
         <ProtectedRoute>
           <AppLayout>
             <RolesPage />
+          </AppLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path={routes.administration.users}>
+        <ProtectedRoute>
+          <AppLayout>
+            <UsersPage />
           </AppLayout>
         </ProtectedRoute>
       </Route>

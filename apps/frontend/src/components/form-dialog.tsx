@@ -42,7 +42,7 @@ export function FormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger ? <DialogTrigger render={trigger} /> : null}
 
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Crear' : 'Editar'} {module}
