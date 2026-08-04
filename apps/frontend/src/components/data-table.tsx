@@ -1,4 +1,4 @@
-import type { DataTableColumn } from '@/modules/administration/permissions/types/table.types'
+import type { ReactNode } from 'react'
 import {
   Table,
   TableBody,
@@ -11,6 +11,15 @@ import { TableSkeleton } from './skeletons/table-skeleton'
 import { EmptyState } from './table/empty-state'
 import { Errorstate } from './table/error-state'
 
+export interface DataTableColumn<T> {
+  key: string
+  header: ReactNode
+  headerClassName?: string
+  cellClassName?: string
+  skeletonClassName?: string
+  render: (row: T) => ReactNode
+}
+
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[]
   data: T[] | undefined
@@ -22,7 +31,7 @@ interface DataTableProps<T> {
   emptyMessage?: string
   errorMessage?: string
   skeletonRows?: number
-  renderActions?: (row: T) => React.ReactNode
+  renderActions?: (row: T) => ReactNode
 }
 
 export function DataTable<T>({

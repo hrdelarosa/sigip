@@ -1,8 +1,7 @@
-import type { DataTableColumn } from '../types/table.types'
 import type { Permission } from '../types/permission.types'
 import { formatDate } from '@/lib/formatters'
 
-import { DataTable } from '@/components/data-table'
+import { DataTable, type DataTableColumn } from '@/components/data-table'
 import PageHeader from '@/components/page-header'
 import PermissionCreate from '../components/PermissionCreate'
 import PermissionActions from '../components/PermissionActions'
