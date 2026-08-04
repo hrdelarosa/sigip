@@ -4,6 +4,6 @@ export class ChangeUserPasswordDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(8)
-  @MaxLength(100)
+  @MaxLength(255)
   password!: string;
 }

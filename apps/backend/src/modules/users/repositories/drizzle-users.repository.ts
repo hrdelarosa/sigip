@@ -1,13 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
-
-import { DRIZZLE_DATABASE } from '../../../database/database.constants';
-import type { DrizzleDatabase } from '../../../database/database.types';
-import { UsersRepository } from './users.repository';
-import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
-import { users } from '../../../database/schema';
 import { desc, eq } from 'drizzle-orm';
-import { UserModel } from '../models/user.model';
+
+import type { DrizzleDatabase } from '../../../database/database.types';
+import { DRIZZLE_DATABASE } from '../../../database/database.constants';
+import { users } from '../../../database/schema';
+import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
+import { UserModel, UserWithPasswordModel } from '../models/user.model';
+import { UsersRepository } from './users.repository';
 import { CreateUserData, UpdateUserData } from '../types/user.types';
+
+const publicUserColumns = {
+  id: users.id,
+  roleId: users.roleId,
+  username: users.username,
+  fullName: users.fullName,
+  isActive: users.isActive,
+  lastLoginAt: users.lastLoginAt,
+  createdAt: users.createdAt,
+  updatedAt: users.updatedAt,
+};
+
+type PublicUserRow = Omit<typeof users.$inferSelect, 'password'>;
 
 @Injectable()
 export class DrizzleUsersRepository implements UsersRepository {
@@ -16,13 +29,12 @@ export class DrizzleUsersRepository implements UsersRepository {
     private readonly db: DrizzleDatabase,
   ) {}
 
-  private toModel(row: typeof users.$inferSelect) {
+  private toModel(row: PublicUserRow): UserModel {
     return {
       id: bufferToUuid(row.id),
       roleId: bufferToUuid(row.roleId),
       username: row.username,
       fullName: row.fullName,
-      password: row.password,
       isActive: row.isActive,
       lastLoginAt: row.lastLoginAt,
       createdAt: row.createdAt,
@@ -32,7 +44,7 @@ export class DrizzleUsersRepository implements UsersRepository {
 
   async findAll(): Promise<UserModel[]> {
     const rows = await this.db
-      .select()
+      .select(publicUserColumns)
       .from(users)
       .orderBy(desc(users.createdAt));
 
@@ -41,7 +53,7 @@ export class DrizzleUsersRepository implements UsersRepository {
 
   async findById(id: string): Promise<UserModel | null> {
     const [row] = await this.db
-      .select()
+      .select(publicUserColumns)
       .from(users)
       .where(eq(users.id, uuidToBuffer(id)))
       .limit(1);
@@ -49,9 +61,21 @@ export class DrizzleUsersRepository implements UsersRepository {
     return row ? this.toModel(row) : null;
   }
 
-  async findByUsername(username: string): Promise<UserModel | null> {
+  async findByIdWithPassword(
+    id: string,
+  ): Promise<UserWithPasswordModel | null> {
     const [row] = await this.db
       .select()
+      .from(users)
+      .where(eq(users.id, uuidToBuffer(id)))
+      .limit(1);
+
+    return row ? { ...this.toModel(row), passwordHash: row.password } : null;
+  }
+
+  async findByUsername(username: string): Promise<UserModel | null> {
+    const [row] = await this.db
+      .select(publicUserColumns)
       .from(users)
       .where(eq(users.username, username))
       .limit(1);
@@ -60,14 +84,14 @@ export class DrizzleUsersRepository implements UsersRepository {
   }
 
   async create(data: CreateUserData): Promise<UserModel> {
-    const values: typeof users.$inferInsert = {
+    const values = {
       id: uuidToBuffer(data.id),
       roleId: uuidToBuffer(data.roleId),
       username: data.username,
       fullName: data.fullName,
-      password: data.password,
+      password: data.passwordHash,
       isActive: true,
-    };
+    } satisfies typeof users.$inferInsert;
 
     await this.db.insert(users).values(values);
 
@@ -110,12 +134,12 @@ export class DrizzleUsersRepository implements UsersRepository {
 
   async updatePassword(
     id: string,
-    password: string,
+    passwordHash: string,
     updatedAt: Date,
   ): Promise<UserModel | null> {
     await this.db
       .update(users)
-      .set({ password, updatedAt })
+      .set({ password: passwordHash, updatedAt })
       .where(eq(users.id, uuidToBuffer(id)));
 
     return this.findById(id);

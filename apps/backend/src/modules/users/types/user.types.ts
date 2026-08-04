@@ -3,7 +3,7 @@ export interface CreateUserData {
   roleId: string;
   username: string;
   fullName: string;
-  password: string;
+  passwordHash: string;
 }
 
 export interface UpdateUserData {

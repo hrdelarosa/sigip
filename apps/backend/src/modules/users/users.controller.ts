@@ -4,6 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { ChangeUserPasswordDto } from './dto/change-user-password.dto';
+import { UserIdParamDto } from './dto/user-id-param.dto';
 
 @Controller('users')
 export class UsersController {
@@ -15,8 +16,8 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findById(id);
+  findOne(@Param() params: UserIdParamDto) {
+    return this.usersService.findById(params.id);
   }
 
   @Post()
@@ -25,20 +26,23 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(@Param() params: UserIdParamDto, @Body() dto: UpdateUserDto) {
+    return this.usersService.update(params.id, dto);
   }
 
   @Patch(':id/status')
-  changeStatus(@Param('id') id: string, @Body() dto: ChangeUserStatusDto) {
-    return this.usersService.changeStatus(id, dto);
+  changeStatus(
+    @Param() params: UserIdParamDto,
+    @Body() dto: ChangeUserStatusDto,
+  ) {
+    return this.usersService.changeStatus(params.id, dto);
   }
 
   @Patch(':id/password')
   async changePassword(
-    @Param('id') id: string,
+    @Param() params: UserIdParamDto,
     @Body() dto: ChangeUserPasswordDto,
   ) {
-    return await this.usersService.changePassword(id, dto);
+    return await this.usersService.changePassword(params.id, dto);
   }
 }
