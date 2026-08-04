@@ -11,6 +11,7 @@ import {
 } from '../models/permission.model';
 import {
   CreatePermissionData,
+  DeletePermissionResult,
   PermissionsRepository,
   UpdatePermissionData,
 } from './permissions.repository';
@@ -115,4 +116,40 @@ export class DrizzlePermissionsRepository implements PermissionsRepository {
 
     return this.findById(id);
   }
+
+  async delete(id: string): Promise<DeletePermissionResult> {
+    try {
+      const [result] = await this.db
+        .delete(permissions)
+        .where(eq(permissions.id, uuidToBuffer(id)));
+
+      return result.affectedRows > 0 ? 'deleted' : 'not-found';
+    } catch (error) {
+      if (isForeignKeyConstraintError(error)) return 'has-assigned-roles';
+
+      throw error;
+    }
+  }
+}
+
+export function isForeignKeyConstraintError(error: unknown): boolean {
+  let currentError = error;
+  const visitedErrors = new Set<object>();
+
+  while (typeof currentError === 'object' && currentError !== null) {
+    if (visitedErrors.has(currentError)) return false;
+    visitedErrors.add(currentError);
+
+    if (
+      'code' in currentError &&
+      currentError.code === 'ER_ROW_IS_REFERENCED_2'
+    ) {
+      return true;
+    }
+
+    if (!('cause' in currentError)) return false;
+    currentError = currentError.cause;
+  }
+
+  return false;
 }

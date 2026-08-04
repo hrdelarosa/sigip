@@ -13,3 +13,11 @@ export class PermissionCodeAlreadyExistsError extends ConflictException {
     );
   }
 }
+
+export class PermissionHasAssignedRolesError extends ConflictException {
+  constructor() {
+    super(
+      'El permiso no puede eliminarse porque tiene roles asignados. Por favor, desasigne el permiso de los roles antes de eliminarlo.',
+    );
+  }
+}

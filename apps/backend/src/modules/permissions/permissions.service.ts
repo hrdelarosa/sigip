@@ -5,6 +5,7 @@ import { PermissionsRepository } from './repositories/permissions.repository';
 import { PermissionDetailsModel } from './models/permission.model';
 import {
   PermissionCodeAlreadyExistsError,
+  PermissionHasAssignedRolesError,
   PermissionNotFoundError,
 } from './permissions.errors';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
@@ -68,5 +69,13 @@ export class PermissionsService {
     if (!permission) throw new PermissionNotFoundError();
 
     return permission;
+  }
+
+  async delete(id: string) {
+    const result = await this.permissionsRepository.delete(id);
+
+    if (result === 'not-found') throw new PermissionNotFoundError();
+    if (result === 'has-assigned-roles')
+      throw new PermissionHasAssignedRolesError();
   }
 }

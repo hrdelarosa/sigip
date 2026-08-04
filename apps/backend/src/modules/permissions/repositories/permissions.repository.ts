@@ -13,6 +13,9 @@ export interface UpdatePermissionData {
   description?: string | null;
 }
 
+export type DeletePermissionResult =
+  'deleted' | 'not-found' | 'has-assigned-roles';
+
 export abstract class PermissionsRepository {
   abstract findAll(): Promise<PermissionModel[]>;
   abstract findById(id: string): Promise<PermissionModel | null>;
@@ -23,4 +26,5 @@ export abstract class PermissionsRepository {
     id: string,
     data: UpdatePermissionData,
   ): Promise<PermissionModel | null>;
+  abstract delete(id: string): Promise<DeletePermissionResult>;
 }
