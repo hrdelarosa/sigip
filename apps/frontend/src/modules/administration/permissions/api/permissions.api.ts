@@ -1,29 +1,30 @@
-import { apiRequest } from '@/lib/api/api-client'
 import type {
-  CreatePermissionInput,
-  Permission,
-  PermissionDetails,
-  UpdatePermissionInput,
-} from '../types/permission.types'
+  CreatePermissionRequest,
+  PermissionDetailsResponse,
+  PermissionResponse,
+  PermissionsResponse,
+  UpdatePermissionRequest,
+} from '@sigip/shared'
+import { apiRequest } from '@/lib/api/api-client'
 
-export function getPermissions(): Promise<Permission[]> {
-  return apiRequest<Permission[]>('/permissions')
+export function getPermissions(): Promise<PermissionsResponse> {
+  return apiRequest<PermissionsResponse>('/permissions')
 }
 
 export function getPermissionById({
   id,
 }: {
   id: string
-}): Promise<PermissionDetails> {
-  return apiRequest<PermissionDetails>(`/permissions/${id}`)
+}): Promise<PermissionDetailsResponse> {
+  return apiRequest<PermissionDetailsResponse>(`/permissions/${id}`)
 }
 
 export function createPermission({
   input,
 }: {
-  input: CreatePermissionInput
-}): Promise<Permission> {
-  return apiRequest<Permission>('/permissions', {
+  input: CreatePermissionRequest
+}): Promise<PermissionResponse> {
+  return apiRequest<PermissionResponse>('/permissions', {
     method: 'POST',
     body: input,
   })
@@ -34,9 +35,9 @@ export function updatePermission({
   input,
 }: {
   id: string
-  input: UpdatePermissionInput
-}): Promise<Permission> {
-  return apiRequest<Permission>(`/permissions/${id}`, {
+  input: UpdatePermissionRequest
+}): Promise<PermissionResponse> {
+  return apiRequest<PermissionResponse>(`/permissions/${id}`, {
     method: 'PATCH',
     body: input,
   })

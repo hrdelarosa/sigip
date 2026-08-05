@@ -32,7 +32,7 @@ export function UsersPage() {
       key: 'username',
       header: 'Usuario',
       skeletonClassName: 'w-28',
-      render: (user) => <span className="font-mono">@{user.username}</span>,
+      render: (user) => <span className="font-mono">{user.username}</span>,
     },
     {
       key: 'role',

@@ -4,7 +4,8 @@ export const createPermissionFormSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(1, { message: 'El código es requerido' })
+    .toLowerCase()
+    .min(3, { message: 'El código debe tener al menos 3 caracteres' })
     .max(100, { message: 'El código no puede superar los 100 caracteres' })
     .regex(
       /^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$/,
