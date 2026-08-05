@@ -17,3 +17,11 @@ export type {
   ReplaceRolePermissionsRequest,
   RolePermissionsResponse,
 } from './roles'
+export type {
+  PermissionResponse,
+  PermissionsResponse,
+  PermissionRoleResponse,
+  PermissionDetailsResponse,
+  CreatePermissionRequest,
+  UpdatePermissionRequest,
+} from './permissions'
