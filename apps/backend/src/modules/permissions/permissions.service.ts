@@ -9,6 +9,7 @@ import {
   PermissionNotFoundError,
 } from './permissions.errors';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
+import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
 
 @Injectable()
 export class PermissionsService {
@@ -47,11 +48,19 @@ export class PermissionsService {
 
     if (existingPermission) throw new PermissionCodeAlreadyExistsError();
 
-    return this.permissionsRepository.create({
-      id: generateUuidV7(),
-      code: normalizedCode,
-      description: this.normalizeDescription(dto.description),
-    });
+    try {
+      return await this.permissionsRepository.create({
+        id: generateUuidV7(),
+        code: normalizedCode,
+        description: this.normalizeDescription(dto.description),
+      });
+    } catch (error) {
+      if (hasMysqlErrorCode(error, 'ER_DUP_ENTRY')) {
+        throw new PermissionCodeAlreadyExistsError();
+      }
+
+      throw error;
+    }
   }
 
   async update(id: string, dto: UpdatePermissionDto) {
