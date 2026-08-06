@@ -9,6 +9,9 @@ import { RolesModule } from './modules/roles/roles.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { CryptoService } from './common/crypto/crypto.service';
 import { CryptoModule } from './common/crypto/crypto.module';
+import { OrganizationalUnitsModule } from './modules/organizational-units/organizational-units.module';
+import { PositionsModule } from './modules/positions/positions.module';
+import { EmployeesModule } from './modules/employees/employees.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { CryptoModule } from './common/crypto/crypto.module';
     RolesModule,
     PermissionsModule,
     CryptoModule,
+    OrganizationalUnitsModule,
+    PositionsModule,
+    EmployeesModule,
   ],
   providers: [CryptoService],
 })

@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   mysqlTable,
+  type MySqlTableExtraConfigValue,
   text,
   uniqueIndex,
   varchar,
@@ -48,7 +49,7 @@ export const employeeAssignments = mysqlTable(
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
-  (table) => [
+  (table): MySqlTableExtraConfigValue[] => [
     uniqueIndex('employee_assignments_id_employee_id_unique').on(
       table.id,
       table.employeeId,

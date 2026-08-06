@@ -18,7 +18,7 @@ export const organizationalUnits = mysqlTable(
   'organizational_units',
   {
     id: uuidBinary('id').notNull().primaryKey(),
-    parentId: uuidBinary('parent_id'),
+    parentId: uuidBinary('parent_id').notNull(),
     code: varchar('code', { length: 50 }).notNull(),
     name: varchar('name', { length: 150 }).notNull(),
     description: varchar('description', { length: 355 }),
