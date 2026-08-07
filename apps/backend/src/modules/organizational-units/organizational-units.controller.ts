@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { OrganizationalUnitsService } from './organizational-units.service';
 import { CreateOrganizationalUnitDto } from './dto/create-organizational-unit.dto';
 import { UpdateOrganizationalUnitDto } from './dto/update-organizational-unit.dto';
@@ -23,7 +31,9 @@ export class OrganizationalUnitsController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<OrganizationalUnitResponse> {
+  async findById(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<OrganizationalUnitResponse> {
     const organizationalUnit =
       await this.organizationalUnitsService.findById(id);
 
@@ -42,7 +52,7 @@ export class OrganizationalUnitsController {
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateOrganizationalUnitDto,
   ): Promise<OrganizationalUnitResponse> {
     const updatedOrganizationalUnit =
@@ -53,7 +63,7 @@ export class OrganizationalUnitsController {
 
   @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateOrganizationalUnitStatusDto,
   ): Promise<OrganizationalUnitResponse> {
     const updatedOrganizationalUnit =

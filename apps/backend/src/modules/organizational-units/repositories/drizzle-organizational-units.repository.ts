@@ -1,16 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
-import { organizationalUnits } from '../../../database/schema';
+import {
+  employeeAssignments,
+  organizationalUnits,
+} from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
+import {
+  InvalidOrganizationalUnitParentError,
+  OrganizationalUnitHasActiveChildrenError,
+  OrganizationalUnitHasCurrentAssignmentsError,
+  OrganizationalUnitHierarchyCycleError,
+} from '../organizational-units.errors';
 import { OrganizationalUnitsModel } from '../models/organizational-units.model';
-import { OrganizationalUnitsRepository } from './organizational-units.repository';
 import {
   CreateOrganizationalUnitData,
   UpdateOrganizationalUnitData,
 } from '../types/organizational-units.types';
+import { OrganizationalUnitsRepository } from './organizational-units.repository';
+
+type OrganizationalUnitRow = typeof organizationalUnits.$inferSelect;
 
 @Injectable()
 export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnitsRepository {
@@ -19,12 +30,10 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
     private readonly db: DrizzleDatabase,
   ) {}
 
-  private toModel(
-    row: typeof organizationalUnits.$inferSelect,
-  ): OrganizationalUnitsModel {
+  private toModel(row: OrganizationalUnitRow): OrganizationalUnitsModel {
     return {
       id: bufferToUuid(row.id),
-      parentId: bufferToUuid(row.parentId),
+      parentId: row.parentId ? bufferToUuid(row.parentId) : null,
       code: row.code,
       name: row.name,
       description: row.description,
@@ -35,13 +44,77 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
     };
   }
 
+  private createsCycle(
+    rows: OrganizationalUnitRow[],
+    id: string,
+    parentId: string,
+  ): boolean {
+    const unitsById = new Map(
+      rows.map((row) => [bufferToUuid(row.id), this.toModel(row)]),
+    );
+    const visited = new Set<string>();
+    let currentId: string | null = parentId;
+
+    while (currentId) {
+      if (currentId === id || visited.has(currentId)) return true;
+
+      visited.add(currentId);
+      currentId = unitsById.get(currentId)?.parentId ?? null;
+    }
+
+    return false;
+  }
+
+  private orderAsHierarchy(
+    rows: OrganizationalUnitRow[],
+  ): OrganizationalUnitsModel[] {
+    const orderedUnits = rows.map((row) => this.toModel(row));
+    const childrenByParentId = new Map<
+      string | null,
+      OrganizationalUnitsModel[]
+    >();
+
+    for (const unit of orderedUnits) {
+      const siblings = childrenByParentId.get(unit.parentId) ?? [];
+      siblings.push(unit);
+      childrenByParentId.set(unit.parentId, siblings);
+    }
+
+    const result: OrganizationalUnitsModel[] = [];
+    const visited = new Set<string>();
+    const appendBranch = (parentId: string | null): void => {
+      for (const unit of childrenByParentId.get(parentId) ?? []) {
+        if (visited.has(unit.id)) continue;
+
+        visited.add(unit.id);
+        result.push(unit);
+        appendBranch(unit.id);
+      }
+    };
+
+    appendBranch(null);
+    for (const unit of orderedUnits) {
+      if (!visited.has(unit.id)) {
+        visited.add(unit.id);
+        result.push(unit);
+        appendBranch(unit.id);
+      }
+    }
+
+    return result;
+  }
+
   async findAll(): Promise<OrganizationalUnitsModel[]> {
-    const row = await this.db
+    const rows = await this.db
       .select()
       .from(organizationalUnits)
-      .orderBy(desc(organizationalUnits.createdAt));
+      .orderBy(
+        asc(organizationalUnits.sortOrder),
+        asc(organizationalUnits.name),
+        asc(organizationalUnits.id),
+      );
 
-    return row.map((row) => this.toModel(row));
+    return this.orderAsHierarchy(rows);
   }
 
   async findById(id: string): Promise<OrganizationalUnitsModel | null> {
@@ -67,61 +140,163 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
   async create(
     data: CreateOrganizationalUnitData,
   ): Promise<OrganizationalUnitsModel> {
-    const values: typeof organizationalUnits.$inferInsert = {
-      id: uuidToBuffer(data.id),
-      parentId: uuidToBuffer(data.parentId),
-      code: data.code,
-      name: data.name,
-      description: data.description ?? null,
-      isActive: true,
-      sortOrder: data.sortOrder,
-    };
+    return this.db.transaction(async (transaction) => {
+      await transaction.execute(
+        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} ORDER BY ${organizationalUnits.id} FOR UPDATE`,
+      );
 
-    await this.db.insert(organizationalUnits).values(values);
+      if (data.parentId) {
+        const [parent] = await transaction
+          .select()
+          .from(organizationalUnits)
+          .where(eq(organizationalUnits.id, uuidToBuffer(data.parentId)))
+          .limit(1);
 
-    const organizationalUnit = await this.findById(data.id);
+        if (!parent?.isActive) throw new InvalidOrganizationalUnitParentError();
+      }
 
-    if (!organizationalUnit)
-      throw new Error('No fue posible recuperar la unidad organizativa creada');
+      await transaction.insert(organizationalUnits).values({
+        id: uuidToBuffer(data.id),
+        parentId: data.parentId ? uuidToBuffer(data.parentId) : null,
+        code: data.code,
+        name: data.name,
+        description: data.description ?? null,
+        isActive: true,
+        sortOrder: data.sortOrder,
+      });
 
-    return organizationalUnit;
+      const [created] = await transaction
+        .select()
+        .from(organizationalUnits)
+        .where(eq(organizationalUnits.id, uuidToBuffer(data.id)))
+        .limit(1);
+
+      if (!created) {
+        throw new Error(
+          'No fue posible recuperar la unidad organizativa creada',
+        );
+      }
+
+      return this.toModel(created);
+    });
   }
 
   async update(
     id: string,
     data: UpdateOrganizationalUnitData,
   ): Promise<OrganizationalUnitsModel | null> {
-    const values: Partial<typeof organizationalUnits.$inferInsert> = {
-      updatedAt: data.updatedAt,
-    };
+    return this.db.transaction(async (transaction) => {
+      await transaction.execute(
+        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} ORDER BY ${organizationalUnits.id} FOR UPDATE`,
+      );
 
-    if (data.parentId !== undefined)
-      values.parentId = uuidToBuffer(data.parentId);
+      const rows = await transaction.select().from(organizationalUnits);
+      const current = rows.find((row) => bufferToUuid(row.id) === id);
 
-    if (data.name !== undefined) values.name = data.name;
+      if (!current) return null;
 
-    if (data.description !== undefined) values.description = data.description;
+      if (data.parentId !== undefined && data.parentId !== null) {
+        const parent = rows.find(
+          (row) => bufferToUuid(row.id) === data.parentId,
+        );
 
-    if (data.sortOrder !== undefined) values.sortOrder = data.sortOrder;
+        if (!parent?.isActive) throw new InvalidOrganizationalUnitParentError();
+        if (this.createsCycle(rows, id, data.parentId)) {
+          throw new OrganizationalUnitHierarchyCycleError();
+        }
+      }
 
-    await this.db
-      .update(organizationalUnits)
-      .set(values)
-      .where(eq(organizationalUnits.id, uuidToBuffer(id)));
+      const values: Partial<typeof organizationalUnits.$inferInsert> = {
+        updatedAt: data.updatedAt,
+      };
 
-    return this.findById(id);
+      if (data.parentId !== undefined) {
+        values.parentId = data.parentId ? uuidToBuffer(data.parentId) : null;
+      }
+      if (data.name !== undefined) values.name = data.name;
+      if (data.description !== undefined) values.description = data.description;
+      if (data.sortOrder !== undefined) values.sortOrder = data.sortOrder;
+
+      await transaction
+        .update(organizationalUnits)
+        .set(values)
+        .where(eq(organizationalUnits.id, uuidToBuffer(id)));
+
+      const [updated] = await transaction
+        .select()
+        .from(organizationalUnits)
+        .where(eq(organizationalUnits.id, uuidToBuffer(id)))
+        .limit(1);
+
+      return updated ? this.toModel(updated) : null;
+    });
   }
 
   async updateStatus(
     id: string,
     isActive: boolean,
-    updatedAt?: Date,
+    updatedAt: Date,
   ): Promise<OrganizationalUnitsModel | null> {
-    await this.db
-      .update(organizationalUnits)
-      .set({ isActive, updatedAt })
-      .where(eq(organizationalUnits.id, uuidToBuffer(id)));
+    return this.db.transaction(async (transaction) => {
+      await transaction.execute(
+        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} ORDER BY ${organizationalUnits.id} FOR UPDATE`,
+      );
 
-    return this.findById(id);
+      const rows = await transaction.select().from(organizationalUnits);
+      const current = rows.find((row) => bufferToUuid(row.id) === id);
+
+      if (!current) return null;
+      if (current.isActive === isActive) return this.toModel(current);
+
+      if (isActive && current.parentId) {
+        const parent = rows.find((row) => row.id.equals(current.parentId!));
+
+        if (!parent?.isActive) throw new InvalidOrganizationalUnitParentError();
+      }
+
+      if (!isActive) {
+        const hasActiveChild = rows.some(
+          (row) => row.parentId?.equals(current.id) && row.isActive,
+        );
+
+        if (hasActiveChild) {
+          throw new OrganizationalUnitHasActiveChildrenError();
+        }
+
+        const today = new Date();
+        const [currentAssignment] = await transaction
+          .select({ id: employeeAssignments.id })
+          .from(employeeAssignments)
+          .where(
+            and(
+              eq(employeeAssignments.organizationalUnitId, current.id),
+              lte(employeeAssignments.effectiveFrom, today),
+              or(
+                isNull(employeeAssignments.effectiveTo),
+                gte(employeeAssignments.effectiveTo, today),
+              ),
+            ),
+          )
+          .limit(1)
+          .for('update');
+
+        if (currentAssignment) {
+          throw new OrganizationalUnitHasCurrentAssignmentsError();
+        }
+      }
+
+      await transaction
+        .update(organizationalUnits)
+        .set({ isActive, updatedAt })
+        .where(eq(organizationalUnits.id, current.id));
+
+      const [updated] = await transaction
+        .select()
+        .from(organizationalUnits)
+        .where(eq(organizationalUnits.id, current.id))
+        .limit(1);
+
+      return updated ? this.toModel(updated) : null;
+    });
   }
 }

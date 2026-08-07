@@ -1,6 +1,6 @@
 export interface CreateOrganizationalUnitData {
   id: string;
-  parentId: string;
+  parentId: string | null;
   code: string;
   name: string;
   description?: string | null;
@@ -8,7 +8,7 @@ export interface CreateOrganizationalUnitData {
 }
 
 export interface UpdateOrganizationalUnitData {
-  parentId?: string;
+  parentId?: string | null;
   name?: string;
   description?: string | null;
   sortOrder?: number;

@@ -1,6 +1,6 @@
 export interface OrganizationalUnitsModel {
   id: string;
-  parentId: string;
+  parentId: string | null;
   code: string;
   name: string;
   description: string | null;

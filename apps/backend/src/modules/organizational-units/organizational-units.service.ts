@@ -3,11 +3,15 @@ import { CreateOrganizationalUnitDto } from './dto/create-organizational-unit.dt
 import { UpdateOrganizationalUnitDto } from './dto/update-organizational-unit.dto';
 import { OrganizationalUnitsRepository } from './repositories/organizational-units.repository';
 import {
+  EmptyOrganizationalUnitUpdateError,
+  InvalidOrganizationalUnitParentError,
   OrganizationalUnitCodeAlreadyExistsError,
   OrganizationalUnitsNotFoundError,
 } from './organizational-units.errors';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { UpdateOrganizationalUnitStatusDto } from './dto/update-organizational-unit-status.dto';
+import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
+import type { OrganizationalUnitsModel } from './models/organizational-units.model';
 
 @Injectable()
 export class OrganizationalUnitsService {
@@ -21,6 +25,21 @@ export class OrganizationalUnitsService {
     const normalized = description.trim();
 
     return normalized.length > 0 ? normalized : null;
+  }
+
+  private handlePersistenceError(error: unknown): never {
+    if (hasMysqlErrorCode(error, 'ER_DUP_ENTRY')) {
+      throw new OrganizationalUnitCodeAlreadyExistsError();
+    }
+
+    if (
+      hasMysqlErrorCode(error, 'ER_NO_REFERENCED_ROW_2') ||
+      hasMysqlErrorCode(error, 'ER_ROW_IS_REFERENCED_2')
+    ) {
+      throw new InvalidOrganizationalUnitParentError();
+    }
+
+    throw error;
   }
 
   async findAll() {
@@ -44,30 +63,47 @@ export class OrganizationalUnitsService {
     if (existingOrganizationalUnit)
       throw new OrganizationalUnitCodeAlreadyExistsError();
 
-    return this.organizationalUnitsRepository.create({
-      id: generateUuidV7(),
-      parentId: dto.parentId,
-      code: normalizedCode,
-      name: dto.name.trim(),
-      description: this.normalizeDescription(dto.description),
-      sortOrder: dto.sortOrder ?? 0,
-    });
+    try {
+      return await this.organizationalUnitsRepository.create({
+        id: generateUuidV7(),
+        parentId: dto.parentId,
+        code: normalizedCode,
+        name: dto.name.trim(),
+        description: this.normalizeDescription(dto.description),
+        sortOrder: dto.sortOrder ?? 0,
+      });
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
   }
 
   async update(id: string, dto: UpdateOrganizationalUnitDto) {
-    await this.findById(id);
+    if (
+      dto.parentId === undefined &&
+      dto.name === undefined &&
+      dto.description === undefined &&
+      dto.sortOrder === undefined
+    ) {
+      throw new EmptyOrganizationalUnitUpdateError();
+    }
 
-    const updatedOrganizationalUnit =
-      await this.organizationalUnitsRepository.update(id, {
-        parentId: dto.parentId,
-        name: dto.name !== undefined ? dto.name.trim() : undefined,
-        description:
-          dto.description !== undefined
-            ? this.normalizeDescription(dto.description)
-            : undefined,
-        sortOrder: dto.sortOrder !== undefined ? dto.sortOrder : undefined,
-        updatedAt: new Date(),
-      });
+    let updatedOrganizationalUnit: OrganizationalUnitsModel | null;
+
+    try {
+      updatedOrganizationalUnit =
+        await this.organizationalUnitsRepository.update(id, {
+          parentId: dto.parentId,
+          name: dto.name !== undefined ? dto.name.trim() : undefined,
+          description:
+            dto.description !== undefined
+              ? this.normalizeDescription(dto.description)
+              : undefined,
+          sortOrder: dto.sortOrder !== undefined ? dto.sortOrder : undefined,
+          updatedAt: new Date(),
+        });
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
 
     if (!updatedOrganizationalUnit)
       throw new OrganizationalUnitsNotFoundError();
@@ -76,10 +112,6 @@ export class OrganizationalUnitsService {
   }
 
   async updateStatus(id: string, dto: UpdateOrganizationalUnitStatusDto) {
-    const organizationalUnit = await this.findById(id);
-
-    if (organizationalUnit.isActive === dto.isActive) return organizationalUnit;
-
     const updatedOrganizationalUnit =
       await this.organizationalUnitsRepository.updateStatus(
         id,

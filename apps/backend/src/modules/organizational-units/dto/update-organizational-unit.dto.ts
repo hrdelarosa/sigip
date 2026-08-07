@@ -1,30 +1,49 @@
-import { UpdateOrganizationalUnitRequest } from '@sigip/shared';
+import type { UpdateOrganizationalUnitRequest } from '@sigip/shared';
 import {
-  IsNumber,
+  IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateOrganizationalUnitDto implements UpdateOrganizationalUnitRequest {
-  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @ValidateIf(
+    (_object: unknown, value: unknown) => value !== undefined && value !== null,
+  )
   @IsUUID()
-  parentId?: string;
+  parentId?: string | null;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsNotEmpty()
   @MinLength(3)
   @MaxLength(150)
   name?: string;
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @MaxLength(355)
-  description?: string;
+  description?: string | null;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
+  @Max(1_000_000)
   sortOrder?: number;
 }
