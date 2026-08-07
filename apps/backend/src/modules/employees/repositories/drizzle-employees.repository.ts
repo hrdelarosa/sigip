@@ -8,10 +8,9 @@ import {
   exists,
   gte,
   isNull,
-  like,
   lte,
-  ne,
   or,
+  sql,
   type SQL,
 } from 'drizzle-orm';
 
@@ -19,7 +18,12 @@ import type { EmployeeStatus } from '@sigip/shared';
 import { EmployeeSort } from '../dto/list-employees-query.dto';
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
-import { employeeAssignments, employees } from '../../../database/schema';
+import {
+  employeeAssignments,
+  employees,
+  organizationalUnits,
+  positions,
+} from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import type { PaginatedResult } from '../../../common/pagination/types/pagination.types';
 import type { EmployeeAssignmentModel } from '../models/employee-assignment.model';
@@ -27,6 +31,7 @@ import type { EmployeeModel } from '../models/employee.model';
 import type {
   CreateEmployeeAssignmentData,
   CreateEmployeeData,
+  EmployeeAssignmentMutationResult,
   EmployeeFilters,
   UpdateEmployeeAssignmentData,
   UpdateEmployeeData,
@@ -92,11 +97,15 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     const conditions: SQL[] = [];
 
     if (search) {
-      const searchPattern = `%${search}%`;
+      const escapedSearch = search
+        .replaceAll('!', '!!')
+        .replaceAll('%', '!%')
+        .replaceAll('_', '!_');
+      const searchPattern = `%${escapedSearch}%`;
 
       const searchCondition = or(
-        like(employees.employeeNumber, searchPattern),
-        like(employees.fullName, searchPattern),
+        sql`${employees.employeeNumber} LIKE ${searchPattern} ESCAPE '!'`,
+        sql`${employees.fullName} LIKE ${searchPattern} ESCAPE '!'`,
       );
 
       if (searchCondition) {
@@ -164,7 +173,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         .select()
         .from(employees)
         .where(whereCondition)
-        .orderBy(orderBy)
+        .orderBy(...orderBy)
         .limit(limit)
         .offset(offset),
 
@@ -292,127 +301,257 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
 
   async createAssignment(
     data: CreateEmployeeAssignmentData,
-  ): Promise<EmployeeAssignmentModel> {
-    const values = {
-      id: uuidToBuffer(data.id),
-      employeeId: uuidToBuffer(data.employeeId),
-      organizationalUnitId: uuidToBuffer(data.organizationalUnitId),
-      positionId: uuidToBuffer(data.positionId),
-      appointmentType: data.appointmentType,
-      schedule: data.schedule,
-      effectiveFrom: data.effectiveFrom,
-      effectiveTo: data.effectiveTo,
-      notes: data.notes,
-    } satisfies typeof employeeAssignments.$inferInsert;
+  ): Promise<EmployeeAssignmentMutationResult> {
+    return this.db.transaction(async (transaction) => {
+      const employeeId = uuidToBuffer(data.employeeId);
+      const organizationalUnitId = uuidToBuffer(data.organizationalUnitId);
+      const positionId = uuidToBuffer(data.positionId);
 
-    await this.db.insert(employeeAssignments).values(values);
+      await transaction.execute(
+        sql`SELECT ${employees.id} FROM ${employees} WHERE ${employees.id} = ${employeeId} FOR UPDATE`,
+      );
+      const [employee] = await transaction
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, employeeId))
+        .limit(1);
+      if (!employee) return { status: 'employee-not-found' };
 
-    const assignment = await this.findAssignmentById(data.employeeId, data.id);
+      await transaction.execute(
+        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} WHERE ${organizationalUnits.id} = ${organizationalUnitId} FOR UPDATE`,
+      );
+      const [organizationalUnit] = await transaction
+        .select({ isActive: organizationalUnits.isActive })
+        .from(organizationalUnits)
+        .where(eq(organizationalUnits.id, organizationalUnitId))
+        .limit(1);
+      if (!organizationalUnit?.isActive) {
+        return { status: 'organizational-unit-not-available' };
+      }
 
-    if (!assignment)
-      throw new Error('No fue posible recuperar la asignación creada');
+      await transaction.execute(
+        sql`SELECT ${positions.id} FROM ${positions} WHERE ${positions.id} = ${positionId} FOR UPDATE`,
+      );
+      const [position] = await transaction
+        .select({ isActive: positions.isActive })
+        .from(positions)
+        .where(eq(positions.id, positionId))
+        .limit(1);
+      if (!position?.isActive) return { status: 'position-not-available' };
 
-    return assignment;
+      const assignments = await this.lockEmployeeAssignments(
+        transaction,
+        employeeId,
+      );
+      if (data.effectiveTo && data.effectiveTo < data.effectiveFrom) {
+        return { status: 'invalid-period' };
+      }
+      if (this.hasOverlap(assignments, data.effectiveFrom, data.effectiveTo)) {
+        return { status: 'overlap' };
+      }
+
+      await transaction.insert(employeeAssignments).values({
+        id: uuidToBuffer(data.id),
+        employeeId,
+        organizationalUnitId,
+        positionId,
+        appointmentType: data.appointmentType,
+        schedule: data.schedule,
+        effectiveFrom: data.effectiveFrom,
+        effectiveTo: data.effectiveTo,
+        notes: data.notes,
+      });
+
+      const [created] = await transaction
+        .select()
+        .from(employeeAssignments)
+        .where(eq(employeeAssignments.id, uuidToBuffer(data.id)))
+        .limit(1);
+      if (!created)
+        throw new Error('No fue posible recuperar la asignación creada');
+
+      return { status: 'success', assignment: this.toAssignmentModel(created) };
+    });
   }
 
   async updateAssignment(
     employeeId: string,
     assignmentId: string,
     data: UpdateEmployeeAssignmentData,
-  ): Promise<EmployeeAssignmentModel | null> {
-    const values: Partial<typeof employeeAssignments.$inferInsert> = {
-      updatedAt: data.updatedAt,
-    };
+  ): Promise<EmployeeAssignmentMutationResult> {
+    return this.db.transaction(async (transaction) => {
+      const employeeIdBuffer = uuidToBuffer(employeeId);
+      const assignmentIdBuffer = uuidToBuffer(assignmentId);
 
-    if (data.organizationalUnitId !== undefined) {
-      values.organizationalUnitId = uuidToBuffer(data.organizationalUnitId);
-    }
-    if (data.positionId !== undefined)
-      values.positionId = uuidToBuffer(data.positionId);
-    if (data.appointmentType !== undefined)
-      values.appointmentType = data.appointmentType;
-    if (data.schedule !== undefined) values.schedule = data.schedule;
-    if (data.effectiveFrom !== undefined)
-      values.effectiveFrom = data.effectiveFrom;
-    if (data.effectiveTo !== undefined) values.effectiveTo = data.effectiveTo;
-    if (data.notes !== undefined) values.notes = data.notes;
-
-    await this.db
-      .update(employeeAssignments)
-      .set(values)
-      .where(
-        and(
-          eq(employeeAssignments.id, uuidToBuffer(assignmentId)),
-          eq(employeeAssignments.employeeId, uuidToBuffer(employeeId)),
-        ),
+      await transaction.execute(
+        sql`SELECT ${employees.id} FROM ${employees} WHERE ${employees.id} = ${employeeIdBuffer} FOR UPDATE`,
       );
+      const [employee] = await transaction
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.id, employeeIdBuffer))
+        .limit(1);
+      if (!employee) return { status: 'employee-not-found' };
 
-    return this.findAssignmentById(employeeId, assignmentId);
+      const [currentSnapshot] = await transaction
+        .select()
+        .from(employeeAssignments)
+        .where(
+          and(
+            eq(employeeAssignments.id, assignmentIdBuffer),
+            eq(employeeAssignments.employeeId, employeeIdBuffer),
+          ),
+        )
+        .limit(1);
+      if (!currentSnapshot) return { status: 'assignment-not-found' };
+
+      const organizationalUnitId = data.organizationalUnitId
+        ? uuidToBuffer(data.organizationalUnitId)
+        : currentSnapshot.organizationalUnitId;
+      const positionId = data.positionId
+        ? uuidToBuffer(data.positionId)
+        : currentSnapshot.positionId;
+
+      await transaction.execute(
+        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} WHERE ${organizationalUnits.id} = ${organizationalUnitId} FOR UPDATE`,
+      );
+      const [organizationalUnit] = await transaction
+        .select({ isActive: organizationalUnits.isActive })
+        .from(organizationalUnits)
+        .where(eq(organizationalUnits.id, organizationalUnitId))
+        .limit(1);
+      if (!organizationalUnit?.isActive) {
+        return { status: 'organizational-unit-not-available' };
+      }
+
+      await transaction.execute(
+        sql`SELECT ${positions.id} FROM ${positions} WHERE ${positions.id} = ${positionId} FOR UPDATE`,
+      );
+      const [position] = await transaction
+        .select({ isActive: positions.isActive })
+        .from(positions)
+        .where(eq(positions.id, positionId))
+        .limit(1);
+      if (!position?.isActive) return { status: 'position-not-available' };
+
+      const assignments = await this.lockEmployeeAssignments(
+        transaction,
+        employeeIdBuffer,
+      );
+      const current = assignments.find((row) =>
+        row.id.equals(assignmentIdBuffer),
+      );
+      if (!current) return { status: 'assignment-not-found' };
+
+      const effectiveFrom = data.effectiveFrom ?? current.effectiveFrom;
+      const effectiveTo =
+        data.effectiveTo !== undefined ? data.effectiveTo : current.effectiveTo;
+      if (effectiveTo && effectiveTo < effectiveFrom) {
+        return { status: 'invalid-period' };
+      }
+      if (
+        this.hasOverlap(
+          assignments,
+          effectiveFrom,
+          effectiveTo,
+          assignmentIdBuffer,
+        )
+      ) {
+        return { status: 'overlap' };
+      }
+
+      const values: Partial<typeof employeeAssignments.$inferInsert> = {
+        updatedAt: data.updatedAt,
+      };
+      if (data.organizationalUnitId !== undefined) {
+        values.organizationalUnitId = organizationalUnitId;
+      }
+      if (data.positionId !== undefined) values.positionId = positionId;
+      if (data.appointmentType !== undefined)
+        values.appointmentType = data.appointmentType;
+      if (data.schedule !== undefined) values.schedule = data.schedule;
+      if (data.effectiveFrom !== undefined)
+        values.effectiveFrom = effectiveFrom;
+      if (data.effectiveTo !== undefined) values.effectiveTo = effectiveTo;
+      if (data.notes !== undefined) values.notes = data.notes;
+
+      await transaction
+        .update(employeeAssignments)
+        .set(values)
+        .where(
+          and(
+            eq(employeeAssignments.id, assignmentIdBuffer),
+            eq(employeeAssignments.employeeId, employeeIdBuffer),
+          ),
+        );
+
+      const [updated] = await transaction
+        .select()
+        .from(employeeAssignments)
+        .where(eq(employeeAssignments.id, assignmentIdBuffer))
+        .limit(1);
+      if (!updated) return { status: 'assignment-not-found' };
+
+      return { status: 'success', assignment: this.toAssignmentModel(updated) };
+    });
   }
 
-  async hasOverlappingAssignment(
-    employeeId: string,
+  private async lockEmployeeAssignments(
+    transaction: Parameters<Parameters<DrizzleDatabase['transaction']>[0]>[0],
+    employeeId: Buffer,
+  ): Promise<(typeof employeeAssignments.$inferSelect)[]> {
+    await transaction.execute(
+      sql`SELECT ${employeeAssignments.id} FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeId} ORDER BY ${employeeAssignments.id} FOR UPDATE`,
+    );
+
+    return transaction
+      .select()
+      .from(employeeAssignments)
+      .where(eq(employeeAssignments.employeeId, employeeId));
+  }
+
+  private hasOverlap(
+    assignments: (typeof employeeAssignments.$inferSelect)[],
     effectiveFrom: Date,
     effectiveTo: Date | null,
-    excludeAssignmentId?: string,
-  ): Promise<boolean> {
-    const conditions: SQL[] = [
-      eq(employeeAssignments.employeeId, uuidToBuffer(employeeId)),
-      or(
-        isNull(employeeAssignments.effectiveTo),
-        gte(employeeAssignments.effectiveTo, effectiveFrom),
-      )!,
-    ];
-
-    if (effectiveTo) {
-      conditions.push(lte(employeeAssignments.effectiveFrom, effectiveTo));
-    }
-
-    if (excludeAssignmentId) {
-      conditions.push(
-        ne(employeeAssignments.id, uuidToBuffer(excludeAssignmentId)),
-      );
-    }
-
-    const [row] = await this.db
-      .select({
-        id: employeeAssignments.id,
-      })
-      .from(employeeAssignments)
-      .where(and(...conditions))
-      .limit(1);
-
-    return Boolean(row);
+    excludeAssignmentId?: Buffer,
+  ): boolean {
+    return assignments.some(
+      (assignment) =>
+        (!excludeAssignmentId || !assignment.id.equals(excludeAssignmentId)) &&
+        (!assignment.effectiveTo || assignment.effectiveTo >= effectiveFrom) &&
+        (!effectiveTo || assignment.effectiveFrom <= effectiveTo),
+    );
   }
 
-  private getOrderBy(sort?: EmployeeSort): SQL {
+  private getOrderBy(sort?: EmployeeSort): SQL[] {
     switch (sort) {
       case 'employeeNumber':
-        return asc(employees.employeeNumber);
+        return [asc(employees.employeeNumber), asc(employees.id)];
 
       case '-employeeNumber':
-        return desc(employees.employeeNumber);
+        return [desc(employees.employeeNumber), asc(employees.id)];
 
       case 'fullName':
-        return asc(employees.fullName);
+        return [asc(employees.fullName), asc(employees.id)];
 
       case '-fullName':
-        return desc(employees.fullName);
+        return [desc(employees.fullName), asc(employees.id)];
 
       case 'hireDate':
-        return asc(employees.hireDate);
+        return [asc(employees.hireDate), asc(employees.id)];
 
       case '-hireDate':
-        return desc(employees.hireDate);
+        return [desc(employees.hireDate), asc(employees.id)];
 
       case 'createdAt':
-        return asc(employees.createdAt);
+        return [asc(employees.createdAt), asc(employees.id)];
 
       case '-createdAt':
-        return desc(employees.createdAt);
+        return [desc(employees.createdAt), asc(employees.id)];
 
       default:
-        return asc(employees.fullName);
+        return [asc(employees.fullName), asc(employees.id)];
     }
   }
 }

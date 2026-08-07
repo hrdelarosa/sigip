@@ -1,18 +1,33 @@
 import { UpdateEmployeeRequest } from '@sigip/shared';
-import { IsDateString, IsOptional, IsString, Length } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
+import { trimString } from './employee-dto.transforms';
 
 export class UpdateEmployeeDto implements UpdateEmployeeRequest {
   @IsOptional()
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
   @Length(1, 50)
   employeeNumber?: string;
 
   @IsOptional()
+  @Transform(trimString)
   @IsString()
+  @IsNotEmpty()
   @Length(1, 200)
   fullName?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Transform(trimString)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsDateString({ strict: true })
   hireDate?: string | null;
 }

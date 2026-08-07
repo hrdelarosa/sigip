@@ -1,5 +1,6 @@
 import type { EmployeeStatus } from '@sigip/shared';
 import type { AppointmentType } from '../../../database/schema/organization/employee-assignments.schema';
+import type { EmployeeAssignmentModel } from '../models/employee-assignment.model';
 
 export interface EmployeeFilters {
   page: number;
@@ -48,3 +49,12 @@ export interface UpdateEmployeeAssignmentData {
   notes?: string | null;
   updatedAt: Date;
 }
+
+export type EmployeeAssignmentMutationResult =
+  | { status: 'success'; assignment: EmployeeAssignmentModel }
+  | { status: 'employee-not-found' }
+  | { status: 'assignment-not-found' }
+  | { status: 'organizational-unit-not-available' }
+  | { status: 'position-not-available' }
+  | { status: 'invalid-period' }
+  | { status: 'overlap' };

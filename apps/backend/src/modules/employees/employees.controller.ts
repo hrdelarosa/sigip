@@ -10,8 +10,9 @@ import {
 import type {
   EmployeeAssignmentResponse,
   EmployeeAssignmentsResponse,
+  EmployeeDetailsResponse,
   EmployeeResponse,
-  PaginatedResponse,
+  EmployeesResponse,
 } from '@sigip/shared';
 
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -21,6 +22,7 @@ import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeesService } from './employees.service';
 import {
   toEmployeeAssignmentResponse,
+  toEmployeeDetailsResponse,
   toEmployeeResponse,
 } from './presenters/employee.presenter';
 import { ListEmployeesQueryDto } from './dto/list-employees-query.dto';
@@ -36,7 +38,7 @@ export class EmployeesController {
   @Get()
   async findAll(
     @Query() query: ListEmployeesQueryDto,
-  ): Promise<PaginatedResponse<EmployeeResponse>> {
+  ): Promise<EmployeesResponse> {
     const result = await this.employeesService.findAll(query);
 
     return toPaginatedResponse(
@@ -51,10 +53,12 @@ export class EmployeesController {
   @Get(':id')
   async findById(
     @Param() params: EmployeeIdParamDto,
-  ): Promise<EmployeeResponse> {
-    const employee = await this.employeesService.findById(params.id);
+  ): Promise<EmployeeDetailsResponse> {
+    const { employee, assignments } = await this.employeesService.findDetails(
+      params.id,
+    );
 
-    return toEmployeeResponse(employee);
+    return toEmployeeDetailsResponse(employee, assignments);
   }
 
   @Post()

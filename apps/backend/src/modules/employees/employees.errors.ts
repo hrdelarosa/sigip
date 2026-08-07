@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -25,6 +26,24 @@ export class EmployeeAssignmentNotFoundError extends NotFoundException {
     super(
       `La asignación de empleado solicitada (${assignmentId}) no existe o no se encuentra disponible.`,
     );
+  }
+}
+
+export class EmptyEmployeeUpdateError extends BadRequestException {
+  constructor() {
+    super('Debe proporcionar al menos un campo para actualizar el empleado.');
+  }
+}
+
+export class EmptyEmployeeAssignmentUpdateError extends BadRequestException {
+  constructor() {
+    super('Debe proporcionar al menos un campo para actualizar la asignación.');
+  }
+}
+
+export class InvalidAdministrativeDateError extends BadRequestException {
+  constructor() {
+    super('Las fechas deben tener el formato YYYY-MM-DD y ser fechas válidas.');
   }
 }
 
@@ -53,5 +72,19 @@ export class OrganizationalUnitNotAvailableError extends BadRequestException {
 export class PositionNotAvailableError extends BadRequestException {
   constructor() {
     super('El puesto indicado no existe o no está activo');
+  }
+}
+
+export class InvalidEmployeeAssignmentReferenceError extends BadRequestException {
+  constructor() {
+    super(
+      'La asignación contiene una referencia que no existe o no está disponible.',
+    );
+  }
+}
+
+export class EmployeePersistenceError extends InternalServerErrorException {
+  constructor() {
+    super('No fue posible completar la operación del empleado.');
   }
 }

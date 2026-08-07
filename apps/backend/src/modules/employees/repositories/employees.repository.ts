@@ -8,6 +8,7 @@ import type { EmployeeModel } from '../models/employee.model';
 import {
   CreateEmployeeAssignmentData,
   CreateEmployeeData,
+  EmployeeAssignmentMutationResult,
   EmployeeFilters,
   UpdateEmployeeAssignmentData,
   UpdateEmployeeData,
@@ -41,16 +42,10 @@ export abstract class EmployeesRepository {
   ): Promise<EmployeeAssignmentModel | null>;
   abstract createAssignment(
     data: CreateEmployeeAssignmentData,
-  ): Promise<EmployeeAssignmentModel>;
+  ): Promise<EmployeeAssignmentMutationResult>;
   abstract updateAssignment(
     employeeId: string,
     assignmentId: string,
     data: UpdateEmployeeAssignmentData,
-  ): Promise<EmployeeAssignmentModel | null>;
-  abstract hasOverlappingAssignment(
-    employeeId: string,
-    effectiveFrom: Date,
-    effectiveTo: Date | null,
-    excludeAssignmentId?: string,
-  ): Promise<boolean>;
+  ): Promise<EmployeeAssignmentMutationResult>;
 }

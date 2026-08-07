@@ -1,5 +1,6 @@
 import type {
   EmployeeAssignmentResponse,
+  EmployeeDetailsResponse,
   EmployeeResponse,
 } from '@sigip/shared';
 import type { EmployeeModel } from '../models/employee.model';
@@ -36,5 +37,15 @@ export function toEmployeeAssignmentResponse(
     notes: assignment.notes,
     createdAt: assignment.createdAt.toISOString(),
     updatedAt: assignment.updatedAt.toISOString(),
+  };
+}
+
+export function toEmployeeDetailsResponse(
+  employee: EmployeeModel,
+  assignments: EmployeeAssignmentModel[],
+): EmployeeDetailsResponse {
+  return {
+    ...toEmployeeResponse(employee),
+    assignments: assignments.map(toEmployeeAssignmentResponse),
   };
 }
