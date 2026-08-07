@@ -9,6 +9,12 @@ import {
   permissionsSeed,
   rolesSeed,
 } from './access-control.seed-data';
+import {
+  assignmentsSeed,
+  employeesSeed,
+  organizationalUnitsSeed,
+  positionsSeed,
+} from './organization.seed-data';
 
 interface IdentifierRow extends RowDataPacket {
   id: Buffer;
@@ -18,6 +24,9 @@ interface IdentifierRow extends RowDataPacket {
 const uuidBuffer = (): Buffer => {
   return Buffer.from(uuidv7().replaceAll('-', ''), 'hex');
 };
+
+const namedUuidBuffer = (name: string): Buffer =>
+  Buffer.from(name.replaceAll('-', ''), 'hex');
 
 const loadEnvironment = (): void => {
   config({
@@ -138,10 +147,83 @@ const seed = async (): Promise<void> => {
       ],
     );
 
+    for (const unit of organizationalUnitsSeed) {
+      await connection.execute(
+        `INSERT INTO organizational_units (id, parent_id, code, name, description, is_active, sort_order)
+         VALUES (?, NULL, ?, ?, ?, true, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)`,
+        [uuidBuffer(), unit[0], unit[1], `Área operativa de ${unit[1]}.`, 0],
+      );
+    }
+
+    for (const position of positionsSeed) {
+      await connection.execute(
+        `INSERT INTO positions (id, code, name, description, is_active)
+         VALUES (?, ?, ?, ?, true)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
+        [uuidBuffer(), position[0], position[1], `Puesto de ${position[1]}.`],
+      );
+    }
+
+    for (const employee of employeesSeed) {
+      await connection.execute(
+        `INSERT INTO employees (id, employee_number, full_name, hire_date, status)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), hire_date = VALUES(hire_date), status = VALUES(status)`,
+        [
+          uuidBuffer(),
+          employee.employeeNumber,
+          employee.fullName,
+          employee.hireDate,
+          employee.status,
+        ],
+      );
+    }
+
+    const [unitRows] = await connection.query<IdentifierRow[]>(
+      'SELECT id, code FROM organizational_units',
+    );
+    const [positionRows] = await connection.query<IdentifierRow[]>(
+      'SELECT id, code FROM positions',
+    );
+    const [employeeRows] = await connection.query<IdentifierRow[]>(
+      'SELECT id, employee_number AS code FROM employees',
+    );
+    const unitIds = new Map(unitRows.map(({ code, id }) => [code, id]));
+    const positionIds = new Map(positionRows.map(({ code, id }) => [code, id]));
+    const employeeIds = new Map(employeeRows.map(({ code, id }) => [code, id]));
+
+    for (const [index, assignment] of assignmentsSeed.entries()) {
+      const employeeId = employeeIds.get(assignment.employeeNumber);
+      const unitId = unitIds.get(assignment.unitCode);
+      const positionId = positionIds.get(assignment.positionCode);
+      if (!employeeId || !unitId || !positionId)
+        throw new Error(
+          `Referencias inválidas en la asignación ${assignment.employeeNumber}`,
+        );
+      await connection.execute(
+        `INSERT INTO employee_assignments (id, employee_id, organizational_unit_id, position_id, appointment_type, schedule, effective_from, effective_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE employee_id = VALUES(employee_id), organizational_unit_id = VALUES(organizational_unit_id), position_id = VALUES(position_id), appointment_type = VALUES(appointment_type), schedule = VALUES(schedule), effective_from = VALUES(effective_from), effective_to = VALUES(effective_to)`,
+        [
+          namedUuidBuffer(
+            `00000000-0000-7000-8000-${String(index + 1).padStart(12, '0')}`,
+          ),
+          employeeId,
+          unitId,
+          positionId,
+          assignment.appointmentType,
+          assignment.schedule,
+          assignment.effectiveFrom,
+          assignment.effectiveTo ?? null,
+        ],
+      );
+    }
+
     await connection.commit();
 
     console.log(
-      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos y usuario '${developmentAdministrator.username}'.`,
+      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos, ${employeesSeed.length} empleados y ${assignmentsSeed.length} asignaciones.`,
     );
   } catch (error) {
     await connection.rollback();
