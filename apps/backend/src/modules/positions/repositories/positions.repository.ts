@@ -1,6 +1,8 @@
-import { UpdateRoleData } from '../../roles/types/role.types';
-import { PositionModel } from '../models/position.model';
-import { CreatePositionData } from '../types/position.types';
+import type { PositionModel } from '../models/position.model';
+import type {
+  CreatePositionData,
+  UpdatePositionData,
+} from '../types/position.types';
 
 export abstract class PositionsRepository {
   abstract findAll(): Promise<PositionModel[]>;
@@ -9,7 +11,7 @@ export abstract class PositionsRepository {
   abstract create(data: CreatePositionData): Promise<PositionModel>;
   abstract update(
     id: string,
-    data: UpdateRoleData,
+    data: UpdatePositionData,
   ): Promise<PositionModel | null>;
   abstract updateStatus(
     id: string,

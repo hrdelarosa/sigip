@@ -3,11 +3,16 @@ import { CreatePositionDto } from './dto/create-position.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
 import { PositionsRepository } from './repositories/positions.repository';
 import {
+  EmptyPositionUpdateError,
   PositionCodeAlreadyExistsError,
+  PositionHasCurrentAssignmentsError,
   PositionNotFoundError,
+  PositionPersistenceError,
 } from './positions.error';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { UpdatePositionStatusDto } from './dto/update-position-status.dto';
+import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
+import type { PositionModel } from './models/position.model';
 
 @Injectable()
 export class PositionsService {
@@ -19,6 +24,16 @@ export class PositionsService {
     const normalized = description.trim();
 
     return normalized.length > 0 ? normalized : null;
+  }
+
+  private handlePersistenceError(error: unknown): never {
+    if (error instanceof PositionHasCurrentAssignmentsError) throw error;
+
+    if (hasMysqlErrorCode(error, 'ER_DUP_ENTRY')) {
+      throw new PositionCodeAlreadyExistsError();
+    }
+
+    throw new PositionPersistenceError();
   }
 
   async findAll() {
@@ -40,25 +55,39 @@ export class PositionsService {
 
     if (existingPosition) throw new PositionCodeAlreadyExistsError();
 
-    return this.positionsRepository.create({
-      id: generateUuidV7(),
-      code: normalizedCode,
-      name: dto.name.trim(),
-      description: this.normalizeDescription(dto.description),
-    });
+    try {
+      return await this.positionsRepository.create({
+        id: generateUuidV7(),
+        code: normalizedCode,
+        name: dto.name.trim(),
+        description: this.normalizeDescription(dto.description),
+      });
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
   }
 
   async update(id: string, dto: UpdatePositionDto) {
     await this.findById(id);
 
-    const updatePosition = await this.positionsRepository.update(id, {
-      name: dto.name !== undefined ? dto.name.trim() : undefined,
-      description:
-        dto.description !== undefined
-          ? this.normalizeDescription(dto.description)
-          : undefined,
-      updatedAt: new Date(),
-    });
+    if (dto.name === undefined && dto.description === undefined) {
+      throw new EmptyPositionUpdateError();
+    }
+
+    let updatePosition: PositionModel | null;
+
+    try {
+      updatePosition = await this.positionsRepository.update(id, {
+        name: dto.name !== undefined ? dto.name.trim() : undefined,
+        description:
+          dto.description !== undefined
+            ? this.normalizeDescription(dto.description)
+            : undefined,
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
 
     if (!updatePosition) throw new PositionNotFoundError();
 
@@ -66,15 +95,17 @@ export class PositionsService {
   }
 
   async updateStatus(id: string, dto: UpdatePositionStatusDto) {
-    const position = await this.positionsRepository.findById(id);
+    let updatePosition: PositionModel | null;
 
-    if (position?.isActive === dto.isActive) return position;
-
-    const updatePosition = await this.positionsRepository.updateStatus(
-      id,
-      dto.isActive,
-      new Date(),
-    );
+    try {
+      updatePosition = await this.positionsRepository.updateStatus(
+        id,
+        dto.isActive,
+        new Date(),
+      );
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
 
     if (!updatePosition) throw new PositionNotFoundError();
 

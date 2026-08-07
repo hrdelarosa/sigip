@@ -1,18 +1,11 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { PositionsService } from './positions.service';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
-import { PositionResponse, PositionsResponse } from '@sigip/shared';
+import type { PositionResponse, PositionsResponse } from '@sigip/shared';
 import { toPositionResponse } from './presenters/position.presenter';
 import { UpdatePositionStatusDto } from './dto/update-position-status.dto';
+import { PositionIdParamDto } from './dto/position-id-param.dto';
 
 @Controller('positions')
 export class PositionsController {
@@ -26,8 +19,10 @@ export class PositionsController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<PositionResponse> {
-    const position = await this.positionsService.findById(id);
+  async findById(
+    @Param() params: PositionIdParamDto,
+  ): Promise<PositionResponse> {
+    const position = await this.positionsService.findById(params.id);
 
     return toPositionResponse(position);
   }
@@ -41,20 +36,23 @@ export class PositionsController {
 
   @Patch(':id')
   async update(
-    @Param('id') id: string,
+    @Param() params: PositionIdParamDto,
     @Body() dto: UpdatePositionDto,
   ): Promise<PositionResponse> {
-    const position = await this.positionsService.update(id, dto);
+    const position = await this.positionsService.update(params.id, dto);
 
     return toPositionResponse(position);
   }
 
-  @Delete(':id')
+  @Patch(':id/status')
   async updateStatus(
-    @Param('id') id: string,
-    dto: UpdatePositionStatusDto,
+    @Param() params: PositionIdParamDto,
+    @Body() dto: UpdatePositionStatusDto,
   ): Promise<PositionResponse> {
-    const updatePosition = await this.positionsService.updateStatus(id, dto);
+    const updatePosition = await this.positionsService.updateStatus(
+      params.id,
+      dto,
+    );
 
     return toPositionResponse(updatePosition);
   }

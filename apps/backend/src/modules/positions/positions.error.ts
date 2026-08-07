@@ -1,4 +1,9 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 
 export class PositionNotFoundError extends NotFoundException {
   constructor() {
@@ -11,5 +16,25 @@ export class PositionCodeAlreadyExistsError extends ConflictException {
     super(
       'El código del puesto ya existe. Por favor, elija un código diferente.',
     );
+  }
+}
+
+export class EmptyPositionUpdateError extends BadRequestException {
+  constructor() {
+    super('Debe proporcionar al menos un campo para actualizar el puesto.');
+  }
+}
+
+export class PositionHasCurrentAssignmentsError extends ConflictException {
+  constructor() {
+    super(
+      'El puesto no puede desactivarse porque tiene asignaciones vigentes.',
+    );
+  }
+}
+
+export class PositionPersistenceError extends InternalServerErrorException {
+  constructor() {
+    super('No fue posible completar la operación del puesto.');
   }
 }

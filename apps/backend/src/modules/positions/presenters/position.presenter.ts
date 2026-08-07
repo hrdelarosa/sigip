@@ -1,5 +1,5 @@
-import { PositionResponse } from '@sigip/shared';
-import { PositionModel } from '../models/position.model';
+import type { PositionResponse } from '@sigip/shared';
+import type { PositionModel } from '../models/position.model';
 
 export function toPositionResponse(position: PositionModel): PositionResponse {
   return {

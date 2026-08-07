@@ -1,16 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
-import { positions } from '../../../database/schema';
+import { employeeAssignments, positions } from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
-import { PositionModel } from '../models/position.model';
+import type { PositionModel } from '../models/position.model';
 import { PositionsRepository } from './positions.repository';
-import {
+import type {
   CreatePositionData,
   UpdatePositionData,
 } from '../types/position.types';
+import { PositionHasCurrentAssignmentsError } from '../positions.error';
 
 @Injectable()
 export class DrizzlePositionsRepository implements PositionsRepository {
@@ -101,13 +102,60 @@ export class DrizzlePositionsRepository implements PositionsRepository {
   async updateStatus(
     id: string,
     isActive: boolean,
-    updatedAt?: Date,
+    updatedAt: Date,
   ): Promise<PositionModel | null> {
-    await this.db
-      .update(positions)
-      .set({ isActive, updatedAt })
-      .where(eq(positions.id, uuidToBuffer(id)));
+    return this.db.transaction(async (transaction) => {
+      const positionId = uuidToBuffer(id);
 
-    return this.findById(id);
+      await transaction.execute(
+        sql`SELECT ${positions.id} FROM ${positions} WHERE ${positions.id} = ${positionId} FOR UPDATE`,
+      );
+
+      const [current] = await transaction
+        .select()
+        .from(positions)
+        .where(eq(positions.id, positionId))
+        .limit(1);
+
+      if (!current) return null;
+      if (current.isActive === isActive) return this.toModel(current);
+
+      if (!isActive) {
+        const today = new Date();
+
+        const [currentAssignment] = await transaction
+          .select({ id: employeeAssignments.id })
+          .from(employeeAssignments)
+          .where(
+            and(
+              eq(employeeAssignments.positionId, positionId),
+              lte(employeeAssignments.effectiveFrom, today),
+              or(
+                isNull(employeeAssignments.effectiveTo),
+                gte(employeeAssignments.effectiveTo, today),
+              ),
+            ),
+          )
+          .limit(1)
+          .for('update');
+
+        if (currentAssignment) {
+          throw new PositionHasCurrentAssignmentsError();
+        }
+      }
+
+      await transaction
+        .update(positions)
+        .set({ isActive, updatedAt })
+        .where(eq(positions.id, positionId));
+
+      const [updated] = await transaction
+        .select()
+        .from(positions)
+        .where(eq(positions.id, positionId))
+        .limit(1);
+
+      return updated ? this.toModel(updated) : null;
+    });
   }
 }
