@@ -1,3 +1,5 @@
+import type { PaginatedResponse } from '../common/pagination.contracts'
+
 export const EMPLOYEE_STATUSES = ['ACTIVE', 'INACTIVE'] as const
 export type EmployeeStatus = (typeof EMPLOYEE_STATUSES)[number]
 
@@ -14,7 +16,7 @@ export interface EmployeeResponse {
   updatedAt: string
 }
 
-export type EmployeesResponse = EmployeeResponse[]
+export type EmployeesResponse = PaginatedResponse<EmployeeResponse>
 
 export interface CreateEmployeeRequest {
   employeeNumber: string

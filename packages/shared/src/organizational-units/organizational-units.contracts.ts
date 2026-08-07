@@ -1,6 +1,6 @@
 export interface OrganizationalUnitResponse {
   id: string
-  parentId: string
+  parentId: string | null
   code: string
   name: string
   description: string | null
@@ -13,17 +13,17 @@ export interface OrganizationalUnitResponse {
 export type OrganizationalUnitsResponse = OrganizationalUnitResponse[]
 
 export interface CreateOrganizationalUnitRequest {
-  parentId: string
+  parentId: string | null
   code: string
   name: string
-  description?: string
+  description?: string | null
   sortOrder?: number
 }
 
 export interface UpdateOrganizationalUnitRequest {
-  parentId?: string
+  parentId?: string | null
   name?: string
-  description?: string
+  description?: string | null
   sortOrder?: number
 }
 

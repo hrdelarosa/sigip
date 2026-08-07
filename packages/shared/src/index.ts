@@ -45,17 +45,5 @@ export type {
 } from './positions'
 
 export * from './employees'
-// export type {
-//   EmployeeStatus,
-//   EmployeeResponse,
-//   EmployeesResponse,
-//   EmployeeSummaryResponse,
-//   EmployeesSummaryResponse,
-//   CreateEmployeeRequest,
-//   UpdateEmployeeRequest,
-//   UpdateEmployeeStatusRequest,
-//   EmployeeAssignmentResponse,
-//   AppointmentType,
-// } from './employees'
 
 export * from './common'
