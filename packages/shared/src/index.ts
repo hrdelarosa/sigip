@@ -39,11 +39,30 @@ export type {
 export type {
   PositionResponse,
   PositionsResponse,
+  PositionDetailsResponse,
+  PositionEmployeeResponse,
   CreatePositionRequest,
   UpdatePositionRequest,
   UpdatePositionStatusRequest,
 } from './positions'
 
-export * from './employees'
+export type {
+  EmployeeResponse,
+  EmployeesResponse,
+  EmployeeDetailsResponse,
+  CreateEmployeeRequest,
+  UpdateEmployeeRequest,
+  UpdateEmployeeStatusRequest,
+  AppointmentType,
+  CreateEmployeeAssignmentRequest,
+  UpdateEmployeeAssignmentRequest,
+  EmployeeAssignmentResponse,
+  EmployeeAssignmentOrganizationalUnitResponse,
+  EmployeeAssignmentPositionResponse,
+  EmployeeAssignmentsResponse,
+  EmployeeStatus,
+} from './employees'
 
-export * from './common'
+export { EMPLOYEE_STATUSES, APPOINTMENT_TYPES } from './employees'
+
+export type { PaginatedResponse, PaginationMeta } from './common'

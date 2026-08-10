@@ -1,3 +1,5 @@
+import type { EmployeeStatus } from '../employees'
+
 export interface PositionResponse {
   id: string
   code: string
@@ -9,6 +11,18 @@ export interface PositionResponse {
 }
 
 export type PositionsResponse = PositionResponse[]
+
+export interface PositionEmployeeResponse {
+  id: string
+  employeeNumber: string
+  fullName: string
+  status: EmployeeStatus
+}
+
+export interface PositionDetailsResponse extends PositionResponse {
+  assignmentCount: number
+  employees: PositionEmployeeResponse[]
+}
 
 export interface CreatePositionRequest {
   code: string

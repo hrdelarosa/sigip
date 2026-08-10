@@ -1,1 +1,1 @@
-export * from './pagination.contracts'
+export type { PaginatedResponse, PaginationMeta } from './pagination.contracts'

@@ -34,11 +34,25 @@ export interface UpdateEmployeeStatusRequest {
   status: EmployeeStatus
 }
 
+export interface EmployeeAssignmentOrganizationalUnitResponse {
+  id: string
+  code: string
+  name: string
+}
+
+export interface EmployeeAssignmentPositionResponse {
+  id: string
+  code: string
+  name: string
+}
+
 export interface EmployeeAssignmentResponse {
   id: string
   employeeId: string
   organizationalUnitId: string
   positionId: string
+  organizationalUnit: EmployeeAssignmentOrganizationalUnitResponse
+  position: EmployeeAssignmentPositionResponse
   appointmentType: AppointmentType
   schedule: string | null
   effectiveFrom: string
