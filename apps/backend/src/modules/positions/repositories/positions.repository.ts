@@ -1,4 +1,7 @@
-import type { PositionModel } from '../models/position.model';
+import type {
+  PositionEmployeeModel,
+  PositionModel,
+} from '../models/position.model';
 import type {
   CreatePositionData,
   UpdatePositionData,
@@ -7,6 +10,9 @@ import type {
 export abstract class PositionsRepository {
   abstract findAll(): Promise<PositionModel[]>;
   abstract findById(id: string): Promise<PositionModel | null>;
+  abstract findEmployeesByPositionId(
+    id: string,
+  ): Promise<PositionEmployeeModel[]>;
   abstract findByCode(code: string): Promise<PositionModel | null>;
   abstract create(data: CreatePositionData): Promise<PositionModel>;
   abstract update(

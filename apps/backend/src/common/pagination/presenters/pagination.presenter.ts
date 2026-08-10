@@ -10,7 +10,7 @@ export function toPaginatedResponse<TModel, TResponse>(
   const totalPages = Math.ceil(total / limit);
 
   return {
-    data: items.map(presenter),
+    items: items.map(presenter),
     meta: {
       page,
       limit,

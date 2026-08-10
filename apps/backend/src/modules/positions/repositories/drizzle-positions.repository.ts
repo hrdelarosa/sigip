@@ -3,15 +3,22 @@ import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
-import { employeeAssignments, positions } from '../../../database/schema';
+import {
+  employeeAssignments,
+  employees,
+  positions,
+} from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
-import type { PositionModel } from '../models/position.model';
+import type {
+  PositionEmployeeModel,
+  PositionModel,
+} from '../models/position.model';
 import { PositionsRepository } from './positions.repository';
 import type {
   CreatePositionData,
   UpdatePositionData,
 } from '../types/position.types';
-import { PositionHasCurrentAssignmentsError } from '../positions.error';
+import { PositionHasCurrentOrFutureAssignmentsError } from '../positions.error';
 
 @Injectable()
 export class DrizzlePositionsRepository implements PositionsRepository {
@@ -32,6 +39,12 @@ export class DrizzlePositionsRepository implements PositionsRepository {
     };
   }
 
+  private calendarToday(): Date {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    return today;
+  }
+
   async findAll(): Promise<PositionModel[]> {
     const row = await this.db
       .select()
@@ -49,6 +62,39 @@ export class DrizzlePositionsRepository implements PositionsRepository {
       .limit(1);
 
     return row ? this.toModel(row) : null;
+  }
+
+  async findEmployeesByPositionId(
+    id: string,
+  ): Promise<PositionEmployeeModel[]> {
+    const today = this.calendarToday();
+    const rows = await this.db
+      .select({
+        id: employees.id,
+        employeeNumber: employees.employeeNumber,
+        fullName: employees.fullName,
+        status: employees.status,
+      })
+      .from(employeeAssignments)
+      .innerJoin(employees, eq(employeeAssignments.employeeId, employees.id))
+      .where(
+        and(
+          eq(employeeAssignments.positionId, uuidToBuffer(id)),
+          lte(employeeAssignments.effectiveFrom, today),
+          or(
+            isNull(employeeAssignments.effectiveTo),
+            gte(employeeAssignments.effectiveTo, today),
+          ),
+        ),
+      )
+      .orderBy(employees.fullName, employees.id);
+
+    return rows.map((row) => ({
+      id: bufferToUuid(row.id),
+      employeeNumber: row.employeeNumber,
+      fullName: row.fullName,
+      status: row.status,
+    }));
   }
 
   async findByCode(code: string): Promise<PositionModel | null> {
@@ -121,7 +167,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
       if (current.isActive === isActive) return this.toModel(current);
 
       if (!isActive) {
-        const today = new Date();
+        const today = this.calendarToday();
 
         const [currentAssignment] = await transaction
           .select({ id: employeeAssignments.id })
@@ -129,7 +175,6 @@ export class DrizzlePositionsRepository implements PositionsRepository {
           .where(
             and(
               eq(employeeAssignments.positionId, positionId),
-              lte(employeeAssignments.effectiveFrom, today),
               or(
                 isNull(employeeAssignments.effectiveTo),
                 gte(employeeAssignments.effectiveTo, today),
@@ -140,7 +185,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
           .for('update');
 
         if (currentAssignment) {
-          throw new PositionHasCurrentAssignmentsError();
+          throw new PositionHasCurrentOrFutureAssignmentsError();
         }
       }
 

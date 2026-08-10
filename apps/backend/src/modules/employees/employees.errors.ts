@@ -63,6 +63,22 @@ export class OverlappingEmployeeAssignmentError extends ConflictException {
   }
 }
 
+export class EmployeeHasCurrentOrFutureAssignmentsError extends ConflictException {
+  constructor() {
+    super(
+      'El empleado no puede desactivarse porque tiene asignaciones vigentes o futuras.',
+    );
+  }
+}
+
+export class InactiveEmployeeAssignmentError extends ConflictException {
+  constructor() {
+    super(
+      'Un empleado inactivo no puede recibir nuevas asignaciones ni mantener asignaciones vigentes o futuras.',
+    );
+  }
+}
+
 export class OrganizationalUnitNotAvailableError extends BadRequestException {
   constructor() {
     super('La unidad organizativa indicada no existe o no está activa');

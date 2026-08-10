@@ -2,7 +2,6 @@ import type { UpdateOrganizationalUnitRequest } from '@sigip/shared';
 import {
   IsInt,
   IsNotEmpty,
-  IsOptional,
   IsString,
   IsUUID,
   Max,
@@ -23,7 +22,7 @@ export class UpdateOrganizationalUnitDto implements UpdateOrganizationalUnitRequ
   @IsUUID()
   parentId?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -33,7 +32,9 @@ export class UpdateOrganizationalUnitDto implements UpdateOrganizationalUnitRequ
   @MaxLength(150)
   name?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (_object: unknown, value: unknown) => value !== undefined && value !== null,
+  )
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -41,7 +42,7 @@ export class UpdateOrganizationalUnitDto implements UpdateOrganizationalUnitRequ
   @MaxLength(355)
   description?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsInt()
   @Min(0)
   @Max(1_000_000)

@@ -2,8 +2,15 @@ import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { PositionsService } from './positions.service';
 import { CreatePositionDto } from './dto/create-position.dto';
 import { UpdatePositionDto } from './dto/update-position.dto';
-import type { PositionResponse, PositionsResponse } from '@sigip/shared';
-import { toPositionResponse } from './presenters/position.presenter';
+import type {
+  PositionDetailsResponse,
+  PositionResponse,
+  PositionsResponse,
+} from '@sigip/shared';
+import {
+  toPositionDetailsResponse,
+  toPositionResponse,
+} from './presenters/position.presenter';
 import { UpdatePositionStatusDto } from './dto/update-position-status.dto';
 import { PositionIdParamDto } from './dto/position-id-param.dto';
 
@@ -21,10 +28,10 @@ export class PositionsController {
   @Get(':id')
   async findById(
     @Param() params: PositionIdParamDto,
-  ): Promise<PositionResponse> {
+  ): Promise<PositionDetailsResponse> {
     const position = await this.positionsService.findById(params.id);
 
-    return toPositionResponse(position);
+    return toPositionDetailsResponse(position);
   }
 
   @Post()

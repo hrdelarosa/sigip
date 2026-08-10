@@ -1,7 +1,4 @@
 import type { AppointmentType } from '../../../database/schema/organization/employee-assignments.schema';
-import type { OrganizationalUnitsModel } from '../../organizational-units/models/organizational-units.model';
-import type { PositionModel } from '../../positions/models/position.model';
-
 export interface EmployeeAssignmentModel {
   id: string;
   employeeId: string;
@@ -16,7 +13,13 @@ export interface EmployeeAssignmentModel {
   updatedAt: Date;
 }
 
-export interface EmployeeAssignmenDetailsModel extends EmployeeAssignmentModel {
-  organizationalUnit: OrganizationalUnitsModel;
-  position: PositionModel;
+export interface EmployeeAssignmentCatalogSummaryModel {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface EmployeeAssignmentDetailsModel extends EmployeeAssignmentModel {
+  organizationalUnit: EmployeeAssignmentCatalogSummaryModel;
+  position: EmployeeAssignmentCatalogSummaryModel;
 }

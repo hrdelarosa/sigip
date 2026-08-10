@@ -25,10 +25,10 @@ export class EmptyPositionUpdateError extends BadRequestException {
   }
 }
 
-export class PositionHasCurrentAssignmentsError extends ConflictException {
+export class PositionHasCurrentOrFutureAssignmentsError extends ConflictException {
   constructor() {
     super(
-      'El puesto no puede desactivarse porque tiene asignaciones vigentes.',
+      'El puesto no puede desactivarse porque tiene asignaciones vigentes o futuras.',
     );
   }
 }

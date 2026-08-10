@@ -20,6 +20,7 @@ export const mysqlPoolProvider: Provider<Pool> = {
 
     return mysql.createPool({
       uri: config.url,
+      timezone: 'Z',
       connectionLimit: config.connectionLimit ?? 10,
       waitForConnections: true,
       queueLimit: 0,

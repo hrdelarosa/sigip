@@ -4,7 +4,7 @@ import type {
   EmployeeResponse,
 } from '@sigip/shared';
 import type { EmployeeModel } from '../models/employee.model';
-import type { EmployeeAssignmentModel } from '../models/employee-assignment.model';
+import type { EmployeeAssignmentDetailsModel } from '../models/employee-assignment.model';
 
 export function toEmployeeResponse(employee: EmployeeModel): EmployeeResponse {
   return {
@@ -21,13 +21,15 @@ export function toEmployeeResponse(employee: EmployeeModel): EmployeeResponse {
 }
 
 export function toEmployeeAssignmentResponse(
-  assignment: EmployeeAssignmentModel,
+  assignment: EmployeeAssignmentDetailsModel,
 ): EmployeeAssignmentResponse {
   return {
     id: assignment.id,
     employeeId: assignment.employeeId,
     organizationalUnitId: assignment.organizationalUnitId,
     positionId: assignment.positionId,
+    organizationalUnit: assignment.organizationalUnit,
+    position: assignment.position,
     appointmentType: assignment.appointmentType,
     schedule: assignment.schedule,
     effectiveFrom: assignment.effectiveFrom.toISOString().slice(0, 10),
@@ -42,7 +44,7 @@ export function toEmployeeAssignmentResponse(
 
 export function toEmployeeDetailsResponse(
   employee: EmployeeModel,
-  assignments: EmployeeAssignmentModel[],
+  assignments: EmployeeAssignmentDetailsModel[],
 ): EmployeeDetailsResponse {
   return {
     ...toEmployeeResponse(employee),

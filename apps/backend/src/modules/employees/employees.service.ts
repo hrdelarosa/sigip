@@ -6,6 +6,7 @@ import { UpdateEmployeeStatusDto } from './dto/update-employee-status.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import {
   EmployeeAssignmentNotFoundError,
+  EmployeeHasCurrentOrFutureAssignmentsError,
   EmployeeNotFoundError,
   EmployeeNumberAlreadyExistsError,
   EmployeePersistenceError,
@@ -14,6 +15,7 @@ import {
   InvalidAdministrativeDateError,
   InvalidAssignmentPeriodError,
   InvalidEmployeeAssignmentReferenceError,
+  InactiveEmployeeAssignmentError,
   OrganizationalUnitNotAvailableError,
   OverlappingEmployeeAssignmentError,
   PositionNotAvailableError,
@@ -22,7 +24,7 @@ import { EmployeesRepository } from './repositories/employees.repository';
 import { ListEmployeesQueryDto } from './dto/list-employees-query.dto';
 import type { PaginatedResult } from '../../common/pagination/types/pagination.types';
 import { EmployeeModel } from './models/employee.model';
-import { EmployeeAssignmentModel } from './models/employee-assignment.model';
+import { EmployeeAssignmentDetailsModel } from './models/employee-assignment.model';
 import { CreateEmployeeAssignmentDto } from './dto/create-employee-assignment.dto';
 import { UpdateEmployeeAssignmentDto } from './dto/update-employee-assignment.dto';
 import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
@@ -99,12 +101,14 @@ export class EmployeesService {
     result: EmployeeAssignmentMutationResult,
     employeeId: string,
     assignmentId?: string,
-  ): EmployeeAssignmentModel {
+  ): EmployeeAssignmentDetailsModel {
     switch (result.status) {
       case 'success':
         return result.assignment;
       case 'employee-not-found':
         throw new EmployeeNotFoundError(employeeId);
+      case 'employee-inactive':
+        throw new InactiveEmployeeAssignmentError();
       case 'assignment-not-found':
         if (assignmentId) {
           throw new EmployeeAssignmentNotFoundError(assignmentId);
@@ -145,7 +149,7 @@ export class EmployeesService {
 
   async findDetails(id: string): Promise<{
     employee: EmployeeModel;
-    assignments: EmployeeAssignmentModel[];
+    assignments: EmployeeAssignmentDetailsModel[];
   }> {
     const employee = await this.findById(id);
     const assignments =
@@ -194,7 +198,7 @@ export class EmployeesService {
     try {
       updatedEmployee = await this.employeesRepository.update(id, {
         employeeNumber,
-        fullName: dto.fullName,
+        fullName: dto.fullName?.trim(),
         hireDate:
           dto.hireDate !== undefined
             ? this.parseNullableDate(dto.hireDate)
@@ -214,10 +218,6 @@ export class EmployeesService {
   }
 
   async updateStatus(id: string, dto: UpdateEmployeeStatusDto) {
-    const employee = await this.findById(id);
-
-    if (employee.status === dto.status) return employee;
-
     let updatedEmployee: EmployeeModel | null;
 
     try {
@@ -226,7 +226,10 @@ export class EmployeesService {
         dto.status,
         new Date(),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof EmployeeHasCurrentOrFutureAssignmentsError) {
+        throw error;
+      }
       throw new EmployeePersistenceError();
     }
 
@@ -237,7 +240,7 @@ export class EmployeesService {
 
   async findAssignments(
     employeeId: string,
-  ): Promise<EmployeeAssignmentModel[]> {
+  ): Promise<EmployeeAssignmentDetailsModel[]> {
     await this.findById(employeeId);
 
     return this.employeesRepository.findAssignmentsByEmployeeId(employeeId);
@@ -246,7 +249,7 @@ export class EmployeesService {
   async findAssignmentsById(
     employeeId: string,
     assignmentId: string,
-  ): Promise<EmployeeAssignmentModel> {
+  ): Promise<EmployeeAssignmentDetailsModel> {
     await this.findById(employeeId);
 
     const assignment = await this.employeesRepository.findAssignmentById(
@@ -262,7 +265,7 @@ export class EmployeesService {
   async createAssignment(
     employeeId: string,
     dto: CreateEmployeeAssignmentDto,
-  ): Promise<EmployeeAssignmentModel> {
+  ): Promise<EmployeeAssignmentDetailsModel> {
     const effectiveFrom = this.parseDate(dto.effectiveFrom);
     const effectiveTo = this.parseNullableDate(dto.effectiveTo);
 
@@ -293,7 +296,7 @@ export class EmployeesService {
     employeeId: string,
     assignmentId: string,
     dto: UpdateEmployeeAssignmentDto,
-  ): Promise<EmployeeAssignmentModel> {
+  ): Promise<EmployeeAssignmentDetailsModel> {
     if (
       dto.organizationalUnitId === undefined &&
       dto.positionId === undefined &&

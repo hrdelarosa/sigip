@@ -1,6 +1,6 @@
 import type { EmployeeStatus } from '@sigip/shared';
 import type { AppointmentType } from '../../../database/schema/organization/employee-assignments.schema';
-import type { EmployeeAssignmentModel } from '../models/employee-assignment.model';
+import type { EmployeeAssignmentDetailsModel } from '../models/employee-assignment.model';
 
 export interface EmployeeFilters {
   page: number;
@@ -51,8 +51,9 @@ export interface UpdateEmployeeAssignmentData {
 }
 
 export type EmployeeAssignmentMutationResult =
-  | { status: 'success'; assignment: EmployeeAssignmentModel }
+  | { status: 'success'; assignment: EmployeeAssignmentDetailsModel }
   | { status: 'employee-not-found' }
+  | { status: 'employee-inactive' }
   | { status: 'assignment-not-found' }
   | { status: 'organizational-unit-not-available' }
   | { status: 'position-not-available' }

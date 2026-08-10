@@ -5,7 +5,7 @@ import { PositionsRepository } from './repositories/positions.repository';
 import {
   EmptyPositionUpdateError,
   PositionCodeAlreadyExistsError,
-  PositionHasCurrentAssignmentsError,
+  PositionHasCurrentOrFutureAssignmentsError,
   PositionNotFoundError,
   PositionPersistenceError,
 } from './positions.error';
@@ -27,7 +27,9 @@ export class PositionsService {
   }
 
   private handlePersistenceError(error: unknown): never {
-    if (error instanceof PositionHasCurrentAssignmentsError) throw error;
+    if (error instanceof PositionHasCurrentOrFutureAssignmentsError) {
+      throw error;
+    }
 
     if (hasMysqlErrorCode(error, 'ER_DUP_ENTRY')) {
       throw new PositionCodeAlreadyExistsError();
@@ -45,7 +47,14 @@ export class PositionsService {
 
     if (!position) throw new PositionNotFoundError();
 
-    return position;
+    const employees =
+      await this.positionsRepository.findEmployeesByPositionId(id);
+
+    return {
+      ...position,
+      assignmentCount: employees.length,
+      employees,
+    };
   }
 
   async create(dto: CreatePositionDto) {

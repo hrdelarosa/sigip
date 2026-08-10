@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, or, sql } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
@@ -11,7 +11,7 @@ import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import {
   InvalidOrganizationalUnitParentError,
   OrganizationalUnitHasActiveChildrenError,
-  OrganizationalUnitHasCurrentAssignmentsError,
+  OrganizationalUnitHasCurrentOrFutureAssignmentsError,
   OrganizationalUnitHierarchyCycleError,
 } from '../organizational-units.errors';
 import { OrganizationalUnitsModel } from '../models/organizational-units.model';
@@ -42,6 +42,12 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  private calendarToday(): Date {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    return today;
   }
 
   private createsCycle(
@@ -263,14 +269,13 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
           throw new OrganizationalUnitHasActiveChildrenError();
         }
 
-        const today = new Date();
+        const today = this.calendarToday();
         const [currentAssignment] = await transaction
           .select({ id: employeeAssignments.id })
           .from(employeeAssignments)
           .where(
             and(
               eq(employeeAssignments.organizationalUnitId, current.id),
-              lte(employeeAssignments.effectiveFrom, today),
               or(
                 isNull(employeeAssignments.effectiveTo),
                 gte(employeeAssignments.effectiveTo, today),
@@ -281,7 +286,7 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
           .for('update');
 
         if (currentAssignment) {
-          throw new OrganizationalUnitHasCurrentAssignmentsError();
+          throw new OrganizationalUnitHasCurrentOrFutureAssignmentsError();
         }
       }
 

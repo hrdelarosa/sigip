@@ -2,7 +2,7 @@ import type { EmployeeStatus } from '@sigip/shared';
 
 import type { PaginatedResult } from '../../../common/pagination/types/pagination.types';
 
-import type { EmployeeAssignmentModel } from '../models/employee-assignment.model';
+import type { EmployeeAssignmentDetailsModel } from '../models/employee-assignment.model';
 
 import type { EmployeeModel } from '../models/employee.model';
 import {
@@ -35,11 +35,11 @@ export abstract class EmployeesRepository {
 
   abstract findAssignmentsByEmployeeId(
     employeeId: string,
-  ): Promise<EmployeeAssignmentModel[]>;
+  ): Promise<EmployeeAssignmentDetailsModel[]>;
   abstract findAssignmentById(
     employeeId: string,
     assignmentId: string,
-  ): Promise<EmployeeAssignmentModel | null>;
+  ): Promise<EmployeeAssignmentDetailsModel | null>;
   abstract createAssignment(
     data: CreateEmployeeAssignmentData,
   ): Promise<EmployeeAssignmentMutationResult>;

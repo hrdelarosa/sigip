@@ -1,9 +1,9 @@
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { Transform } from 'class-transformer';
 import type { UpdatePositionRequest } from '@sigip/shared';
 
 export class UpdatePositionDto implements UpdatePositionRequest {
-  @IsOptional()
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,
@@ -12,7 +12,9 @@ export class UpdatePositionDto implements UpdatePositionRequest {
   @MaxLength(150)
   name?: string;
 
-  @IsOptional()
+  @ValidateIf(
+    (_object: unknown, value: unknown) => value !== undefined && value !== null,
+  )
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

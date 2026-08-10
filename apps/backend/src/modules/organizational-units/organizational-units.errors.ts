@@ -50,10 +50,10 @@ export class OrganizationalUnitHasActiveChildrenError extends ConflictException 
   }
 }
 
-export class OrganizationalUnitHasCurrentAssignmentsError extends ConflictException {
+export class OrganizationalUnitHasCurrentOrFutureAssignmentsError extends ConflictException {
   constructor() {
     super(
-      'No se puede desactivar una unidad organizacional con asignaciones vigentes.',
+      'No se puede desactivar una unidad organizacional con asignaciones vigentes o futuras.',
     );
   }
 }

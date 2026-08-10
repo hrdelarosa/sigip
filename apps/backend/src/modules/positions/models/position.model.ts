@@ -1,3 +1,5 @@
+import { EmployeeStatus } from '@sigip/shared';
+
 export interface PositionModel {
   id: string;
   code: string;
@@ -6,4 +8,16 @@ export interface PositionModel {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface PositionEmployeeModel {
+  id: string;
+  employeeNumber: string;
+  fullName: string;
+  status: EmployeeStatus;
+}
+
+export interface PositionDetailsModel extends PositionModel {
+  assignmentCount: number;
+  employees: PositionEmployeeModel[];
 }
