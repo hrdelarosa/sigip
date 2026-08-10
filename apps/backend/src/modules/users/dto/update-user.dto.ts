@@ -9,13 +9,16 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import type { UpdateUserRequest } from '@sigip/shared';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserDto implements UpdateUserRequest {
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @ApiPropertyOptional({ format: 'uuid' })
   @IsUUID()
   roleId?: string;
 
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @ApiPropertyOptional({ minLength: 3, maxLength: 50 })
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
@@ -29,6 +32,7 @@ export class UpdateUserDto implements UpdateUserRequest {
   username?: string;
 
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @ApiPropertyOptional({ maxLength: 150 })
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

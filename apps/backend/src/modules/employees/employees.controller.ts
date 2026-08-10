@@ -30,12 +30,38 @@ import { toPaginatedResponse } from '../../common/pagination/presenters/paginati
 import { EmployeeAssignmentIdParamDto } from './dto/employee-assignment-id-param.dto';
 import { CreateEmployeeAssignmentDto } from './dto/create-employee-assignment.dto';
 import { UpdateEmployeeAssignmentDto } from './dto/update-employee-assignment.dto';
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  EmployeeApiResponse,
+  EmployeeAssignmentApiResponse,
+  EmployeeDetailsApiResponse,
+  EmployeesApiResponse,
+} from '../../common/swagger/api.models';
 
 @Controller('employees')
+@ApiTags('Employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar empleados con paginación y filtros' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'INACTIVE'] })
+  @ApiQuery({ name: 'organizationalUnitId', required: false, format: 'uuid' })
+  @ApiQuery({ name: 'positionId', required: false, format: 'uuid' })
+  @ApiQuery({ name: 'sort', required: false, type: String })
+  @ApiOkResponse({ type: EmployeesApiResponse })
   async findAll(
     @Query() query: ListEmployeesQueryDto,
   ): Promise<EmployeesResponse> {
@@ -51,6 +77,10 @@ export class EmployeesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener el detalle de un empleado' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeDetailsApiResponse })
+  @ApiNotFoundResponse({ description: 'Empleado no encontrado' })
   async findById(
     @Param() params: EmployeeIdParamDto,
   ): Promise<EmployeeDetailsResponse> {
@@ -62,6 +92,9 @@ export class EmployeesController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Crear un empleado' })
+  @ApiCreatedResponse({ type: EmployeeApiResponse })
+  @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
   async create(@Body() dto: CreateEmployeeDto): Promise<EmployeeResponse> {
     const employee = await this.employeesService.create(dto);
 
@@ -69,6 +102,10 @@ export class EmployeesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un empleado' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeApiResponse })
+  @ApiNotFoundResponse({ description: 'Empleado no encontrado' })
   async update(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: UpdateEmployeeDto,
@@ -79,6 +116,9 @@ export class EmployeesController {
   }
 
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Actualizar el estado de un empleado' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeApiResponse })
   async updateStatus(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: UpdateEmployeeStatusDto,
@@ -89,6 +129,9 @@ export class EmployeesController {
   }
 
   @Get(':id/assignments')
+  @ApiOperation({ summary: 'Listar las asignaciones de un empleado' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeAssignmentApiResponse, isArray: true })
   async findAssignments(
     @Param() params: EmployeeIdParamDto,
   ): Promise<EmployeeAssignmentsResponse> {
@@ -98,6 +141,11 @@ export class EmployeesController {
   }
 
   @Get(':employeeId/assignments/:assignmentId')
+  @ApiOperation({ summary: 'Obtener una asignación por ID' })
+  @ApiParam({ name: 'employeeId', format: 'uuid' })
+  @ApiParam({ name: 'assignmentId', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeAssignmentApiResponse })
+  @ApiNotFoundResponse({ description: 'Asignación no encontrada' })
   async findAssignment(
     @Param() params: EmployeeAssignmentIdParamDto,
   ): Promise<EmployeeAssignmentResponse> {
@@ -110,6 +158,10 @@ export class EmployeesController {
   }
 
   @Post(':id/assignments')
+  @ApiOperation({ summary: 'Crear una asignación para un empleado' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiCreatedResponse({ type: EmployeeAssignmentApiResponse })
+  @ApiBadRequestResponse({ description: 'Datos de asignación inválidos' })
   async createAssignment(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: CreateEmployeeAssignmentDto,
@@ -123,6 +175,11 @@ export class EmployeesController {
   }
 
   @Patch(':employeeId/assignments/:assignmentId')
+  @ApiOperation({ summary: 'Actualizar una asignación' })
+  @ApiParam({ name: 'employeeId', format: 'uuid' })
+  @ApiParam({ name: 'assignmentId', format: 'uuid' })
+  @ApiOkResponse({ type: EmployeeAssignmentApiResponse })
+  @ApiNotFoundResponse({ description: 'Asignación no encontrada' })
   async updateAssignment(
     @Param() params: EmployeeAssignmentIdParamDto,
     @Body() dto: UpdateEmployeeAssignmentDto,

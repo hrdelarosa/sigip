@@ -23,17 +23,19 @@ async function bootstrap() {
     }),
   );
 
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
+
   const config = new DocumentBuilder()
-    .setTitle('Cats example')
-    .setDescription('The cats API description')
-    .setVersion('1.0')
-    .addTag('cats')
+    .setTitle('SIGIP API')
+    .setDescription(
+      'API REST del Sistema de Gestión de Incidencias de Personal. Todas las rutas usan el prefijo /api.',
+    )
+    .setVersion('1.0.0')
+    .addServer(`http://localhost:${port ?? 3000}`, 'Servidor local')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
-
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT', 3000);
 
   await app.listen(port);
 }

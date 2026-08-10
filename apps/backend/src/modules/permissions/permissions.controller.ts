@@ -22,12 +22,29 @@ import {
   toPermissionDetailsResponse,
   toPermissionResponse,
 } from './presenters/permission.presenter';
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  PermissionApiResponse,
+  PermissionDetailsApiResponse,
+} from '../../common/swagger/api.models';
 
 @Controller('permissions')
+@ApiTags('Permissions')
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar permisos' })
+  @ApiOkResponse({ type: PermissionApiResponse, isArray: true })
   async findAll(): Promise<PermissionsResponse> {
     const permission = await this.permissionsService.findAll();
 
@@ -35,6 +52,10 @@ export class PermissionsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener un permiso por ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PermissionDetailsApiResponse })
+  @ApiNotFoundResponse({ description: 'Permiso no encontrado' })
   async findById(
     @Param() params: PermissionIdParamDto,
   ): Promise<PermissionDetailsResponse> {
@@ -44,6 +65,9 @@ export class PermissionsController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Crear un permiso' })
+  @ApiCreatedResponse({ type: PermissionApiResponse })
+  @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
   async create(@Body() dto: CreatePermissionDto): Promise<PermissionResponse> {
     const permission = await this.permissionsService.create(dto);
 
@@ -51,6 +75,10 @@ export class PermissionsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un permiso' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PermissionApiResponse })
+  @ApiNotFoundResponse({ description: 'Permiso no encontrado' })
   async update(
     @Param() params: PermissionIdParamDto,
     @Body() dto: UpdatePermissionDto,
@@ -62,6 +90,10 @@ export class PermissionsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar un permiso' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiNoContentResponse({ description: 'Permiso eliminado' })
+  @ApiNotFoundResponse({ description: 'Permiso no encontrado' })
   delete(@Param() params: PermissionIdParamDto) {
     return this.permissionsService.delete(params.id);
   }

@@ -13,12 +13,28 @@ import {
 } from './presenters/position.presenter';
 import { UpdatePositionStatusDto } from './dto/update-position-status.dto';
 import { PositionIdParamDto } from './dto/position-id-param.dto';
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  PositionApiResponse,
+  PositionDetailsApiResponse,
+} from '../../common/swagger/api.models';
 
 @Controller('positions')
+@ApiTags('Positions')
 export class PositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar puestos' })
+  @ApiOkResponse({ type: PositionApiResponse, isArray: true })
   async findAll(): Promise<PositionsResponse> {
     const position = await this.positionsService.findAll();
 
@@ -26,6 +42,10 @@ export class PositionsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener un puesto por ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PositionDetailsApiResponse })
+  @ApiNotFoundResponse({ description: 'Puesto no encontrado' })
   async findById(
     @Param() params: PositionIdParamDto,
   ): Promise<PositionDetailsResponse> {
@@ -35,6 +55,9 @@ export class PositionsController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Crear un puesto' })
+  @ApiCreatedResponse({ type: PositionApiResponse })
+  @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
   async create(@Body() dto: CreatePositionDto): Promise<PositionResponse> {
     const position = await this.positionsService.create(dto);
 
@@ -42,6 +65,10 @@ export class PositionsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un puesto' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PositionApiResponse })
+  @ApiNotFoundResponse({ description: 'Puesto no encontrado' })
   async update(
     @Param() params: PositionIdParamDto,
     @Body() dto: UpdatePositionDto,
@@ -52,6 +79,9 @@ export class PositionsController {
   }
 
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Activar o desactivar un puesto' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PositionApiResponse })
   async updateStatus(
     @Param() params: PositionIdParamDto,
     @Body() dto: UpdatePositionStatusDto,

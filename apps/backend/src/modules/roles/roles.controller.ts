@@ -14,12 +14,29 @@ import type {
   PermissionSummaryResponse,
   RolePermissionsResponse,
 } from '@sigip/shared';
+import {
+  ApiBadRequestResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  PermissionSummaryApiResponse,
+  RoleApiResponse,
+  RolePermissionsApiResponse,
+} from '../../common/swagger/api.models';
 
 @Controller('roles')
+@ApiTags('Roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar roles' })
+  @ApiOkResponse({ type: RoleApiResponse, isArray: true })
   async findAll(): Promise<RoleResponse[]> {
     const roles = await this.rolesService.findAll();
 
@@ -27,6 +44,10 @@ export class RolesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener un rol por ID' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: RoleApiResponse })
+  @ApiNotFoundResponse({ description: 'Rol no encontrado' })
   async findById(@Param() params: RoleIdParamDto): Promise<RoleResponse> {
     const role = await this.rolesService.findById(params.id);
 
@@ -34,6 +55,9 @@ export class RolesController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Crear un rol' })
+  @ApiCreatedResponse({ type: RoleApiResponse })
+  @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
   async create(@Body() dto: CreateRoleDto): Promise<RoleResponse> {
     const role = await this.rolesService.create(dto);
 
@@ -41,6 +65,10 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un rol' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: RoleApiResponse })
+  @ApiNotFoundResponse({ description: 'Rol no encontrado' })
   async update(
     @Param() params: RoleIdParamDto,
     @Body() dto: UpdateRoleDto,
@@ -51,6 +79,9 @@ export class RolesController {
   }
 
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Activar o desactivar un rol' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: RoleApiResponse })
   async updateStatus(
     @Param() params: RoleIdParamDto,
     @Body() dto: UpdateRoleStatusDto,
@@ -61,6 +92,10 @@ export class RolesController {
   }
 
   @Get(':id/permissions')
+  @ApiOperation({ summary: 'Consultar los permisos de un rol' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: RolePermissionsApiResponse })
+  @ApiNotFoundResponse({ description: 'Rol no encontrado' })
   async findPermissions(
     @Param() params: RoleIdParamDto,
   ): Promise<RolePermissionsResponse> {
@@ -73,6 +108,10 @@ export class RolesController {
   }
 
   @Put(':id/permissions')
+  @ApiOperation({ summary: 'Reemplazar los permisos de un rol' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PermissionSummaryApiResponse, isArray: true })
+  @ApiBadRequestResponse({ description: 'Permisos inválidos' })
   async replacePermissions(
     @Param() params: RoleIdParamDto,
     @Body() dto: ReplaceRolePermissionsDto,
