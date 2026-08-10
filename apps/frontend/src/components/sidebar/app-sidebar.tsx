@@ -1,5 +1,7 @@
 import type { ComponentProps } from 'react'
 import {
+  BriefcaseBusinessIcon,
+  Building2Icon,
   FileTextIcon,
   GaugeIcon,
   IdCardIcon,
@@ -57,6 +59,16 @@ const navigationGroups = [
         label: 'Permisos',
         href: routes.administration.permissions,
         icon: KeyRoundIcon,
+      },
+      {
+        label: 'Unidades organizativas',
+        href: routes.administration.organizationalUnits,
+        icon: Building2Icon,
+      },
+      {
+        label: 'Puestos',
+        href: routes.administration.positions,
+        icon: BriefcaseBusinessIcon,
       },
     ],
   },

@@ -9,7 +9,11 @@ export const routes = {
     roles: '/administration/roles',
     users: '/administration/users',
     organizationalUnits: '/administration/organizational-units',
+    organizationalUnitDetail: (organizationalUnitId: string) =>
+      `/administration/organizational-units?details=${organizationalUnitId}`,
     positions: '/administration/positions',
+    positionDetail: (positionId: string) =>
+      `/administration/positions?details=${positionId}`,
     incidentTypes: '/administration/incident-types',
     documentTypes: '/administration/document-types',
   },

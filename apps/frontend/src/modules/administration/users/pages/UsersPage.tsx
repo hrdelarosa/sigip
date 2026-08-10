@@ -1,7 +1,9 @@
 import type { UserResponse } from '@sigip/shared'
 import { CircleAlert } from 'lucide-react'
+
 import { DataTable, type DataTableColumn } from '@/components/data-table'
 import PageHeader from '@/components/page-header'
+import { Spinner } from '@/components/ui/spinner'
 import { StatusBadge } from '@/components/status-badge'
 import {
   Alert,
@@ -83,6 +85,7 @@ export function UsersPage() {
               size="xs"
               onClick={() => rolesQuery.refetch()}
             >
+              {rolesQuery.isPending ? <Spinner /> : 'Reintentar'}
               Reintentar
             </Button>
           </AlertAction>

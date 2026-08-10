@@ -25,6 +25,7 @@ export function useValidatedForm<T extends FieldValues>({
     reset,
     setValue,
     watch,
+    control,
   } = useForm<T>({
     resolver: standardSchemaResolver(formSchema),
     defaultValues,
@@ -37,5 +38,6 @@ export function useValidatedForm<T extends FieldValues>({
     reset,
     setValue,
     watch,
+    control,
   }
 }
