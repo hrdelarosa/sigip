@@ -4,6 +4,23 @@
 
 SIGIP is a pnpm monorepo. `apps/frontend/` contains the React 19 + Vite client; keep components, styles, and browser assets under `src/`, with static files in `public/`. `apps/backend/` contains the NestJS API and its Drizzle/MySQL integration. Organize domain code in `src/modules/<feature>/`, environment configuration in `src/config/`, database infrastructure and schemas in `src/database/`, generated SQL migrations in `apps/backend/drizzle/`, and end-to-end tests in `test/`. Reusable contracts belong in `packages/shared/src/`. Project decisions and database documentation live in `docs/`. The root `docker-compose.yml` provides the local MySQL 8.4 service.
 
+## Source of Truth & Current Phase
+
+Read `docs/Contexto_Maestro_SIGIP_v4.md` before planning a new feature; it is the source of truth for product scope, architecture, domain rules, implementation status, and sequencing. When a confirmed decision changes, update that document in the same change so it does not drift from the code. If the document conflicts with a newer explicit user decision, follow the newer decision and then synchronize the document.
+
+The administrative foundation is functionally complete in backend and frontend: roles, permissions, users, organizational units, positions, employees, and employee assignments. MySQL, Drizzle schemas/migrations, Docker Compose, and development seeds are active infrastructure; do not reintroduce in-memory repositories or describe persistence/frontend work as future setup.
+
+The active phase is `Auth + Sessions`. Complete it end to end before production implementation of incidents:
+
+1. Login, logout, and `GET /api/auth/me`.
+2. Opaque session token in an `HttpOnly` cookie, with only its hash persisted.
+3. Idle and absolute expiration, revocation, and session administration.
+4. Global session authentication plus permission-based authorization.
+5. Real frontend session restoration and route protection; the current `ProtectedRoute` passthrough is provisional.
+6. Automated tests for authentication, expiration/revocation, and authorization failures.
+
+After Auth + Sessions, implement in this order: Incident Types; Incidents with Incident Occurrences; Document Types and private document storage; Audit; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
+
 ## Build, Test, and Development Commands
 
 Run commands from the repository root with pnpm 11.15.1:
@@ -36,6 +53,10 @@ Define Drizzle tables under `src/database/schema/<domain>/` and re-export them t
 
 The global `DatabaseModule` exports the `MYSQL_POOL` and `DRIZZLE_DATABASE` injection tokens. Inject these tokens rather than creating feature-specific pools. Ensure acquired connections are released and that new infrastructure participates in graceful shutdown. Development seed data belongs in `src/database/seeds/`, must remain safe to rerun, and must refuse to execute when `NODE_ENV=production`.
 
+Persistent feature modules should follow the established `Controller -> Service -> Repository` direction. Services depend on abstract repository contracts; Drizzle implementations own SQL, UUID binary/text conversion, and persistence-specific mapping. Use presenters for HTTP response shaping when internal models contain persistence or sensitive fields. Follow an existing administrative module before introducing a new layer or pattern.
+
+Authentication uses server-side sessions, not JWT as the primary mechanism. Never store raw session tokens, expose password hashes, or trust user/actor identifiers supplied by the frontend. Cookie, CORS, expiration, revocation, and permission checks are part of the same security boundary and must be verified together.
+
 ## Environment & Secrets
 
 The root `.env` configures Docker Compose with `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, and optional `MYSQL_PORT`. `apps/backend/.env` configures NestJS and Drizzle with `NODE_ENV`, `PORT`, and `DATABASE_URL`; use `apps/backend/.env.example` as the template. Never commit either real `.env` file or production credentials. Keep the Docker and backend credentials aligned for local development, and update `.env.example` whenever the backend gains a required environment variable.
@@ -43,6 +64,8 @@ The root `.env` configures Docker Compose with `MYSQL_ROOT_PASSWORD`, `MYSQL_DAT
 ## Testing Guidelines
 
 The backend uses Jest, ts-jest, and Supertest. Name unit tests `*.spec.ts` beside source code and end-to-end tests `*.e2e-spec.ts` under `apps/backend/test/`. Add tests for new behavior and regressions. Run `pnpm --filter backend test:cov` when changing critical business logic; no fixed coverage threshold is currently configured.
+
+Auth/session and incident rules are critical business logic. Cover service rules with unit tests and the browser-facing security flow with e2e tests, including successful behavior, invalid input, unauthenticated access, insufficient permissions, expiration/revocation, and transactional rollback where applicable.
 
 ## Commit & Pull Request Guidelines
 

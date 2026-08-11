@@ -1,5 +1,12 @@
 # Contexto Maestro — SIGIP
+
 ## Sistema de Gestión de Incidencias de Personal
+
+**Estado:** vigente
+
+**Última actualización:** 9 de agosto de 2026
+
+**Fase activa:** autenticación y sesiones
 
 ## 1. Propósito del documento
 
@@ -21,24 +28,32 @@ Si un trabajador presenta conceptos diferentes, deberá existir un formato y una
 
 Una incidencia puede corresponder a una fecha única, varias fechas independientes o un periodo continuo, siempre que todas las fechas correspondan al mismo tipo de incidencia.
 
-## 3. Tecnologías seleccionadas
+## 3. Tecnologías y plataforma vigentes
 
 ### Backend
 
-- NestJS
+- NestJS 11
 - TypeScript
+- Drizzle ORM sobre `mysql2`
+- Validación de DTO con `class-validator` y `class-transformer`
+- Validación de entorno con Joi
 
 ### Frontend
 
-- React
-- Vite
-- Tailwind CSS
+- React 19
+- Vite 8
+- Tailwind CSS 4
 - shadcn/ui
+- TanStack Query para estado remoto
+- React Hook Form y Zod para formularios
+- Wouter para enrutamiento
 
-### Persistencia futura
+### Persistencia
 
-- MySQL 8 o superior
-- Drizzle ORM
+- MySQL 8.4 mediante Docker Compose para desarrollo local
+- Esquemas y migraciones administrados con Drizzle
+- UUIDv7 almacenados como `BINARY(16)`
+- Datos de desarrollo cargados mediante un seed idempotente que se niega a ejecutarse en producción
 
 ### Autenticación
 
@@ -47,13 +62,15 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - Sesiones revocables
 - No se utilizará JWT como mecanismo principal
 
-### Fase actual
+### Estado actual de la plataforma
 
-- No hay base de datos conectada.
-- No hay Drizzle configurado.
-- No hay migraciones.
-- Se utilizan datos ficticios o repositorios en memoria.
-- El objetivo actual es construir y comprender la API por módulos.
+- El monorepo usa pnpm y separa `frontend`, `backend` y contratos compartidos.
+- MySQL, Drizzle, migraciones, esquemas y seed de desarrollo ya están configurados.
+- La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
+- Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
+- La protección de rutas del frontend aún es provisional: `ProtectedRoute` todavía no aplica autenticación real.
+- El backend todavía no contiene módulos funcionales de `auth`, `sessions`, `incident-types`, `incidents`, `document-types`, `documents`, `audit` ni `dashboard`.
+- La tabla `sessions` ya forma parte del esquema de acceso, pero aún falta implementar su comportamiento y su integración con `auth`.
 
 ## 4. Arquitectura definitiva
 
@@ -71,66 +88,71 @@ No se aplicará Clean Architecture estricta ni se creará una clase independient
 
 La prioridad será mantener un proyecto profesional, bien organizado, fácil de entender, fácil de mantener y accesible para futuros colaboradores.
 
-### Responsabilidades
+### Responsabilidades vigentes
 
 - **Controller:** define rutas HTTP, recibe datos, delega al servicio y devuelve respuestas.
 - **Service:** contiene reglas funcionales, validaciones y coordinación del módulo.
-- **Repository:** abstrae la persistencia; inicialmente puede utilizar memoria y después Drizzle/MySQL.
+- **Repository abstracto:** define el contrato de persistencia que consume el servicio.
+- **Repositorio Drizzle:** implementa el contrato contra MySQL y concentra consultas, conversión UUID y detalles del motor.
 - **DTO:** valida la información de entrada y define el contrato HTTP.
-- **Model:** representa estructuras internas mientras no exista el esquema definitivo de Drizzle.
+- **Model:** representa las estructuras internas que utiliza la capa de aplicación.
+- **Presenter:** transforma modelos internos a contratos HTTP sin exponer detalles sensibles o de persistencia.
 - **Errors:** agrupa errores propios del módulo cuando sea necesario.
 
 ### Regla de simplicidad
 
-No se añadirá una capa, mapper, interfaz, caso de uso o archivo independiente únicamente para seguir un patrón arquitectónico. Cada separación debe responder a una necesidad concreta de claridad, prueba, reutilización, cambio de infraestructura o mantenimiento.
+No se añadirá una capa, mapper, interfaz, caso de uso o archivo independiente únicamente para seguir un patrón arquitectónico. Cada separación debe responder a una necesidad concreta de claridad, prueba, reutilización, cambio de infraestructura o mantenimiento. Los nuevos módulos deben seguir primero los patrones que ya existen en los módulos administrativos.
 
-## 5. Estructura general del backend
+## 5. Estructura general del proyecto
 
 ```text
-src/
-├── main.ts
-├── app.module.ts
-├── common/
-├── config/
-├── health/
-└── modules/
-    ├── auth/
-    ├── sessions/
-    ├── users/
-    ├── roles/
-    ├── permissions/
-    ├── organizational-units/
-    ├── positions/
-    ├── employees/
-    ├── incident-types/
-    ├── incidents/
-    ├── document-types/
-    ├── documents/
-    ├── audit/
-    └── dashboard/
+apps/
+├── backend/
+│   ├── drizzle/
+│   ├── src/
+│   │   ├── common/
+│   │   ├── config/
+│   │   ├── database/
+│   │   ├── health/
+│   │   └── modules/
+│   └── test/
+└── frontend/
+    ├── public/
+    └── src/
+        ├── app/
+        ├── components/
+        ├── hooks/
+        ├── lib/
+        └── modules/
+packages/
+└── shared/
+    └── src/
+docs/
 ```
+
+Los módulos de dominio se alojan en `apps/backend/src/modules/<feature>/` y `apps/frontend/src/modules/<feature>/`. Los contratos reutilizables entre ambos lados pertenecen a `packages/shared/src/`; no deben duplicarse si representan el mismo concepto de API.
 
 ## 6. Relación entre módulos y tablas
 
 No se creará necesariamente un módulo por cada tabla. Las tablas puente y dependientes se administrarán desde el módulo funcional correspondiente.
 
-| Módulo | Tablas o responsabilidad |
-|---|---|
-| `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. |
-| `sessions` | `sessions`. |
-| `users` | `users`. |
-| `roles` | `roles`, relación con usuarios mediante `users.role_id` y `role_permissions`. |
-| `permissions` | `permissions`. |
-| `organizational-units` | `organizational_units`. |
-| `positions` | `positions`. |
-| `employees` | `employees` y `employee_assignments`. |
-| `incident-types` | `incident_types`. |
-| `incidents` | `incidents` e `incident_occurrences`. |
-| `document-types` | `document_types`. |
-| `documents` | `documents`. |
-| `audit` | `audit_logs`. |
-| `dashboard` | Consultas agregadas; no tiene tabla propia. |
-| `health` | Estado de la API; no tiene tabla propia. |
+| Módulo | Tablas o responsabilidad | Estado funcional |
+|---|---|---|
+| `health` | Estado de la API y conectividad de base de datos. | Implementado. |
+| `roles` | `roles`, relación con usuarios mediante `users.role_id` y `role_permissions`. | Backend y frontend implementados. |
+| `permissions` | `permissions`. | Backend y frontend implementados. |
+| `users` | `users`. | Backend y frontend implementados; falta integrar identidad autenticada. |
+| `organizational-units` | `organizational_units`. | Backend y frontend implementados. |
+| `positions` | `positions`. | Backend y frontend implementados. |
+| `employees` | `employees` y `employee_assignments`. | Backend y frontend implementados. |
+| `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Siguiente módulo a implementar. |
+| `sessions` | `sessions`. | Esquema existente; comportamiento pendiente. |
+| `incident-types` | `incident_types`. | Pendiente. |
+| `incidents` | `incidents` e `incident_occurrences`. | Pendiente; núcleo funcional del sistema. |
+| `document-types` | `document_types`. | Pendiente. |
+| `documents` | `documents` y almacenamiento privado. | Pendiente. |
+| `audit` | `audit_logs`. | Pendiente. |
+| `dashboard` | Consultas agregadas; no tiene tabla propia. | Pendiente. |
 
 ### Decisión sobre usuarios y roles
 
@@ -168,24 +190,19 @@ Ejemplo:
 ```text
 users/
 ├── dto/
-│   ├── change-user-password.dto.ts
-│   ├── change-user-status.dto.ts
-│   ├── create-user.dto.ts
-│   ├── list-users-query.dto.ts
-│   ├── update-user.dto.ts
-│   └── user-id-param.dto.ts
 ├── models/
-│   └── user.model.ts
+├── presenters/
 ├── repositories/
 │   ├── users.repository.ts
-│   └── in-memory-users.repository.ts
+│   └── drizzle-users.repository.ts
+├── types/
 ├── users.controller.ts
-├── users.service.ts
 ├── users.errors.ts
-└── users.module.ts
+├── users.module.ts
+└── users.service.ts
 ```
 
-En la etapa inicial, un módulo puede comenzar sin repositorio si su información ficticia vive dentro del servicio. La separación se incorporará cuando ayude a preparar la persistencia o las pruebas.
+No todos los módulos necesitan todas estas carpetas. Se incorporan únicamente cuando su responsabilidad lo justifica, pero los módulos persistentes nuevos deben reutilizar el patrón de contrato abstracto más implementación Drizzle ya establecido.
 
 ## 9. Modelo actual de usuarios
 
@@ -229,7 +246,7 @@ export type PublicUserModel = Omit<UserModel, 'passwordHash'>;
 
 - No se almacena correo electrónico.
 - La autenticación utiliza `username` y contraseña.
-- La contraseña nunca se almacena en texto plano.
+- La contraseña nunca se almacena en texto plano y se protege con Argon2id mediante el servicio criptográfico compartido.
 - `passwordHash` nunca se devuelve en respuestas HTTP.
 - Cada usuario tiene exactamente un rol.
 - El usuario se desactiva; no se elimina normalmente.
@@ -238,7 +255,9 @@ export type PublicUserModel = Omit<UserModel, 'passwordHash'>;
 - El nombre de usuario debe ser único.
 - La política definitiva de mayúsculas y normalización del `username` sigue pendiente.
 
-## 10. Rutas previstas
+## 10. Contratos HTTP implementados y previstos
+
+Las rutas de Health, Users, Roles, Permissions, Organizational Units, Positions y Employees indicadas abajo ya están implementadas, excepto donde se marque expresamente lo contrario. Las rutas de los módulos restantes representan el contrato previsto y deberán confirmarse al especificar cada fase.
 
 ### Health
 
@@ -306,8 +325,11 @@ Reglas:
 ### Permissions
 
 ```http
-GET /api/permissions
-GET /api/permissions/:id
+GET    /api/permissions
+GET    /api/permissions/:id
+POST   /api/permissions
+PATCH  /api/permissions/:id
+DELETE /api/permissions/:id
 ```
 
 ### Organizational Units
@@ -339,9 +361,13 @@ POST  /api/employees
 PATCH /api/employees/:id
 PATCH /api/employees/:id/status
 GET   /api/employees/:id/assignments
+GET   /api/employees/:employeeId/assignments/:assignmentId
 POST  /api/employees/:id/assignments
+PATCH /api/employees/:employeeId/assignments/:assignmentId
 GET   /api/employees/:id/incidents
 ```
+
+Todas las rutas anteriores de Employees salvo `GET /api/employees/:id/incidents` están implementadas. La consulta de incidencias se incorporará con el módulo `incidents`.
 
 ### Incident Types
 
@@ -405,42 +431,85 @@ GET /api/dashboard/incidents-by-type
 
 ## 11. Fase actual del desarrollo
 
-Durante esta etapa:
+La infraestructura administrativa previa al núcleo de incidencias se considera terminada como fase funcional. Esto no significa que el proyecto completo esté finalizado: significa que ya existe la base operativa sobre la que debe construirse el dominio principal.
 
-- no se conectará MySQL;
-- no se configurará Drizzle;
-- no se crearán migraciones;
-- no se almacenarán archivos reales;
-- no se desarrollará todavía el frontend;
-- no se aplicará autenticación real;
-- no se aplicarán permisos reales;
-- los datos pueden almacenarse temporalmente en memoria.
+### Alcance completado
+
+- Monorepo pnpm con contratos compartidos.
+- Backend NestJS conectado a MySQL mediante Drizzle.
+- Docker Compose para MySQL 8.4.
+- Esquemas, dos migraciones y seed de desarrollo para acceso y estructura organizacional.
+- Health check de API y base de datos.
+- Backend de roles, permisos, usuarios, unidades organizacionales, puestos, empleados y asignaciones.
+- Frontend administrativo para esos mismos módulos, con consultas, formularios y flujos de alta/edición/estado según corresponda.
+
+### Alcance inmediato
+
+La fase activa es `Auth + Sessions`, implementada de extremo a extremo antes de iniciar incidencias:
+
+```text
+credenciales
+  ↓
+validar usuario activo y contraseña
+  ↓
+crear sesión y almacenar solamente el hash del token
+  ↓
+emitir cookie HttpOnly
+  ↓
+resolver GET /api/auth/me
+  ↓
+proteger backend y frontend
+  ↓
+aplicar autorización por permisos
+```
+
+Esta secuencia evita que `incidents`, `documents` y `audit` reciban identificadores de actor desde el cliente. Campos como `registeredBy`, `updatedBy`, `cancelledBy` y `uploadedBy` deben derivarse siempre de la sesión autenticada.
+
+### Trabajo todavía pendiente
+
+- Autenticación, administración y revocación de sesiones.
+- Guards/decoradores de autenticación y permisos en backend.
+- Estado de sesión, login/logout y rutas realmente protegidas en frontend.
+- Catálogos de tipos de incidencia y tipos documentales.
+- Incidencias y ocurrencias con todas sus reglas transaccionales.
+- Almacenamiento privado y descarga autorizada de documentos.
+- Auditoría append-only.
+- Dashboard y consultas agregadas.
+- Ampliar pruebas automatizadas; actualmente solo existe la base e2e del backend.
 
 ## 12. Orden de implementación
 
 ```text
-1. Health
-2. Roles
-3. Permissions
-4. Users
-5. Auth
-6. Sessions
-7. Organizational Units
-8. Positions
-9. Employees
-10. Incident Types
-11. Incidents
-12. Document Types
-13. Documents
-14. Audit
-15. Dashboard
+FASE ADMINISTRATIVA — COMPLETADA
+├── Health + Database
+├── Roles + Permissions + Users
+├── Organizational Units + Positions
+└── Employees + Employee Assignments
+
+SIGUIENTE — AUTH + SESSIONS
+├── backend: login, logout y me
+├── backend: cookie HttpOnly y token opaco
+├── backend: expiración, revocación y administración
+├── backend: autenticación y autorización globales
+├── backend: pruebas unitarias y e2e
+└── frontend: restauración de sesión y rutas protegidas
+
+NÚCLEO FUNCIONAL
+├── Incident Types
+├── Incidents + Incident Occurrences
+├── Document Types
+└── Documents + almacenamiento privado
+
+CIERRE FUNCIONAL
+├── Audit
+└── Dashboard
 ```
 
-### Razón para implementar Roles antes que Users
+### Razón para implementar Auth antes que Incidents
 
-Un usuario necesita obligatoriamente un `roleId`. Para validar correctamente, el rol debe existir, estar activo y ser el único del usuario.
+Las incidencias y los documentos registran quién ejecutó cada acción. Si se construyen antes de Auth, los controladores tendrían que aceptar IDs de usuario artificiales o inseguros y después habría que rediseñarlos. Con la sesión resuelta, el actor se obtiene del contexto autenticado y la autorización por permisos queda disponible desde el primer endpoint del núcleo.
 
-Durante la etapa ficticia, Users puede utilizar UUID de roles simulados. Antes de conectar la base de datos conviene tener preparado Roles.
+Audit no debe posponerse hasta después de todo el sistema. Su infraestructura puede incorporarse tras incidencias/documentos, pero las operaciones sensibles nuevas deben integrarse a la auditoría en cuanto el módulo esté disponible.
 
 ## 13. Reglas transaccionales relevantes
 
@@ -489,6 +558,8 @@ Nunca deben registrarse contraseñas, hashes de contraseña, tokens, hashes de s
 - MIME y tamaño máximo de archivos.
 - Política antivirus, respaldo y retención.
 - Duración de sesiones.
+- Configuración definitiva de la cookie de sesión según el entorno.
+- Rotación de tokens, sesiones concurrentes y rate limiting de login.
 - Algoritmo de hash.
 - Política de credenciales.
 - Normalización y sensibilidad a mayúsculas del username.
@@ -497,44 +568,19 @@ Nunca deben registrarse contraseñas, hashes de contraseña, tokens, hashes de s
 - Entidades que necesitan campos directos de actor.
 - Códigos definitivos de roles.
 
-## 16. Estado inmediato del módulo Users
+## 16. Criterio de salida de la fase Auth + Sessions
 
-Debe utilizar:
+La fase no se considera terminada por tener solamente endpoints aislados. Debe funcionar el flujo completo entre navegador, API y MySQL:
 
-```ts
-roleId: string;
-```
+1. `POST /api/auth/login` valida credenciales contra el usuario activo y crea una sesión persistida.
+2. El token de sesión es opaco, se entrega únicamente mediante cookie `HttpOnly` y en MySQL se almacena solo su hash.
+3. `GET /api/auth/me` devuelve la identidad pública, el rol y los permisos efectivos sin exponer secretos.
+4. `POST /api/auth/logout` revoca la sesión actual y elimina la cookie.
+5. El guard de sesión rechaza tokens ausentes, inválidos, revocados o expirados y actualiza la expiración por inactividad sin superar la absoluta.
+6. El guard/decorador de permisos protege las operaciones administrativas existentes.
+7. Desactivar un usuario o cambiar su contraseña revoca las sesiones que correspondan según la política confirmada.
+8. El frontend restaura la sesión al cargar, maneja estados de carga y expiración, y deja de usar el `ProtectedRoute` provisional.
+9. Las solicitudes con cookie incluyen las credenciales necesarias y la configuración CORS/cookie es correcta para desarrollo y producción.
+10. Existen pruebas unitarias para reglas de sesión y pruebas e2e para login, `me`, logout, expiración/revocación y acceso denegado.
 
-No debe utilizar:
-
-```ts
-roleIds: string[];
-```
-
-No debe existir la tabla:
-
-```text
-user_roles
-```
-
-Tampoco debe existir la ruta:
-
-```http
-PUT /api/users/:id/roles
-```
-
-El cambio de rol se realizará mediante:
-
-```http
-PATCH /api/users/:id
-```
-
-con un cuerpo como:
-
-```json
-{
-  "roleId": "uuid-del-rol"
-}
-```
-
-El módulo seguirá trabajando inicialmente con datos ficticios, UUIDv7 y un hash simulado que nunca se expone en la API.
+Hasta cumplir estos puntos no debe iniciarse la implementación productiva de `incidents`, salvo trabajo de análisis o especificación que no dependa de actores autenticados.
