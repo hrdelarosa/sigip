@@ -36,9 +36,11 @@ import {
   PermissionApiResponse,
   PermissionDetailsApiResponse,
 } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
 @Controller('permissions')
 @ApiTags('Permissions')
+@RequirePermissions('permissions:read')
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
@@ -65,6 +67,7 @@ export class PermissionsController {
   }
 
   @Post()
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Crear un permiso' })
   @ApiCreatedResponse({ type: PermissionApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -75,6 +78,7 @@ export class PermissionsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Actualizar un permiso' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: PermissionApiResponse })
@@ -89,6 +93,7 @@ export class PermissionsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('settings:update')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar un permiso' })
   @ApiParam({ name: 'id', format: 'uuid' })

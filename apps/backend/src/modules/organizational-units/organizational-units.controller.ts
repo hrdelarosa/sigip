@@ -26,9 +26,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { OrganizationalUnitApiResponse } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
 @Controller('organizational-units')
 @ApiTags('Organizational units')
+@RequirePermissions('catalogs:read')
 export class OrganizationalUnitsController {
   constructor(
     private readonly organizationalUnitsService: OrganizationalUnitsService,
@@ -58,6 +60,7 @@ export class OrganizationalUnitsController {
   }
 
   @Post()
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Crear una unidad organizativa' })
   @ApiCreatedResponse({ type: OrganizationalUnitApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -71,6 +74,7 @@ export class OrganizationalUnitsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Actualizar una unidad organizativa' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: OrganizationalUnitApiResponse })
@@ -86,6 +90,7 @@ export class OrganizationalUnitsController {
   }
 
   @Patch(':id/status')
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Activar o desactivar una unidad organizativa' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: OrganizationalUnitApiResponse })

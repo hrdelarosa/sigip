@@ -16,5 +16,6 @@ import { RolesModule } from '../roles/roles.module';
     },
   ],
   imports: [CryptoModule, RolesModule],
+  exports: [UsersRepository],
 })
 export class UsersModule {}

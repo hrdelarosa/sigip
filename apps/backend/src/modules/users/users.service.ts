@@ -129,7 +129,7 @@ export class UsersService {
     return updatedUser;
   }
 
-  async changeStatus(id: string, dto: ChangeUserStatusDto) {
+  async changeStatus(id: string, dto: ChangeUserStatusDto, actorId: string) {
     const user = await this.findById(id);
 
     if (user.isActive === dto.isActive) return user;
@@ -138,6 +138,7 @@ export class UsersService {
       id,
       dto.isActive,
       new Date(),
+      actorId,
     );
 
     if (!updateUser) throw new UserNotFoundError();
@@ -145,7 +146,11 @@ export class UsersService {
     return updateUser;
   }
 
-  async changePassword(id: string, dto: ChangeUserPasswordDto) {
+  async changePassword(
+    id: string,
+    dto: ChangeUserPasswordDto,
+    actorId: string,
+  ) {
     const user = await this.usersRepository.findByIdWithPassword(id);
 
     if (!user) throw new UserNotFoundError();
@@ -165,6 +170,7 @@ export class UsersService {
         id,
         await this.cryptoService.hashPassword(dto.password),
         new Date(),
+        actorId,
       );
     } catch (error) {
       this.handlePersistenceError(error);

@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 
 import type { DrizzleDatabase } from '../../../database/database.types';
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
-import { users } from '../../../database/schema';
+import { sessions, users } from '../../../database/schema';
 import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import { UserModel, UserWithPasswordModel } from '../models/user.model';
 import { UsersRepository } from './users.repository';
@@ -83,6 +83,18 @@ export class DrizzleUsersRepository implements UsersRepository {
     return row ? this.toModel(row) : null;
   }
 
+  async findByUsernameWithPassword(
+    username: string,
+  ): Promise<UserWithPasswordModel | null> {
+    const [row] = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    return row ? { ...this.toModel(row), passwordHash: row.password } : null;
+  }
+
   async create(data: CreateUserData): Promise<UserModel> {
     const values = {
       id: uuidToBuffer(data.id),
@@ -122,12 +134,31 @@ export class DrizzleUsersRepository implements UsersRepository {
   async updateStatus(
     id: string,
     isActive: boolean,
-    updatedAt?: Date,
+    updatedAt: Date,
+    actorId: string,
   ): Promise<UserModel | null> {
-    await this.db
-      .update(users)
-      .set({ isActive, updatedAt })
-      .where(eq(users.id, uuidToBuffer(id)));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ isActive, updatedAt })
+        .where(eq(users.id, uuidToBuffer(id)));
+
+      if (!isActive) {
+        await tx
+          .update(sessions)
+          .set({
+            revokedAt: updatedAt,
+            revokedBy: uuidToBuffer(actorId),
+            revokedReason: 'USER_DEACTIVATED',
+          })
+          .where(
+            and(
+              eq(sessions.userId, uuidToBuffer(id)),
+              isNull(sessions.revokedAt),
+            ),
+          );
+      }
+    });
 
     return this.findById(id);
   }
@@ -136,11 +167,28 @@ export class DrizzleUsersRepository implements UsersRepository {
     id: string,
     passwordHash: string,
     updatedAt: Date,
+    actorId: string,
   ): Promise<UserModel | null> {
-    await this.db
-      .update(users)
-      .set({ password: passwordHash, updatedAt })
-      .where(eq(users.id, uuidToBuffer(id)));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ password: passwordHash, updatedAt })
+        .where(eq(users.id, uuidToBuffer(id)));
+
+      await tx
+        .update(sessions)
+        .set({
+          revokedAt: updatedAt,
+          revokedBy: uuidToBuffer(actorId),
+          revokedReason: 'PASSWORD_RESET',
+        })
+        .where(
+          and(
+            eq(sessions.userId, uuidToBuffer(id)),
+            isNull(sessions.revokedAt),
+          ),
+        );
+    });
 
     return this.findById(id);
   }

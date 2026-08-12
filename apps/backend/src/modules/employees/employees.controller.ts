@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  ForbiddenException,
   Param,
   Patch,
   Post,
@@ -46,9 +47,13 @@ import {
   EmployeeDetailsApiResponse,
   EmployeesApiResponse,
 } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('employees')
 @ApiTags('Employees')
+@RequirePermissions('employees:read')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
@@ -92,6 +97,7 @@ export class EmployeesController {
   }
 
   @Post()
+  @RequirePermissions('employees:create')
   @ApiOperation({ summary: 'Crear un empleado' })
   @ApiCreatedResponse({ type: EmployeeApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -102,6 +108,7 @@ export class EmployeesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('employees:update')
   @ApiOperation({ summary: 'Actualizar un empleado' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: EmployeeApiResponse })
@@ -122,7 +129,13 @@ export class EmployeesController {
   async updateStatus(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: UpdateEmployeeStatusDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeResponse> {
+    const permission =
+      dto.status === 'ACTIVE' ? 'employees:activate' : 'employees:deactivate';
+    if (!actor.permissions.includes(permission)) {
+      throw new ForbiddenException('Permisos insuficientes');
+    }
     const employee = await this.employeesService.updateStatus(params.id, dto);
 
     return toEmployeeResponse(employee);
@@ -158,6 +171,7 @@ export class EmployeesController {
   }
 
   @Post(':id/assignments')
+  @RequirePermissions('employees:update')
   @ApiOperation({ summary: 'Crear una asignación para un empleado' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiCreatedResponse({ type: EmployeeAssignmentApiResponse })
@@ -175,6 +189,7 @@ export class EmployeesController {
   }
 
   @Patch(':employeeId/assignments/:assignmentId')
+  @RequirePermissions('employees:update')
   @ApiOperation({ summary: 'Actualizar una asignación' })
   @ApiParam({ name: 'employeeId', format: 'uuid' })
   @ApiParam({ name: 'assignmentId', format: 'uuid' })

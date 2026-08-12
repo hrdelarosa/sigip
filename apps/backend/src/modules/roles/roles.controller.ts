@@ -28,9 +28,11 @@ import {
   RoleApiResponse,
   RolePermissionsApiResponse,
 } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
 @Controller('roles')
 @ApiTags('Roles')
+@RequirePermissions('roles:read')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
@@ -55,6 +57,7 @@ export class RolesController {
   }
 
   @Post()
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Crear un rol' })
   @ApiCreatedResponse({ type: RoleApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -65,6 +68,7 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Actualizar un rol' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: RoleApiResponse })
@@ -79,6 +83,7 @@ export class RolesController {
   }
 
   @Patch(':id/status')
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Activar o desactivar un rol' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: RoleApiResponse })
@@ -108,6 +113,7 @@ export class RolesController {
   }
 
   @Put(':id/permissions')
+  @RequirePermissions('settings:update')
   @ApiOperation({ summary: 'Reemplazar los permisos de un rol' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: PermissionSummaryApiResponse, isArray: true })

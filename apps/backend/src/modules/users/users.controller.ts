@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,9 +25,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { UserApiResponse } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('users')
 @ApiTags('Users')
+@RequirePermissions('users:read')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -45,6 +57,7 @@ export class UsersController {
   }
 
   @Post()
+  @RequirePermissions('users:create')
   @ApiOperation({ summary: 'Crear un usuario' })
   @ApiCreatedResponse({ type: UserApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -55,6 +68,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @RequirePermissions('users:update')
   @ApiOperation({ summary: 'Actualizar un usuario' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: UserApiResponse })
@@ -76,13 +90,23 @@ export class UsersController {
   async changeStatus(
     @Param() params: UserIdParamDto,
     @Body() dto: ChangeUserStatusDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<UserResponse> {
-    const user = await this.usersService.changeStatus(params.id, dto);
+    const permission = dto.isActive ? 'users:activate' : 'users:deactivate';
+    if (!actor.permissions.includes(permission)) {
+      throw new ForbiddenException('Permisos insuficientes');
+    }
+    const user = await this.usersService.changeStatus(
+      params.id,
+      dto,
+      actor.userId,
+    );
 
     return toUserResponse(user);
   }
 
   @Patch(':id/password')
+  @RequirePermissions('users:reset-password')
   @ApiOperation({ summary: 'Cambiar la contraseña de un usuario' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: UserApiResponse })
@@ -90,8 +114,13 @@ export class UsersController {
   async changePassword(
     @Param() params: UserIdParamDto,
     @Body() dto: ChangeUserPasswordDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<UserResponse> {
-    const user = await this.usersService.changePassword(params.id, dto);
+    const user = await this.usersService.changePassword(
+      params.id,
+      dto,
+      actor.userId,
+    );
 
     return toUserResponse(user);
   }

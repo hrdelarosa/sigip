@@ -26,9 +26,11 @@ import {
   PositionApiResponse,
   PositionDetailsApiResponse,
 } from '../../common/swagger/api.models';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
 @Controller('positions')
 @ApiTags('Positions')
+@RequirePermissions('catalogs:read')
 export class PositionsController {
   constructor(private readonly positionsService: PositionsService) {}
 
@@ -55,6 +57,7 @@ export class PositionsController {
   }
 
   @Post()
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Crear un puesto' })
   @ApiCreatedResponse({ type: PositionApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
@@ -65,6 +68,7 @@ export class PositionsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Actualizar un puesto' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: PositionApiResponse })
@@ -79,6 +83,7 @@ export class PositionsController {
   }
 
   @Patch(':id/status')
+  @RequirePermissions('catalogs:update')
   @ApiOperation({ summary: 'Activar o desactivar un puesto' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: PositionApiResponse })
