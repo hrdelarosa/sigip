@@ -1,5 +1,9 @@
 import { env } from '../env'
 import { ApiError, type ApiErrorResponse } from './api-error'
+import {
+  dispatchUnauthorized,
+  getSessionGeneration,
+} from './auth-session-events'
 
 interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
@@ -9,6 +13,7 @@ export async function apiRequest<TResponse>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<TResponse> {
+  const sessionGeneration = getSessionGeneration()
   const headers = new Headers(options.headers)
 
   if (options.body !== undefined && !(options.body instanceof FormData)) {
@@ -17,6 +22,7 @@ export async function apiRequest<TResponse>(
 
   const response = await fetch(`${env.apiUrl}${path}`, {
     ...options,
+    credentials: options.credentials ?? 'include',
     headers,
     body:
       options.body === undefined
@@ -27,6 +33,9 @@ export async function apiRequest<TResponse>(
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      dispatchUnauthorized(sessionGeneration)
+    }
     throw await createApiError(response)
   }
 
@@ -72,6 +81,12 @@ function getErrorMessage(
   switch (status) {
     case 400:
       return 'La solicitud no es válida'
+
+    case 401:
+      return 'La sesión no es válida o ha expirado'
+
+    case 403:
+      return 'No tiene permisos para realizar esta operación'
 
     case 404:
       return 'El recurso solicitado no existe'

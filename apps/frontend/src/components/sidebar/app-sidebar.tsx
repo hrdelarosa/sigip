@@ -2,16 +2,16 @@ import type { ComponentProps } from 'react'
 import {
   BriefcaseBusinessIcon,
   Building2Icon,
-  FileTextIcon,
-  GaugeIcon,
   IdCardIcon,
   KeyRoundIcon,
   ShieldCheckIcon,
+  MonitorSmartphoneIcon,
   UsersIcon,
 } from 'lucide-react'
 import { Link, useLocation } from 'wouter'
 
 import { routes } from '@/app/router/routes'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 import {
   Sidebar,
@@ -29,16 +29,16 @@ const navigationGroups = [
   {
     label: 'Principal',
     items: [
-      { label: 'Dashboard', href: routes.dashboard, icon: GaugeIcon },
-      {
-        label: 'Incidencias',
-        href: routes.incidents.root,
-        icon: FileTextIcon,
-      },
       {
         label: 'Empleados',
         href: routes.employees.root,
         icon: IdCardIcon,
+        permission: 'employees:read',
+      },
+      {
+        label: 'Sesiones',
+        href: routes.sessions,
+        icon: MonitorSmartphoneIcon,
       },
     ],
   },
@@ -49,26 +49,31 @@ const navigationGroups = [
         label: 'Usuarios',
         href: routes.administration.users,
         icon: UsersIcon,
+        permission: 'users:read',
       },
       {
         label: 'Roles',
         href: routes.administration.roles,
         icon: ShieldCheckIcon,
+        permission: 'roles:read',
       },
       {
         label: 'Permisos',
         href: routes.administration.permissions,
         icon: KeyRoundIcon,
+        permission: 'permissions:read',
       },
       {
         label: 'Unidades organizativas',
         href: routes.administration.organizationalUnits,
         icon: Building2Icon,
+        permission: 'catalogs:read',
       },
       {
         label: 'Puestos',
         href: routes.administration.positions,
         icon: BriefcaseBusinessIcon,
+        permission: 'catalogs:read',
       },
     ],
   },
@@ -76,6 +81,7 @@ const navigationGroups = [
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const [location] = useLocation()
+  const auth = useAuth()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -110,30 +116,36 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => {
-                  const isActive =
-                    location === item.href ||
-                    location.startsWith(`${item.href}/`)
-                  const Icon = item.icon
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.label}
-                        render={
-                          <Link
-                            href={item.href}
-                            aria-current={isActive ? 'page' : undefined}
-                          />
-                        }
-                      >
-                        <Icon aria-hidden="true" />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                {group.items
+                  .filter(
+                    (item) =>
+                      !('permission' in item) ||
+                      hasPermission(auth.data?.permissions, item.permission),
                   )
-                })}
+                  .map((item) => {
+                    const isActive =
+                      location === item.href ||
+                      location.startsWith(`${item.href}/`)
+                    const Icon = item.icon
+
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          tooltip={item.label}
+                          render={
+                            <Link
+                              href={item.href}
+                              aria-current={isActive ? 'page' : undefined}
+                            />
+                          }
+                        >
+                          <Icon aria-hidden="true" />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

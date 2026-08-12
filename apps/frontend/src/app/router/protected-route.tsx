@@ -1,5 +1,73 @@
 import type { PropsWithChildren } from 'react'
+import { Redirect } from 'wouter'
 
-export function ProtectedRoute({ children }: PropsWithChildren) {
+import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
+import { hasPermission, useAuth } from '@/modules/auth'
+import { routes } from './routes'
+
+interface ProtectedRouteProps extends PropsWithChildren {
+  permission?: string
+}
+
+export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
+  const auth = useAuth()
+
+  if (auth.isPending) {
+    return (
+      <div className="grid min-h-screen place-items-center" aria-busy="true">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner aria-hidden="true" /> Restaurando sesión...
+        </div>
+      </div>
+    )
+  }
+
+  if (auth.isError) {
+    return (
+      <div className="grid min-h-screen place-items-center p-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-xl font-semibold">
+            No se pudo validar la sesión
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Revise su conexión e intente nuevamente.
+          </p>
+          <Button className="mt-4" onClick={() => void auth.refetch()}>
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!auth.data) {
+    const returnTo = `${window.location.pathname}${window.location.search}`
+    return (
+      <Redirect
+        to={`${routes.auth.login}?returnTo=${encodeURIComponent(returnTo)}`}
+        replace
+      />
+    )
+  }
+
+  if (permission && !hasPermission(auth.data.permissions, permission)) {
+    return (
+      <div className="grid min-h-screen place-items-center p-6">
+        <div className="max-w-md text-center">
+          <p className="text-sm font-medium text-destructive">
+            Acceso denegado
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold">
+            Permisos insuficientes
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Su cuenta no tiene autorización para consultar esta sección.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return children
 }
