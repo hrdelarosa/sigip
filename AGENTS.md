@@ -10,16 +10,16 @@ Read `docs/Contexto_Maestro_SIGIP_v4.md` before planning a new feature; it is th
 
 The administrative foundation is functionally complete in backend and frontend: roles, permissions, users, organizational units, positions, employees, and employee assignments. MySQL, Drizzle schemas/migrations, Docker Compose, and development seeds are active infrastructure; do not reintroduce in-memory repositories or describe persistence/frontend work as future setup.
 
-The active phase is `Auth + Sessions`. Complete it end to end before production implementation of incidents:
+The `Auth + Sessions` phase is complete end to end:
 
 1. Login, logout, and `GET /api/auth/me`.
 2. Opaque session token in an `HttpOnly` cookie, with only its hash persisted.
 3. Idle and absolute expiration, revocation, and session administration.
 4. Global session authentication plus permission-based authorization.
-5. Real frontend session restoration and route protection; the current `ProtectedRoute` passthrough is provisional.
+5. Real frontend session restoration and permission-aware route protection.
 6. Automated tests for authentication, expiration/revocation, and authorization failures.
 
-After Auth + Sessions, implement in this order: Incident Types; Incidents with Incident Occurrences; Document Types and private document storage; Audit; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
+The active phase is now `Incident Types`. Then implement in this order: Incidents with Incident Occurrences; Document Types and private document storage; Audit; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
 
 ## Build, Test, and Development Commands
 

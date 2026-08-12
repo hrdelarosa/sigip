@@ -68,9 +68,9 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - MySQL, Drizzle, migraciones, esquemas y seed de desarrollo ya están configurados.
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
-- La protección de rutas del frontend aún es provisional: `ProtectedRoute` todavía no aplica autenticación real.
-- El backend todavía no contiene módulos funcionales de `auth`, `sessions`, `incident-types`, `incidents`, `document-types`, `documents`, `audit` ni `dashboard`.
-- La tabla `sessions` ya forma parte del esquema de acceso, pero aún falta implementar su comportamiento y su integración con `auth`.
+- La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
+- El backend contiene módulos funcionales de `auth` y `sessions`; siguen pendientes `incident-types`, `incidents`, `document-types`, `documents`, `audit` y `dashboard`.
+- La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
 
 ## 4. Arquitectura definitiva
 
@@ -141,12 +141,12 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `health` | Estado de la API y conectividad de base de datos. | Implementado. |
 | `roles` | `roles`, relación con usuarios mediante `users.role_id` y `role_permissions`. | Backend y frontend implementados. |
 | `permissions` | `permissions`. | Backend y frontend implementados. |
-| `users` | `users`. | Backend y frontend implementados; falta integrar identidad autenticada. |
+| `users` | `users`. | Backend y frontend implementados con identidad autenticada. |
 | `organizational-units` | `organizational_units`. | Backend y frontend implementados. |
 | `positions` | `positions`. | Backend y frontend implementados. |
 | `employees` | `employees` y `employee_assignments`. | Backend y frontend implementados. |
-| `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Siguiente módulo a implementar. |
-| `sessions` | `sessions`. | Esquema existente; comportamiento pendiente. |
+| `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Backend y frontend implementados. |
+| `sessions` | `sessions`. | Persistencia, expiración, revocación y consulta implementadas. |
 | `incident-types` | `incident_types`. | Pendiente. |
 | `incidents` | `incidents` e `incident_occurrences`. | Pendiente; núcleo funcional del sistema. |
 | `document-types` | `document_types`. | Pendiente. |
@@ -443,9 +443,9 @@ La infraestructura administrativa previa al núcleo de incidencias se considera 
 - Backend de roles, permisos, usuarios, unidades organizacionales, puestos, empleados y asignaciones.
 - Frontend administrativo para esos mismos módulos, con consultas, formularios y flujos de alta/edición/estado según corresponda.
 
-### Alcance inmediato
+### Alcance inmediato completado
 
-La fase activa es `Auth + Sessions`, implementada de extremo a extremo antes de iniciar incidencias:
+La fase `Auth + Sessions` está implementada de extremo a extremo antes de iniciar incidencias:
 
 ```text
 credenciales
@@ -467,9 +467,6 @@ Esta secuencia evita que `incidents`, `documents` y `audit` reciban identificado
 
 ### Trabajo todavía pendiente
 
-- Autenticación, administración y revocación de sesiones.
-- Guards/decoradores de autenticación y permisos en backend.
-- Estado de sesión, login/logout y rutas realmente protegidas en frontend.
 - Catálogos de tipos de incidencia y tipos documentales.
 - Incidencias y ocurrencias con todas sus reglas transaccionales.
 - Almacenamiento privado y descarga autorizada de documentos.
@@ -486,7 +483,7 @@ FASE ADMINISTRATIVA — COMPLETADA
 ├── Organizational Units + Positions
 └── Employees + Employee Assignments
 
-SIGUIENTE — AUTH + SESSIONS
+AUTH + SESSIONS — COMPLETADA
 ├── backend: login, logout y me
 ├── backend: cookie HttpOnly y token opaco
 ├── backend: expiración, revocación y administración
@@ -560,7 +557,6 @@ Nunca deben registrarse contraseñas, hashes de contraseña, tokens, hashes de s
 - Duración de sesiones.
 - Configuración definitiva de la cookie de sesión según el entorno.
 - Rotación de tokens, sesiones concurrentes y rate limiting de login.
-- Algoritmo de hash.
 - Política de credenciales.
 - Normalización y sensibilidad a mayúsculas del username.
 - Reactivación o reemplazo de incidencias canceladas.
@@ -583,4 +579,15 @@ La fase no se considera terminada por tener solamente endpoints aislados. Debe f
 9. Las solicitudes con cookie incluyen las credenciales necesarias y la configuración CORS/cookie es correcta para desarrollo y producción.
 10. Existen pruebas unitarias para reglas de sesión y pruebas e2e para login, `me`, logout, expiración/revocación y acceso denegado.
 
-Hasta cumplir estos puntos no debe iniciarse la implementación productiva de `incidents`, salvo trabajo de análisis o especificación que no dependa de actores autenticados.
+Cumplidos estos puntos, la siguiente fase productiva es `Incident Types`; después continúa `Incidents` con actores derivados exclusivamente de la sesión.
+
+### Configuración implementada
+
+- El token de sesión contiene 256 bits aleatorios, se entrega solo en la cookie y se persiste como SHA-256 hexadecimal.
+- Las contraseñas utilizan Argon2id. Las credenciales inválidas producen una respuesta uniforme y el login está limitado a 10 intentos por minuto por cliente y por instancia.
+- Los valores predeterminados son 30 minutos de inactividad y 10 horas de duración absoluta; la actividad se actualiza condicionalmente en cada petición válida y nunca supera el límite absoluto.
+- La cookie usa `HttpOnly`, `SameSite=Lax`, ruta `/`, expiración absoluta y `Secure` en producción.
+- CORS acepta únicamente `FRONTEND_ORIGIN` con credenciales y las mutaciones validan el encabezado `Origin` cuando está presente.
+- Desactivar un usuario o reemplazar su contraseña revoca sus sesiones activas en la misma transacción de MySQL.
+- Los permisos efectivos se consultan desde el rol vigente al resolver cada petición; un cambio de rol o permisos se aplica sin emitir una sesión nueva.
+- `GET/DELETE /api/sessions` opera sobre las sesiones propias. La consulta y revocación por usuario requiere `sessions:read` o `sessions:revoke`.
