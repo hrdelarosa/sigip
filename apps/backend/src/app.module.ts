@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import databaseConfig from './config/database.config';
+import authConfig from './config/auth.config';
 import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -12,6 +15,11 @@ import { CryptoModule } from './common/crypto/crypto.module';
 import { OrganizationalUnitsModule } from './modules/organizational-units/organizational-units.module';
 import { PositionsModule } from './modules/positions/positions.module';
 import { EmployeesModule } from './modules/employees/employees.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
+import { OriginGuard } from './common/guards/origin.guard';
+import { SessionAuthGuard } from './common/guards/session-auth.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 @Module({
   imports: [
@@ -19,13 +27,14 @@ import { EmployeesModule } from './modules/employees/employees.module';
       isGlobal: true,
       cache: true,
       envFilePath: ['apps/backend/.env', '.env'],
-      load: [databaseConfig],
+      load: [databaseConfig, authConfig],
       validationSchema: environmentValidationSchema,
       validationOptions: {
         allowUnknown: true,
         abortEarly: false,
       },
     }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     DatabaseModule,
     HealthModule,
     UsersModule,
@@ -35,7 +44,15 @@ import { EmployeesModule } from './modules/employees/employees.module';
     OrganizationalUnitsModule,
     PositionsModule,
     EmployeesModule,
+    AuthModule,
+    SessionsModule,
   ],
-  providers: [CryptoService],
+  providers: [
+    CryptoService,
+    { provide: APP_GUARD, useClass: OriginGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: SessionAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+  ],
 })
 export class AppModule {}

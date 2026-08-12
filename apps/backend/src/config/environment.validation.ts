@@ -8,4 +8,15 @@ export const environmentValidationSchema = Joi.object({
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['mysql'] })
     .required(),
+
+  SESSION_COOKIE_NAME: Joi.string().min(1).required(),
+  SESSION_IDLE_MINUTES: Joi.number().integer().positive().default(30),
+  SESSION_ABSOLUTE_MINUTES: Joi.number()
+    .integer()
+    .min(Joi.ref('SESSION_IDLE_MINUTES'))
+    .default(600),
+  FRONTEND_ORIGIN: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .required(),
+  TRUST_PROXY_HOPS: Joi.number().integer().min(0).default(0),
 });
