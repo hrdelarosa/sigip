@@ -88,7 +88,9 @@ describe('Authentication flow (e2e)', () => {
         password: process.env.E2E_PASSWORD ?? 'admin123',
       })
       .expect(200);
-    const list = await agent.get('/api/sessions').expect(200);
+    const currentUser = await agent.get('/api/auth/me').expect(200);
+    const userId = (currentUser.body as unknown as AuthMeResponse).id;
+    const list = await agent.get(`/api/users/${userId}/sessions`).expect(200);
     const listedSessions = list.body as unknown as SessionsResponse;
     const current = listedSessions.find((session) => session.isCurrent);
     expect(current).toBeDefined();
@@ -111,7 +113,9 @@ describe('Authentication flow (e2e)', () => {
         password: process.env.E2E_PASSWORD ?? 'admin123',
       })
       .expect(200);
-    const list = await agent.get('/api/sessions').expect(200);
+    const currentUser = await agent.get('/api/auth/me').expect(200);
+    const userId = (currentUser.body as unknown as AuthMeResponse).id;
+    const list = await agent.get(`/api/users/${userId}/sessions`).expect(200);
     const listedSessions = list.body as unknown as SessionsResponse;
     const current = listedSessions.find((session) => session.isCurrent);
     expect(current).toBeDefined();
@@ -152,6 +156,7 @@ describe('Authentication flow (e2e)', () => {
         .send({ username, password })
         .expect(200);
       await agent.get('/api/users').expect(403);
+      await agent.get(`/api/users/${userId}/sessions`).expect(403);
 
       const admin = request.agent(app.getHttpServer());
       await admin
@@ -161,6 +166,26 @@ describe('Authentication flow (e2e)', () => {
           username: process.env.E2E_USERNAME ?? 'admin',
           password: process.env.E2E_PASSWORD ?? 'admin123',
         })
+        .expect(200);
+
+      const userSessions = await admin
+        .get(`/api/users/${userId}/sessions`)
+        .expect(200);
+      const activeSession = (
+        userSessions.body as unknown as SessionsResponse
+      ).find((session) => !session.revokedAt);
+      expect(activeSession).toBeDefined();
+
+      await admin
+        .delete(`/api/users/${userId}/sessions/${activeSession!.id}`)
+        .set('Origin', frontendOrigin)
+        .expect(204);
+      await agent.get('/api/auth/me').expect(401);
+
+      await agent
+        .post('/api/auth/login')
+        .set('Origin', frontendOrigin)
+        .send({ username, password })
         .expect(200);
 
       const replacementPassword = 'Replacement-e2e-password';
