@@ -5,6 +5,7 @@ import { SessionsService } from '../sessions/sessions.service';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { InvalidCredentialsError } from './auth.errors';
 import { AuthService } from './auth.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('AuthService', () => {
   const user = {
@@ -23,6 +24,7 @@ describe('AuthService', () => {
   };
   const cryptoService = { verifyPassword: jest.fn() };
   const sessionsService = { createLoginSession: jest.fn() };
+  const auditService = { append: jest.fn() };
   let service: AuthService;
 
   beforeAll(async () => {
@@ -32,6 +34,7 @@ describe('AuthService', () => {
         { provide: UsersRepository, useValue: usersRepository },
         { provide: CryptoService, useValue: cryptoService },
         { provide: SessionsService, useValue: sessionsService },
+        { provide: AuditService, useValue: auditService },
       ],
     }).compile();
 
@@ -64,6 +67,13 @@ describe('AuthService', () => {
       ),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
     expect(cryptoService.verifyPassword).toHaveBeenCalledTimes(1);
+    expect(auditService.append).toHaveBeenCalledWith({
+      action: 'LOGIN_FAILED',
+      entityType: 'AUTH',
+      newValues: { username: 'unknown' },
+      ipAddress: null,
+      userAgent: null,
+    });
   });
 
   it('rejects inactive users even when the password matches', async () => {
@@ -79,5 +89,39 @@ describe('AuthService', () => {
         { ipAddress: null, userAgent: null },
       ),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
+  });
+
+  it('keeps the credential error when failed-login auditing is unavailable', async () => {
+    usersRepository.findByUsernameWithPassword.mockResolvedValue(null);
+    cryptoService.verifyPassword.mockResolvedValue(false);
+    auditService.append.mockRejectedValueOnce(
+      new Error('database unavailable'),
+    );
+
+    await expect(
+      service.login(
+        { username: 'unknown', password: 'secret' },
+        { ipAddress: null, userAgent: null },
+      ),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+  });
+
+  it('audits a login rejected during transactional session creation', async () => {
+    usersRepository.findByUsernameWithPassword.mockResolvedValue(user);
+    cryptoService.verifyPassword.mockResolvedValue(true);
+    sessionsService.createLoginSession.mockResolvedValue(null);
+
+    await expect(
+      service.login(
+        { username: 'admin', password: 'secret' },
+        { ipAddress: null, userAgent: null },
+      ),
+    ).rejects.toBeInstanceOf(InvalidCredentialsError);
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+      }),
+    );
   });
 });

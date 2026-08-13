@@ -1,5 +1,6 @@
 import { UserModel, UserWithPasswordModel } from '../models/user.model';
 import { CreateUserData, UpdateUserData } from '../types/user.types';
+import type { UserAuditContext } from '../types/user.types';
 
 export abstract class UsersRepository {
   abstract findAll(): Promise<UserModel[]>;
@@ -11,18 +12,27 @@ export abstract class UsersRepository {
   abstract findByUsernameWithPassword(
     username: string,
   ): Promise<UserWithPasswordModel | null>;
-  abstract create(data: CreateUserData): Promise<UserModel>;
-  abstract update(id: string, data: UpdateUserData): Promise<UserModel | null>;
+  abstract create(
+    data: CreateUserData,
+    actor: UserAuditContext,
+  ): Promise<UserModel>;
+  abstract update(
+    id: string,
+    data: UpdateUserData,
+    actor: UserAuditContext,
+  ): Promise<UserModel | null>;
   abstract updateStatus(
     id: string,
     isActive: boolean,
     updatedAt: Date,
     actorId: string,
+    actorSessionId: string,
   ): Promise<UserModel | null>;
   abstract updatePassword(
     id: string,
     passwordHash: string,
     updatedAt: Date,
     actorId: string,
+    actorSessionId: string,
   ): Promise<UserModel | null>;
 }

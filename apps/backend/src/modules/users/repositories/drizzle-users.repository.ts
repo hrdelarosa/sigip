@@ -8,6 +8,8 @@ import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import { UserModel, UserWithPasswordModel } from '../models/user.model';
 import { UsersRepository } from './users.repository';
 import { CreateUserData, UpdateUserData } from '../types/user.types';
+import type { UserAuditContext } from '../types/user.types';
+import { AuditService } from '../../audit/audit.service';
 
 const publicUserColumns = {
   id: users.id,
@@ -27,6 +29,7 @@ export class DrizzleUsersRepository implements UsersRepository {
   constructor(
     @Inject(DRIZZLE_DATABASE)
     private readonly db: DrizzleDatabase,
+    private readonly auditService: AuditService,
   ) {}
 
   private toModel(row: PublicUserRow): UserModel {
@@ -95,7 +98,10 @@ export class DrizzleUsersRepository implements UsersRepository {
     return row ? { ...this.toModel(row), passwordHash: row.password } : null;
   }
 
-  async create(data: CreateUserData): Promise<UserModel> {
+  async create(
+    data: CreateUserData,
+    actor: UserAuditContext,
+  ): Promise<UserModel> {
     const values = {
       id: uuidToBuffer(data.id),
       roleId: uuidToBuffer(data.roleId),
@@ -105,7 +111,24 @@ export class DrizzleUsersRepository implements UsersRepository {
       isActive: true,
     } satisfies typeof users.$inferInsert;
 
-    await this.db.insert(users).values(values);
+    await this.db.transaction(async (tx) => {
+      await tx.insert(users).values(values);
+      await this.auditService.append(
+        {
+          ...actor,
+          action: 'CREATED',
+          entityType: 'USER',
+          entityId: data.id,
+          newValues: {
+            roleId: data.roleId,
+            username: data.username,
+            fullName: data.fullName,
+            isActive: true,
+          },
+        },
+        tx,
+      );
+    });
 
     const user = await this.findById(data.id);
 
@@ -114,7 +137,11 @@ export class DrizzleUsersRepository implements UsersRepository {
     return user;
   }
 
-  async update(id: string, data: UpdateUserData): Promise<UserModel | null> {
+  async update(
+    id: string,
+    data: UpdateUserData,
+    actor: UserAuditContext,
+  ): Promise<UserModel | null> {
     const values: Partial<typeof users.$inferInsert> = {
       updatedAt: data.updatedAt,
     };
@@ -123,10 +150,47 @@ export class DrizzleUsersRepository implements UsersRepository {
     if (data.username !== undefined) values.username = data.username;
     if (data.fullName !== undefined) values.fullName = data.fullName;
 
-    await this.db
-      .update(users)
-      .set(values)
-      .where(eq(users.id, uuidToBuffer(id)));
+    await this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select(publicUserColumns)
+        .from(users)
+        .where(eq(users.id, uuidToBuffer(id)))
+        .for('update');
+
+      if (!current) return;
+
+      await tx
+        .update(users)
+        .set(values)
+        .where(eq(users.id, uuidToBuffer(id)));
+
+      const oldValues = {
+        roleId: bufferToUuid(current.roleId),
+        username: current.username,
+        fullName: current.fullName,
+      };
+      const newValues = {
+        roleId: data.roleId ?? oldValues.roleId,
+        username: data.username ?? oldValues.username,
+        fullName: data.fullName ?? oldValues.fullName,
+      };
+
+      await this.auditService.append(
+        {
+          ...actor,
+          action:
+            data.roleId !== undefined && data.roleId !== oldValues.roleId
+              ? 'ROLE_CHANGED'
+              : 'UPDATED',
+          entityType: 'USER',
+          entityId: id,
+          oldValues,
+          newValues,
+          createdAt: data.updatedAt,
+        },
+        tx,
+      );
+    });
 
     return this.findById(id);
   }
@@ -136,15 +200,24 @@ export class DrizzleUsersRepository implements UsersRepository {
     isActive: boolean,
     updatedAt: Date,
     actorId: string,
+    actorSessionId: string,
   ): Promise<UserModel | null> {
     await this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select(publicUserColumns)
+        .from(users)
+        .where(eq(users.id, uuidToBuffer(id)))
+        .for('update');
+
+      if (!current || current.isActive === isActive) return;
+
       await tx
         .update(users)
         .set({ isActive, updatedAt })
         .where(eq(users.id, uuidToBuffer(id)));
 
       if (!isActive) {
-        await tx
+        const [revoked] = await tx
           .update(sessions)
           .set({
             revokedAt: updatedAt,
@@ -157,7 +230,40 @@ export class DrizzleUsersRepository implements UsersRepository {
               isNull(sessions.revokedAt),
             ),
           );
+
+        if (revoked.affectedRows > 0) {
+          await this.auditService.append(
+            {
+              userId: actorId,
+              sessionId: actorSessionId,
+              action: 'SESSIONS_REVOKED',
+              entityType: 'SESSION',
+              entityId: id,
+              newValues: {
+                userId: id,
+                revokedReason: 'USER_DEACTIVATED',
+                revokedCount: revoked.affectedRows,
+              },
+              createdAt: updatedAt,
+            },
+            tx,
+          );
+        }
       }
+
+      await this.auditService.append(
+        {
+          userId: actorId,
+          sessionId: actorSessionId,
+          action: 'STATUS_CHANGED',
+          entityType: 'USER',
+          entityId: id,
+          oldValues: { isActive: current.isActive },
+          newValues: { isActive },
+          createdAt: updatedAt,
+        },
+        tx,
+      );
     });
 
     return this.findById(id);
@@ -168,6 +274,7 @@ export class DrizzleUsersRepository implements UsersRepository {
     passwordHash: string,
     updatedAt: Date,
     actorId: string,
+    actorSessionId: string,
   ): Promise<UserModel | null> {
     await this.db.transaction(async (tx) => {
       await tx
@@ -175,7 +282,7 @@ export class DrizzleUsersRepository implements UsersRepository {
         .set({ password: passwordHash, updatedAt })
         .where(eq(users.id, uuidToBuffer(id)));
 
-      await tx
+      const [revoked] = await tx
         .update(sessions)
         .set({
           revokedAt: updatedAt,
@@ -188,6 +295,38 @@ export class DrizzleUsersRepository implements UsersRepository {
             isNull(sessions.revokedAt),
           ),
         );
+
+      await this.auditService.append(
+        {
+          userId: actorId,
+          sessionId: actorSessionId,
+          action: 'PASSWORD_CHANGED',
+          entityType: 'USER',
+          entityId: id,
+          newValues: { credentialsUpdated: true },
+          createdAt: updatedAt,
+        },
+        tx,
+      );
+
+      if (revoked.affectedRows > 0) {
+        await this.auditService.append(
+          {
+            userId: actorId,
+            sessionId: actorSessionId,
+            action: 'SESSIONS_REVOKED',
+            entityType: 'SESSION',
+            entityId: id,
+            newValues: {
+              userId: id,
+              revokedReason: 'PASSWORD_RESET',
+              revokedCount: revoked.affectedRows,
+            },
+            createdAt: updatedAt,
+          },
+          tx,
+        );
+      }
     });
 
     return this.findById(id);

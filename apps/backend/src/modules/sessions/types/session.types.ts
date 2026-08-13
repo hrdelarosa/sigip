@@ -23,6 +23,7 @@ export interface RevokeSessionData {
   revokedAt: Date;
   revokedBy: string | null;
   revokedReason: SessionRevocationReason;
+  actorSessionId?: string;
 }
 
 export interface RevokeUserSessionsData {
@@ -30,4 +31,5 @@ export interface RevokeUserSessionsData {
   revokedAt: Date;
   revokedBy: string | null;
   revokedReason: SessionRevocationReason;
+  actorSessionId?: string;
 }

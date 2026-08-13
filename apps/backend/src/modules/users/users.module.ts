@@ -5,6 +5,8 @@ import { CryptoModule } from '../../common/crypto/crypto.module';
 import { UsersRepository } from './repositories/users.repository';
 import { DrizzleUsersRepository } from './repositories/drizzle-users.repository';
 import { RolesModule } from '../roles/roles.module';
+import { AuditModule } from '../audit/audit.module';
+import { SessionsModule } from '../sessions/sessions.module';
 
 @Module({
   controllers: [UsersController],
@@ -15,7 +17,7 @@ import { RolesModule } from '../roles/roles.module';
       useClass: DrizzleUsersRepository,
     },
   ],
-  imports: [CryptoModule, RolesModule],
+  imports: [AuditModule, CryptoModule, RolesModule, SessionsModule],
   exports: [UsersRepository],
 })
 export class UsersModule {}

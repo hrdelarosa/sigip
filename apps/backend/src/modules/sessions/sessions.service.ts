@@ -116,6 +116,7 @@ export class SessionsService {
       revokedAt: new Date(),
       revokedBy: user.userId,
       revokedReason: 'LOGOUT',
+      actorSessionId: user.sessionId,
     });
   }
 
@@ -123,6 +124,7 @@ export class SessionsService {
     sessionId: string,
     userId: string,
     actorId: string,
+    actorSessionId?: string,
   ): Promise<void> {
     const session = await this.findByIdForUser(sessionId, userId);
 
@@ -134,15 +136,22 @@ export class SessionsService {
       revokedAt: new Date(),
       revokedBy: actorId,
       revokedReason: actorId === userId ? 'LOGOUT' : 'ADMIN_REVOKED',
+      actorSessionId,
     });
   }
 
-  async revokeAllForUser(userId: string, actorId: string): Promise<void> {
+  async revokeAllForUser(
+    userId: string,
+    actorId: string,
+    actorSessionId?: string,
+  ): Promise<void> {
+    const revokedReason = actorId === userId ? 'LOGOUT_ALL' : 'ADMIN_REVOKED';
     await this.sessionsRepository.revokeAllForUser({
       userId,
       revokedAt: new Date(),
       revokedBy: actorId,
-      revokedReason: actorId === userId ? 'LOGOUT_ALL' : 'ADMIN_REVOKED',
+      revokedReason,
+      actorSessionId,
     });
   }
 

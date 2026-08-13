@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, isNull } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
@@ -21,6 +21,7 @@ import {
   RevokeUserSessionsData,
 } from '../types/session.types';
 import { SessionsRepository } from './sessions.repository';
+import { AuditService } from '../../audit/audit.service';
 
 const sessionColumns = {
   id: sessions.id,
@@ -46,6 +47,7 @@ export class DrizzleSessionsRepository implements SessionsRepository {
   constructor(
     @Inject(DRIZZLE_DATABASE)
     private readonly db: DrizzleDatabase,
+    private readonly auditService: AuditService,
   ) {}
 
   private toModel(row: SessionRow): SessionModel {
@@ -153,6 +155,21 @@ export class DrizzleSessionsRepository implements SessionsRepository {
         .set({ lastLoginAt: data.createdAt, updatedAt: data.createdAt })
         .where(eq(users.id, user.id));
 
+      await this.auditService.append(
+        {
+          userId: data.userId,
+          sessionId: data.id,
+          action: 'LOGIN_SUCCEEDED',
+          entityType: 'AUTH',
+          entityId: data.userId,
+          newValues: { username: user.username },
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent,
+          createdAt: data.createdAt,
+        },
+        tx,
+      );
+
       const permissionRows = await tx
         .select({ code: permissions.code })
         .from(rolePermissions)
@@ -190,13 +207,66 @@ export class DrizzleSessionsRepository implements SessionsRepository {
   }
 
   async findAllForUser(userId: string): Promise<SessionModel[]> {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const rows = await this.db
       .select(sessionColumns)
       .from(sessions)
-      .where(eq(sessions.userId, uuidToBuffer(userId)))
+      .where(
+        and(
+          eq(sessions.userId, uuidToBuffer(userId)),
+          gte(sessions.createdAt, sevenDaysAgo),
+        ),
+      )
       .orderBy(desc(sessions.createdAt));
 
     return rows.map((row) => this.toModel(row));
+  }
+
+  async findSessionSummaryForUser(
+    userId: string,
+    currentSessionId: string,
+    now: Date,
+    recentFrom: Date,
+  ) {
+    const userIdBuffer = uuidToBuffer(userId);
+    const [activeResult, recentResult, currentSession] = await Promise.all([
+      this.db
+        .select({ activeCount: count() })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.userId, userIdBuffer),
+            isNull(sessions.revokedAt),
+            gt(sessions.idleExpiresAt, now),
+            gt(sessions.absoluteExpiresAt, now),
+          ),
+        ),
+      this.db
+        .select({ recentCount: count() })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.userId, userIdBuffer),
+            gte(sessions.createdAt, recentFrom),
+          ),
+        ),
+      this.db
+        .select({ absoluteExpiresAt: sessions.absoluteExpiresAt })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.id, uuidToBuffer(currentSessionId)),
+            eq(sessions.userId, userIdBuffer),
+          ),
+        )
+        .limit(1),
+    ]);
+
+    return {
+      activeCount: activeResult[0]?.activeCount ?? 0,
+      recentCount: recentResult[0]?.recentCount ?? 0,
+      currentSessionExpiresAt: currentSession[0]?.absoluteExpiresAt ?? null,
+    };
   }
 
   async findByIdForUser(
@@ -260,42 +330,84 @@ export class DrizzleSessionsRepository implements SessionsRepository {
   }
 
   async revoke(data: RevokeSessionData): Promise<boolean> {
-    const conditions = [
-      eq(sessions.id, uuidToBuffer(data.sessionId)),
-      isNull(sessions.revokedAt),
-    ];
+    return this.db.transaction(async (tx) => {
+      const conditions = [
+        eq(sessions.id, uuidToBuffer(data.sessionId)),
+        isNull(sessions.revokedAt),
+      ];
 
-    if (data.userId) {
-      conditions.push(eq(sessions.userId, uuidToBuffer(data.userId)));
-    }
+      if (data.userId) {
+        conditions.push(eq(sessions.userId, uuidToBuffer(data.userId)));
+      }
 
-    const [result] = await this.db
-      .update(sessions)
-      .set({
-        revokedAt: data.revokedAt,
-        revokedBy: data.revokedBy ? uuidToBuffer(data.revokedBy) : null,
-        revokedReason: data.revokedReason,
-      })
-      .where(and(...conditions));
+      const [result] = await tx
+        .update(sessions)
+        .set({
+          revokedAt: data.revokedAt,
+          revokedBy: data.revokedBy ? uuidToBuffer(data.revokedBy) : null,
+          revokedReason: data.revokedReason,
+        })
+        .where(and(...conditions));
 
-    return result.affectedRows > 0;
+      if (result.affectedRows === 0) return false;
+
+      await this.auditService.append(
+        {
+          userId: data.revokedBy,
+          sessionId: data.actorSessionId,
+          action:
+            data.revokedReason === 'LOGOUT' ? 'LOGOUT' : 'SESSION_REVOKED',
+          entityType: 'SESSION',
+          entityId: data.sessionId,
+          newValues: {
+            revokedReason: data.revokedReason,
+            ...(data.userId ? { userId: data.userId } : {}),
+          },
+          createdAt: data.revokedAt,
+        },
+        tx,
+      );
+
+      return true;
+    });
   }
 
   async revokeAllForUser(data: RevokeUserSessionsData): Promise<boolean> {
-    const [result] = await this.db
-      .update(sessions)
-      .set({
-        revokedAt: data.revokedAt,
-        revokedBy: data.revokedBy ? uuidToBuffer(data.revokedBy) : null,
-        revokedReason: data.revokedReason,
-      })
-      .where(
-        and(
-          eq(sessions.userId, uuidToBuffer(data.userId)),
-          isNull(sessions.revokedAt),
-        ),
+    return this.db.transaction(async (tx) => {
+      const [result] = await tx
+        .update(sessions)
+        .set({
+          revokedAt: data.revokedAt,
+          revokedBy: data.revokedBy ? uuidToBuffer(data.revokedBy) : null,
+          revokedReason: data.revokedReason,
+        })
+        .where(
+          and(
+            eq(sessions.userId, uuidToBuffer(data.userId)),
+            isNull(sessions.revokedAt),
+          ),
+        );
+
+      if (result.affectedRows === 0) return false;
+
+      await this.auditService.append(
+        {
+          userId: data.revokedBy,
+          sessionId: data.actorSessionId,
+          action: 'SESSIONS_REVOKED',
+          entityType: 'SESSION',
+          entityId: data.userId,
+          newValues: {
+            userId: data.userId,
+            revokedReason: data.revokedReason,
+            revokedCount: result.affectedRows,
+          },
+          createdAt: data.revokedAt,
+        },
+        tx,
       );
 
-    return result.affectedRows > 0;
+      return true;
+    });
   }
 }

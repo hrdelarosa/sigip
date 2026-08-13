@@ -17,6 +17,16 @@ export abstract class SessionsRepository {
     now: Date,
   ): Promise<AuthenticatedSessionModel | null>;
   abstract findAllForUser(userId: string): Promise<SessionModel[]>;
+  abstract findSessionSummaryForUser(
+    userId: string,
+    currentSessionId: string,
+    now: Date,
+    recentFrom: Date,
+  ): Promise<{
+    activeCount: number;
+    recentCount: number;
+    currentSessionExpiresAt: Date | null;
+  }>;
   abstract findByIdForUser(
     sessionId: string,
     userId: string,

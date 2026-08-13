@@ -12,3 +12,10 @@ export interface UpdateUserData {
   fullName?: string;
   updatedAt?: Date;
 }
+
+export interface UserAuditContext {
+  userId: string;
+  sessionId: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}

@@ -41,6 +41,7 @@ export class SessionsController {
       params.id,
       params.userId,
       user.userId,
+      user.sessionId,
     );
   }
 }

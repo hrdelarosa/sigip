@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -13,8 +14,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangeUserStatusDto } from './dto/change-user-status.dto';
 import { ChangeUserPasswordDto } from './dto/change-user-password.dto';
 import { UserIdParamDto } from './dto/user-id-param.dto';
-import type { UserResponse, UsersResponse } from '@sigip/shared';
-import { toUserResponse } from './presenters/user.presenter';
+import type {
+  UserDetailsResponse,
+  UserResponse,
+  UsersResponse,
+} from '@sigip/shared';
+import {
+  toUserDetailsResponse,
+  toUserResponse,
+} from './presenters/user.presenter';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
@@ -28,6 +36,7 @@ import { UserApiResponse } from '../../common/swagger/api.models';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import type { AuthenticatedRequest } from '../../common/types/authenticated-request.type';
 
 @Controller('users')
 @ApiTags('Users')
@@ -50,10 +59,17 @@ export class UsersController {
   @ApiOkResponse({ type: UserApiResponse })
   @ApiNotFoundResponse({ description: 'Usuario no encontrado' })
   @ApiBadRequestResponse({ description: 'UUID inválido' })
-  async findOne(@Param() params: UserIdParamDto): Promise<UserResponse> {
-    const user = await this.usersService.findById(params.id);
+  async findOne(
+    @Param() params: UserIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<UserDetailsResponse> {
+    const details = await this.usersService.findDetails(params.id, {
+      includeSessions: actor.permissions.includes('sessions:read'),
+      includeAudit: actor.permissions.includes('audit:read'),
+      currentSessionId: actor.sessionId,
+    });
 
-    return toUserResponse(user);
+    return toUserDetailsResponse(details);
   }
 
   @Post()
@@ -61,8 +77,14 @@ export class UsersController {
   @ApiOperation({ summary: 'Crear un usuario' })
   @ApiCreatedResponse({ type: UserApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
-  async create(@Body() dto: CreateUserDto): Promise<UserResponse> {
-    const user = await this.usersService.create(dto);
+  async create(
+    @Body() dto: CreateUserDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<UserResponse> {
+    const user = await this.usersService.create(
+      dto,
+      this.auditContext(request),
+    );
 
     return toUserResponse(user);
   }
@@ -76,8 +98,13 @@ export class UsersController {
   async update(
     @Param() params: UserIdParamDto,
     @Body() dto: UpdateUserDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<UserResponse> {
-    const user = await this.usersService.update(params.id, dto);
+    const user = await this.usersService.update(
+      params.id,
+      dto,
+      this.auditContext(request),
+    );
 
     return toUserResponse(user);
   }
@@ -99,7 +126,7 @@ export class UsersController {
     const user = await this.usersService.changeStatus(
       params.id,
       dto,
-      actor.userId,
+      this.auditContextFromUser(actor),
     );
 
     return toUserResponse(user);
@@ -119,9 +146,21 @@ export class UsersController {
     const user = await this.usersService.changePassword(
       params.id,
       dto,
-      actor.userId,
+      this.auditContextFromUser(actor),
     );
 
     return toUserResponse(user);
+  }
+
+  private auditContext(request: AuthenticatedRequest) {
+    return {
+      ...this.auditContextFromUser(request.authenticatedUser),
+      ipAddress: request.ip?.slice(0, 45) ?? null,
+      userAgent: request.get('user-agent')?.slice(0, 500) ?? null,
+    };
+  }
+
+  private auditContextFromUser(actor: AuthenticatedUserModel) {
+    return { userId: actor.userId, sessionId: actor.sessionId };
   }
 }

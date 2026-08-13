@@ -11,6 +11,7 @@ describe('SessionsService', () => {
     findAuthenticatedByTokenHash: jest.fn(),
     touch: jest.fn(),
     findAllForUser: jest.fn(),
+    findSessionSummaryForUser: jest.fn(),
     findByIdForUser: jest.fn(),
     revoke: jest.fn(),
     revokeAllForUser: jest.fn(),

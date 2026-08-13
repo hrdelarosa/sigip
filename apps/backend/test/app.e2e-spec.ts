@@ -8,7 +8,7 @@ import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/configure-application';
 import { DRIZZLE_DATABASE } from '../src/database/database.constants';
 import type { DrizzleDatabase } from '../src/database/database.types';
-import { roles, sessions, users } from '../src/database/schema';
+import { auditLogs, roles, sessions, users } from '../src/database/schema';
 import { uuidToBuffer } from '../src/database/utils/uuid.util';
 import { CryptoService } from '../src/common/crypto/crypto.service';
 import { generateUuidV7 } from '../src/common/utils/generate-uuid-v7.util';
@@ -208,6 +208,9 @@ describe('Authentication flow (e2e)', () => {
         .expect(200);
       await agent.get('/api/auth/me').expect(401);
     } finally {
+      await db
+        .delete(auditLogs)
+        .where(eq(auditLogs.userId, uuidToBuffer(userId)));
       await db
         .delete(sessions)
         .where(eq(sessions.userId, uuidToBuffer(userId)));
