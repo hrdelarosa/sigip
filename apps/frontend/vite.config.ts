@@ -9,9 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@sigip/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
-  },
-  optimizeDeps: {
-    include: ['@sigip/shared'],
   },
 })

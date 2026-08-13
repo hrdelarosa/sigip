@@ -6,7 +6,7 @@ import { routes } from '@/app/router/routes'
 import { advanceSessionGeneration } from '@/lib/api/auth-session-events'
 import { ApiError } from '@/lib/api/api-error'
 import { logout } from '../api/auth.api'
-import { authQueryKey } from './useAuth'
+import { authQueryKeys } from '../queries/auth-query-keys'
 
 export function useLogout() {
   const queryClient = useQueryClient()
@@ -15,7 +15,7 @@ export function useLogout() {
   async function clearLocalSession() {
     await queryClient.cancelQueries()
     advanceSessionGeneration()
-    queryClient.setQueryData(authQueryKey, null)
+    queryClient.setQueryData(authQueryKeys.currentUser(), null)
     queryClient.removeQueries({
       predicate: (query) => query.queryKey[0] !== 'auth',
     })

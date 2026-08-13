@@ -1,21 +1,13 @@
 import type { ComponentProps } from 'react'
-import {
-  BriefcaseBusinessIcon,
-  Building2Icon,
-  IdCardIcon,
-  KeyRoundIcon,
-  ShieldCheckIcon,
-  MonitorSmartphoneIcon,
-  UsersIcon,
-} from 'lucide-react'
+import { LogOut, ShieldCheckIcon } from 'lucide-react'
 import { Link, useLocation } from 'wouter'
-
 import { routes } from '@/app/router/routes'
-import { hasPermission, useAuth } from '@/modules/auth'
+import { navigationGroups } from '@/config/sidebar-routes'
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -24,64 +16,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '../ui/sidebar'
-
-const navigationGroups = [
-  {
-    label: 'Principal',
-    items: [
-      {
-        label: 'Empleados',
-        href: routes.employees.root,
-        icon: IdCardIcon,
-        permission: 'employees:read',
-      },
-      {
-        label: 'Sesiones',
-        href: routes.sessions,
-        icon: MonitorSmartphoneIcon,
-      },
-    ],
-  },
-  {
-    label: 'Administración',
-    items: [
-      {
-        label: 'Usuarios',
-        href: routes.administration.users,
-        icon: UsersIcon,
-        permission: 'users:read',
-      },
-      {
-        label: 'Roles',
-        href: routes.administration.roles,
-        icon: ShieldCheckIcon,
-        permission: 'roles:read',
-      },
-      {
-        label: 'Permisos',
-        href: routes.administration.permissions,
-        icon: KeyRoundIcon,
-        permission: 'permissions:read',
-      },
-      {
-        label: 'Unidades organizativas',
-        href: routes.administration.organizationalUnits,
-        icon: Building2Icon,
-        permission: 'catalogs:read',
-      },
-      {
-        label: 'Puestos',
-        href: routes.administration.positions,
-        icon: BriefcaseBusinessIcon,
-        permission: 'catalogs:read',
-      },
-    ],
-  },
-] as const
+import { hasPermission, useAuth, useLogout } from '@/modules/auth'
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const [location] = useLocation()
   const auth = useAuth()
+  const logout = useLogout()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -151,6 +91,21 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="font-medium hover:text-destructive hover:bg-destructive/5"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+            >
+              <LogOut />
+              Cerrar sesión
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { authQueryKey } from '../hooks/useAuth'
+import { authQueryKeys } from '../queries/auth-query-keys'
 import {
   getSessionGeneration,
   UNAUTHORIZED_EVENT,
@@ -15,7 +15,7 @@ export function AuthSessionListener() {
       const generation = (event as CustomEvent<number>).detail
       if (generation !== getSessionGeneration()) return
 
-      queryClient.setQueryData(authQueryKey, null)
+      queryClient.setQueryData(authQueryKeys.currentUser(), null)
       queryClient.removeQueries({
         predicate: (query) => query.queryKey[0] !== 'auth',
       })

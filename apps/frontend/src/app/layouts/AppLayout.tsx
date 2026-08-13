@@ -7,13 +7,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { Button } from '@/components/ui/button'
-import { LogOutIcon } from 'lucide-react'
-import { useAuth, useLogout } from '@/modules/auth'
+import { useAuth } from '@/modules/auth'
+import { NavUser } from '@/components/nav-user'
 
 export function AppLayout({ children }: PropsWithChildren) {
   const auth = useAuth()
-  const logout = useLogout()
 
   return (
     <SidebarProvider>
@@ -32,24 +30,8 @@ export function AppLayout({ children }: PropsWithChildren) {
             className="mx-2 data-[orientation=vertical]:h-full"
           />
 
-          <div className="ml-auto flex min-w-0 items-center gap-3">
-            <div className="hidden min-w-0 text-right sm:block">
-              <p className="truncate text-sm font-medium">
-                {auth.data?.fullName}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {auth.data?.role.name}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={logout.isPending}
-              onClick={() => logout.mutate()}
-            >
-              <LogOutIcon aria-hidden="true" />
-              <span className="sr-only sm:not-sr-only">Cerrar sesión</span>
-            </Button>
+          <div className="ml-auto">
+            <NavUser user={auth.data} />
           </div>
         </header>
 
