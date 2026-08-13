@@ -1,6 +1,6 @@
 # SIGIP
 
-Sistema de Gestion de Incidencias de Personal.
+Sistema de Gestión de Incidencias de Personal.
 
 SIGIP es un monorepo administrado con pnpm que contiene un cliente React y una
 API NestJS conectada a MySQL mediante Drizzle ORM.
@@ -12,8 +12,8 @@ apps/
   frontend/       React, Vite y TypeScript
   backend/        NestJS, Drizzle ORM, MySQL y TypeScript
 packages/
-  shared/         Base para contratos compartidos
-docs/             Documentacion del proyecto
+  shared/         Contratos compartidos entre frontend y backend
+docs/             Contexto maestro y documentación de base de datos
 docker-compose.yml  MySQL local para desarrollo
 ```
 
@@ -24,7 +24,7 @@ docker-compose.yml  MySQL local para desarrollo
 - Nest CLI 11
 - Docker con Docker Compose, para la base de datos local
 
-## Instalacion
+## Instalación
 
 Todas las dependencias del workspace se instalan desde la raiz:
 
@@ -32,7 +32,7 @@ Todas las dependencias del workspace se instalan desde la raiz:
 pnpm install
 ```
 
-## Configuracion
+## Configuración
 
 La base de datos local y el backend utilizan archivos de entorno distintos.
 Estos archivos no deben versionarse.
@@ -68,6 +68,11 @@ que coincida con las credenciales del contenedor:
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=mysql://sigip:sigip_password@localhost:3306/sigip
+SESSION_COOKIE_NAME=sigip_session
+SESSION_IDLE_MINUTES=30
+SESSION_ABSOLUTE_MINUTES=600
+FRONTEND_ORIGIN=http://localhost:5173
+TRUST_PROXY_HOPS=0
 ```
 
 `DATABASE_URL` es obligatoria y debe utilizar el protocolo `mysql`. El backend
@@ -94,10 +99,20 @@ pnpm db:push
 pnpm db:seed
 ```
 
-La migracion inicial crea las tablas de usuarios, roles, permisos, relaciones
-rol-permiso y sesiones. El seed es idempotente, no se ejecuta en produccion y
+Las migraciones crean acceso, sesiones, estructura organizacional, asignaciones
+y auditoría append-only. El seed es idempotente, no se ejecuta en producción y
 crea el usuario local `admin` con la contrasena `admin123`. Estas credenciales
 son exclusivamente para desarrollo.
+
+## Estado Funcional
+
+- Administración de roles, permisos, usuarios, unidades organizacionales, puestos, empleados y asignaciones.
+- Login, logout, restauración de sesión y autorización por permisos.
+- Sesiones opacas revocables con expiración inactiva y absoluta; su administración se realiza desde cada usuario.
+- Auditoría persistente con filtros, detalle y valores anteriores/nuevos.
+- Fase activa: tipos de incidencia.
+
+Consulta `docs/Contexto_Maestro_SIGIP_v4.md` antes de planear nuevas funcionalidades.
 
 ## Desarrollo
 
@@ -111,7 +126,7 @@ endpoint `GET /api/health` permite comprobar que el servicio esta disponible.
 Todas las solicitudes usan validacion global: las propiedades desconocidas son
 rechazadas y los DTO se transforman a sus tipos declarados.
 
-## Verificacion
+## Verificación
 
 ```bash
 pnpm build

@@ -467,7 +467,7 @@ No se recomienda persistir los siguientes valores porque se calculan a partir de
 
 Si las consultas agregadas se vuelven costosas, primero se deben medir y después valorar vistas, tablas de resumen o procesos de proyección.
 
-## 9. Decisiones pendientes antes de implementar
+## 9. Decisiones pendientes del dominio
 
 1. Definir el catálogo real de tipos de incidencia y sus reglas.
 2. Confirmar los estados válidos de empleados e incidencias; por ahora se propone el mínimo necesario. Definir también si la inactivación de un empleado exige fecha, motivo y usuario responsable.
@@ -478,22 +478,19 @@ Si las consultas agregadas se vuelven costosas, primero se deben medir y despué
 7. Confirmar si debe existir exactamente un `FORMATO_INCIDENCIA` activo por incidencia, qué anexos exige cada tipo y cuándo una incidencia se considera completa. También se debe resolver el flujo entre la transacción de MySQL y la carga no transaccional del archivo, ya sea mediante compensación o un estado pendiente. Si las reglas varían por tipo, sustituir `requires_document` por una relación de requisitos documentales.
 8. Confirmar si el formato tiene folio o número institucional, si es obligatorio y el alcance de su unicidad antes de agregar `format_number`.
 9. Definir MIME permitidos, tamaño máximo, análisis antivirus, retención y respaldo de archivos.
-10. Definir los plazos de expiración absoluta e inactividad de sesiones y el algoritmo de hash de contraseñas.
-11. Definir la política de credenciales: cambio obligatorio inicial, fecha del último cambio, bloqueo por intentos fallidos, desbloqueo y revocación de sesiones después de cambiar contraseña.
-12. Definir retención, consulta y protección de la bitácora de auditoría, incluida su relación con sesiones antiguas.
-13. Confirmar la normalización y sensibilidad a mayúsculas del nombre de usuario.
-14. Definir si una incidencia cancelada puede reactivarse o si debe crearse una incidencia de reemplazo.
-15. Confirmar si `full_name` es suficiente o si la fuente oficial requiere separar nombres y apellidos.
-16. Definir qué entidades necesitan `created_by`, `updated_by` o campos de cambio de estado además de la bitácora general.
-17. Unificar los códigos definitivos de roles antes de crear seeds; actualmente existen variantes como `ADMINISTRATOR`/`ADMIN` y `HR_CAPTURE_CLERK`/`HR_CLERK` en los documentos de diseño.
+10. Definir la política de credenciales pendiente: cambio obligatorio inicial, fecha del último cambio, bloqueo por intentos fallidos y desbloqueo. Argon2id, la revocación después de cambiar contraseña y los límites de sesión ya están implementados.
+11. Definir la retención definitiva de la bitácora de auditoría y su relación de largo plazo con sesiones antiguas. La consulta protegida y append-only ya está implementada.
+12. Confirmar la normalización y sensibilidad a mayúsculas del nombre de usuario.
+13. Definir si una incidencia cancelada puede reactivarse o si debe crearse una incidencia de reemplazo.
+14. Confirmar si `full_name` es suficiente o si la fuente oficial requiere separar nombres y apellidos.
+15. Definir qué entidades necesitan `created_by`, `updated_by` o campos de cambio de estado además de la bitácora general.
+16. Unificar los códigos definitivos de roles para producción; el seed de desarrollo vigente utiliza los códigos definidos en `access-control.seed-data.ts`.
 
 ## 10. Orden sugerido de implementación futura
 
-1. Configuración de MySQL, Drizzle y convenciones compartidas.
-2. `roles`, `permissions`, `role_permissions`, `users` y `sessions`.
-3. Catálogos de organización y personal con `employee_assignments`.
-4. Catálogo y núcleo de incidencias con sus ocurrencias.
-5. Tipos y metadatos de documentos, junto con almacenamiento privado.
-6. Auditoría transversal.
-7. Seeds de catálogos, restricciones e índices finales.
-8. Pruebas de integración para reglas temporales, cancelación, permisos y concurrencia.
+1. `incident_types`.
+2. Núcleo de incidencias con sus ocurrencias.
+3. Tipos y metadatos de documentos, junto con almacenamiento privado.
+4. Integración de auditoría en las mutaciones administrativas y de dominio restantes.
+5. Seeds de catálogos, restricciones e índices finales.
+6. Pruebas de integración para reglas temporales, cancelación, permisos y concurrencia.

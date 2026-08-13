@@ -19,7 +19,9 @@ The `Auth + Sessions` phase is complete end to end:
 5. Real frontend session restoration and permission-aware route protection.
 6. Automated tests for authentication, expiration/revocation, and authorization failures.
 
-The active phase is now `Incident Types`. Then implement in this order: Incidents with Incident Occurrences; Document Types and private document storage; Audit; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
+Audit infrastructure is also active: `audit_logs` is append-only, `GET /api/audit` and `GET /api/audit/:id` require `audit:read`, and the frontend provides filtering and detailed before/after values. Authentication, session, and user mutations already write audit events; remaining administrative and domain mutations must be integrated as they are touched. Never audit passwords, hashes, tokens, cookies, authorization headers, secrets, or binary content. When a sensitive mutation is transactional, its audit write belongs to the same transaction.
+
+The active phase is now `Incident Types`. Then implement in this order: Incidents with Incident Occurrences; Document Types and private document storage; remaining cross-cutting Audit integration; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
 
 ## Build, Test, and Development Commands
 
@@ -43,7 +45,7 @@ Use filters for focused validation, for example `pnpm --filter frontend build` o
 
 ## Coding Style & Naming Conventions
 
-Write TypeScript with two-space indentation and let ESLint and Prettier enforce formatting. Use `PascalCase` for classes and React components, `camelCase` for functions and variables, and descriptive kebab-case filenames. Follow NestJS suffixes such as `users.controller.ts`, `create-user.dto.ts`, and `users.schema.ts`. Prefer feature modules, constructor injection, explicit DTO validation, and strongly typed database access; avoid `any` and unchecked assertions.
+Write TypeScript with two-space indentation and let ESLint and Prettier enforce formatting. Use `PascalCase` for classes and React components, `camelCase` for functions and variables, and descriptive kebab-case filenames. Follow NestJS suffixes such as `users.controller.ts`, `create-user.dto.ts`, and `users.schema.ts`. Prefer one exported React component per file; extract meaningful visual subcomponents instead of accumulating several components in a page or Sheet file, while keeping one-use pure helpers colocated with their owning component. Prefer feature modules, constructor injection, explicit DTO validation, and strongly typed database access; avoid `any` and unchecked assertions.
 
 ## Backend & Database Conventions
 
@@ -56,6 +58,8 @@ The global `DatabaseModule` exports the `MYSQL_POOL` and `DRIZZLE_DATABASE` inje
 Persistent feature modules should follow the established `Controller -> Service -> Repository` direction. Services depend on abstract repository contracts; Drizzle implementations own SQL, UUID binary/text conversion, and persistence-specific mapping. Use presenters for HTTP response shaping when internal models contain persistence or sensitive fields. Follow an existing administrative module before introducing a new layer or pattern.
 
 Authentication uses server-side sessions, not JWT as the primary mechanism. Never store raw session tokens, expose password hashes, or trust user/actor identifiers supplied by the frontend. Cookie, CORS, expiration, revocation, and permission checks are part of the same security boundary and must be verified together.
+
+Session administration lives in each user's actions, not in a global sessions page. `GET /api/users/:userId/sessions` requires `sessions:read`; revocation requires `sessions:revoke`. Administrative session history is limited to the most recent seven days. User details may enrich the response with effective permissions, session summary, creator derived from the `CREATED` audit event, and recent audit only when the requester has `audit:read`.
 
 ## Environment & Secrets
 
