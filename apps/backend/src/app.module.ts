@@ -20,6 +20,7 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { OriginGuard } from './common/guards/origin.guard';
 import { SessionAuthGuard } from './common/guards/session-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     EmployeesModule,
     AuthModule,
     SessionsModule,
+    AuditModule,
   ],
   providers: [
     CryptoService,
