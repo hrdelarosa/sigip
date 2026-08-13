@@ -4,9 +4,11 @@ import { Badge } from './ui/badge'
 export function StatusBadge({
   isActive,
   icon = false,
+  dot = false,
 }: {
   isActive: boolean
   icon?: boolean
+  dot?: boolean
 }) {
   return (
     <Badge
@@ -17,6 +19,9 @@ export function StatusBadge({
       }`}
     >
       {icon && <ShieldCheck data-icon="inline-start" aria-hidden="true" />}
+      {dot && icon === false && (
+        <span className="size-1.5 rounded-full bg-current" />
+      )}
       {isActive ? 'Activo' : 'Inactivo'}
     </Badge>
   )

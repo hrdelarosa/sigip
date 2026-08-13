@@ -15,8 +15,10 @@ export function useUpdateUser() {
     mutationFn: ({ id, input }: UpdateUserVariables) =>
       updateUser({ id, input }),
     onSuccess: async (user) => {
-      queryClient.setQueryData(userQueryKeys.detail(user.id), user)
-      await queryClient.invalidateQueries({ queryKey: userQueryKeys.lists() })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.lists() }),
+        queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(user.id) }),
+      ])
     },
   })
 }

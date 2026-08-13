@@ -14,7 +14,7 @@ export function DetailsErrorAlert({ itemType, onRetry, isPending }: Props) {
     <Alert variant="destructive">
       <CircleAlert aria-hidden="true" />
       <AlertTitle>
-        No se pudieron cargar los detalles del {itemType || 'elemento'}
+        No se pudieron cargar los detalles {itemType || 'del elemento'}
       </AlertTitle>
       <AlertDescription>
         Comprueba la conexión e inténtalo nuevamente.

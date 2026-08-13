@@ -6,14 +6,16 @@ import { PositionsPage } from '@/modules/administration/positions'
 import { RolesPage } from '@/modules/administration/roles'
 import { UsersPage } from '@/modules/administration/users'
 import { EmployeeDetailsPage, EmployeesPage } from '@/modules/employees'
-import { hasPermission, LoginPage, SessionsPage, useAuth } from '@/modules/auth'
+import { hasPermission, LoginPage, useAuth } from '@/modules/auth'
 import { AppLayout } from '../layouts/AppLayout'
 import { AuthLayout } from '../layouts/AuthLayout'
 import { ProtectedRoute } from './protected-route'
 import { routes } from './routes'
+import { AuditPage } from '@/modules/audit'
 
 const destinations = [
   { permission: 'employees:read', route: routes.employees.root },
+  { permission: 'audit:read', route: routes.audit },
   { permission: 'users:read', route: routes.administration.users },
   { permission: 'roles:read', route: routes.administration.roles },
   { permission: 'permissions:read', route: routes.administration.permissions },
@@ -73,12 +75,11 @@ export function AppRouter() {
           <EmployeesPage />
         </ProtectedPage>
       </Route>
-      <Route path={routes.sessions}>
-        <ProtectedPage>
-          <SessionsPage />
+      <Route path={routes.audit}>
+        <ProtectedPage permission="audit:read">
+          <AuditPage />
         </ProtectedPage>
       </Route>
-
       <Route>
         <NotFoundPage />
       </Route>

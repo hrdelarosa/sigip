@@ -1,14 +1,16 @@
-import type { UserResponse } from '@sigip/shared'
 import { useState } from 'react'
 import {
   Eye,
   KeyRound,
   MoreHorizontal,
+  MonitorSmartphone,
   Pencil,
   Power,
   PowerOff,
 } from 'lucide-react'
+import type { UserResponse } from '@sigip/shared'
 import type { Role } from '../../roles/types/roles.types'
+
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -18,10 +20,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import UserDetails from './UserDetails'
 import UserEdit from './UserEdit'
+import UserDetails from './UserDetails'
 import UserPassword from './UserPassword'
+import UserSessions from './UserSessions'
 import UserStatusAlert from './UserStatusAlert'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 interface Props {
   user: UserResponse
@@ -33,6 +37,13 @@ export default function UserActions({ user, roles }: Props) {
   const [editOpen, setEditOpen] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
+  const [sessionsOpen, setSessionsOpen] = useState(false)
+  const authQuery = useAuth()
+  const canReadSessions = hasPermission(
+    authQuery.data?.permissions,
+    'sessions:read',
+  )
+  const currentUser = authQuery.data
 
   return (
     <>
@@ -54,6 +65,12 @@ export default function UserActions({ user, roles }: Props) {
               <Eye />
               Ver detalles
             </DropdownMenuItem>
+            {canReadSessions ? (
+              <DropdownMenuItem onClick={() => setSessionsOpen(true)}>
+                <MonitorSmartphone />
+                Ver sesiones
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil />
               Editar
@@ -71,6 +88,7 @@ export default function UserActions({ user, roles }: Props) {
             <DropdownMenuItem
               variant={user.isActive ? 'destructive' : 'default'}
               onClick={() => setStatusOpen(true)}
+              disabled={user.id === currentUser?.id}
             >
               {user.isActive ? <PowerOff /> : <Power />}
               {user.isActive ? 'Desactivar' : 'Activar'}
@@ -81,7 +99,6 @@ export default function UserActions({ user, roles }: Props) {
 
       <UserDetails
         user={user}
-        roles={roles}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
@@ -101,6 +118,13 @@ export default function UserActions({ user, roles }: Props) {
         open={statusOpen}
         onOpenChange={setStatusOpen}
       />
+      {canReadSessions ? (
+        <UserSessions
+          user={user}
+          open={sessionsOpen}
+          onOpenChange={setSessionsOpen}
+        />
+      ) : null}
     </>
   )
 }

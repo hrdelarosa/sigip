@@ -34,8 +34,6 @@ export const routes = {
   },
 
   audit: '/audit',
-  sessions: '/sessions',
-
   auth: {
     login: '/login',
   },

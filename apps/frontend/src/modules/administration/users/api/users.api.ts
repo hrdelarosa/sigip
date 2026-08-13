@@ -4,6 +4,7 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   UserResponse,
+  UserDetailsResponse,
   UsersResponse,
 } from '@sigip/shared'
 import { apiRequest } from '@/lib/api/api-client'
@@ -12,8 +13,8 @@ export function getUsers(): Promise<UsersResponse> {
   return apiRequest<UsersResponse>('/users')
 }
 
-export function getUserById({ id }: { id: string }): Promise<UserResponse> {
-  return apiRequest<UserResponse>(`/users/${id}`)
+export function getUserById({ id }: { id: string }): Promise<UserDetailsResponse> {
+  return apiRequest<UserDetailsResponse>(`/users/${id}`)
 }
 
 export function createUser({
