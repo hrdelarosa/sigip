@@ -4,9 +4,9 @@
 
 **Estado:** vigente
 
-**Última actualización:** 9 de agosto de 2026
+**Última actualización:** 13 de agosto de 2026
 
-**Fase activa:** autenticación y sesiones
+**Fase activa:** tipos de incidencia
 
 ## 1. Propósito del documento
 
@@ -69,8 +69,9 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
-- El backend contiene módulos funcionales de `auth` y `sessions`; siguen pendientes `incident-types`, `incidents`, `document-types`, `documents`, `audit` y `dashboard`.
+- El backend contiene módulos funcionales de `auth`, `sessions` y `audit`; el frontend incluye restauración de sesión, administración de sesiones por usuario y consulta visual de auditoría. Siguen pendientes `incident-types`, `incidents`, `document-types`, `documents` y `dashboard`.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
+- La auditoría es append-only y ya registra autenticación, sesiones y mutaciones de usuarios. Su integración transversal continúa a medida que se modifiquen roles, permisos, empleados, asignaciones y nuevos módulos de dominio.
 
 ## 4. Arquitectura definitiva
 
@@ -132,6 +133,8 @@ docs/
 
 Los módulos de dominio se alojan en `apps/backend/src/modules/<feature>/` y `apps/frontend/src/modules/<feature>/`. Los contratos reutilizables entre ambos lados pertenecen a `packages/shared/src/`; no deben duplicarse si representan el mismo concepto de API.
 
+En frontend se prefiere un componente React exportado por archivo. Los componentes visuales con responsabilidad propia deben extraerse; los helpers puros de uso exclusivo permanecen junto al componente que los consume para no crear abstracciones sin reutilización.
+
 ## 6. Relación entre módulos y tablas
 
 No se creará necesariamente un módulo por cada tabla. Las tablas puente y dependientes se administrarán desde el módulo funcional correspondiente.
@@ -141,17 +144,17 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `health` | Estado de la API y conectividad de base de datos. | Implementado. |
 | `roles` | `roles`, relación con usuarios mediante `users.role_id` y `role_permissions`. | Backend y frontend implementados. |
 | `permissions` | `permissions`. | Backend y frontend implementados. |
-| `users` | `users`. | Backend y frontend implementados con identidad autenticada. |
+| `users` | `users`. | Backend y frontend implementados con identidad autenticada, detalle enriquecido, permisos efectivos y resumen de sesiones. |
 | `organizational-units` | `organizational_units`. | Backend y frontend implementados. |
 | `positions` | `positions`. | Backend y frontend implementados. |
 | `employees` | `employees` y `employee_assignments`. | Backend y frontend implementados. |
 | `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Backend y frontend implementados. |
-| `sessions` | `sessions`. | Persistencia, expiración, revocación y consulta implementadas. |
+| `sessions` | `sessions`. | Persistencia, expiración, revocación y administración por usuario implementadas. |
 | `incident-types` | `incident_types`. | Pendiente. |
 | `incidents` | `incidents` e `incident_occurrences`. | Pendiente; núcleo funcional del sistema. |
 | `document-types` | `document_types`. | Pendiente. |
 | `documents` | `documents` y almacenamiento privado. | Pendiente. |
-| `audit` | `audit_logs`. | Pendiente. |
+| `audit` | `audit_logs`. | Esquema, migraciones, consulta backend y frontend implementados; autenticación, sesiones y usuarios ya producen eventos. Resta integrar las demás mutaciones administrativas y de dominio. |
 | `dashboard` | Consultas agregadas; no tiene tabla propia. | Pendiente. |
 
 ### Decisión sobre usuarios y roles
@@ -276,13 +279,11 @@ GET  /api/auth/me
 ### Sessions
 
 ```http
-GET    /api/sessions
-GET    /api/sessions/:id
-DELETE /api/sessions/:id
-DELETE /api/sessions
 GET    /api/users/:userId/sessions
-DELETE /api/users/:userId/sessions
+DELETE /api/users/:userId/sessions/:id
 ```
+
+La administración se abre desde las acciones del usuario. La consulta requiere `sessions:read`, la revocación requiere `sessions:revoke` y el historial administrativo visible se limita a sesiones creadas durante los últimos siete días. Cada sesión muestra dispositivo, agente de usuario, IP, actividad, creación, expiración por inactividad, expiración absoluta, estado y si corresponde a la sesión actual.
 
 ### Users
 
@@ -298,7 +299,7 @@ PATCH /api/users/:id/password
 #### Operaciones de Users
 
 - `GET /api/users`: listado, búsqueda, filtro por estado, filtro por rol y paginación.
-- `GET /api/users/:id`: consulta individual con validación UUID.
+- `GET /api/users/:id`: consulta individual con validación UUID; incluye rol, permisos efectivos, creador cuando puede derivarse de Audit y resumen de sesiones. La auditoría reciente solo se incluye si el solicitante posee `audit:read`.
 - `POST /api/users`: recibe `roleId`, `username`, `fullName` y contraseña temporal; crea el usuario activo y genera UUIDv7.
 - `PATCH /api/users/:id`: actualiza `fullName` y puede reemplazar `roleId`; nunca agrega un segundo rol.
 - `PATCH /api/users/:id/status`: activa o desactiva; al desactivar deberá revocar sesiones.
@@ -421,6 +422,8 @@ GET /api/audit/:id
 
 La auditoría será append-only.
 
+Ambas rutas requieren `audit:read`. El listado permite filtrar por acción, entidad, UUID de entidad, usuario, sesión y rango de fechas. El detalle presenta acción, actor, fecha, entidad, sesión, IP, agente de usuario y conserva por separado los valores anteriores y nuevos, incluyendo estructuras JSON complejas.
+
 ### Dashboard
 
 ```http
@@ -438,10 +441,12 @@ La infraestructura administrativa previa al núcleo de incidencias se considera 
 - Monorepo pnpm con contratos compartidos.
 - Backend NestJS conectado a MySQL mediante Drizzle.
 - Docker Compose para MySQL 8.4.
-- Esquemas, dos migraciones y seed de desarrollo para acceso y estructura organizacional.
+- Esquemas y cuatro migraciones para acceso, estructura organizacional, sesiones y auditoría, además del seed de desarrollo.
 - Health check de API y base de datos.
 - Backend de roles, permisos, usuarios, unidades organizacionales, puestos, empleados y asignaciones.
 - Frontend administrativo para esos mismos módulos, con consultas, formularios y flujos de alta/edición/estado según corresponda.
+- Administración de sesiones desde las acciones de cada usuario, con consulta de actividad y revocación autorizada.
+- Auditoría persistente y append-only con filtros, detalle visual y valores anteriores/nuevos.
 
 ### Alcance inmediato completado
 
@@ -470,9 +475,9 @@ Esta secuencia evita que `incidents`, `documents` y `audit` reciban identificado
 - Catálogos de tipos de incidencia y tipos documentales.
 - Incidencias y ocurrencias con todas sus reglas transaccionales.
 - Almacenamiento privado y descarga autorizada de documentos.
-- Auditoría append-only.
+- Integración transversal restante de auditoría en roles, permisos, empleados, asignaciones y catálogos.
 - Dashboard y consultas agregadas.
-- Ampliar pruebas automatizadas; actualmente solo existe la base e2e del backend.
+- Ampliar pruebas automatizadas para las fases de dominio y los flujos visuales; Auth, Sessions, Users y Audit ya cuentan con cobertura unitaria/e2e focalizada en backend.
 
 ## 12. Orden de implementación
 
@@ -498,7 +503,7 @@ NÚCLEO FUNCIONAL
 └── Documents + almacenamiento privado
 
 CIERRE FUNCIONAL
-├── Audit
+├── Integración transversal restante de Audit
 └── Dashboard
 ```
 
@@ -506,7 +511,7 @@ CIERRE FUNCIONAL
 
 Las incidencias y los documentos registran quién ejecutó cada acción. Si se construyen antes de Auth, los controladores tendrían que aceptar IDs de usuario artificiales o inseguros y después habría que rediseñarlos. Con la sesión resuelta, el actor se obtiene del contexto autenticado y la autorización por permisos queda disponible desde el primer endpoint del núcleo.
 
-Audit no debe posponerse hasta después de todo el sistema. Su infraestructura puede incorporarse tras incidencias/documentos, pero las operaciones sensibles nuevas deben integrarse a la auditoría en cuanto el módulo esté disponible.
+La infraestructura de Audit ya está incorporada. Toda operación sensible nueva debe integrarse a la auditoría desde su implementación y compartir transacción con la mutación cuando corresponda.
 
 ## 13. Reglas transaccionales relevantes
 
@@ -554,9 +559,8 @@ Nunca deben registrarse contraseñas, hashes de contraseña, tokens, hashes de s
 - Posible folio del formato.
 - MIME y tamaño máximo de archivos.
 - Política antivirus, respaldo y retención.
-- Duración de sesiones.
 - Configuración definitiva de la cookie de sesión según el entorno.
-- Rotación de tokens, sesiones concurrentes y rate limiting de login.
+- Rotación de tokens y política definitiva de sesiones concurrentes.
 - Política de credenciales.
 - Normalización y sensibilidad a mayúsculas del username.
 - Reactivación o reemplazo de incidencias canceladas.
@@ -590,4 +594,7 @@ Cumplidos estos puntos, la siguiente fase productiva es `Incident Types`; despu�
 - CORS acepta únicamente `FRONTEND_ORIGIN` con credenciales y las mutaciones validan el encabezado `Origin` cuando está presente.
 - Desactivar un usuario o reemplazar su contraseña revoca sus sesiones activas en la misma transacción de MySQL.
 - Los permisos efectivos se consultan desde el rol vigente al resolver cada petición; un cambio de rol o permisos se aplica sin emitir una sesión nueva.
-- `GET/DELETE /api/sessions` opera sobre las sesiones propias. La consulta y revocación por usuario requiere `sessions:read` o `sessions:revoke`.
+- La administración de sesiones se realiza desde las acciones de cada usuario; no existe una página global que mezcle sesiones ni una página de autoservicio. Consultar y revocar sesiones de un usuario requiere `sessions:read` o `sessions:revoke`, respectivamente.
+- La consulta administrativa de sesiones devuelve únicamente las creadas durante los últimos siete días; el estado efectivo se deriva de revocación y vencimientos inactivo/absoluto.
+- El detalle de usuario muestra identidad, rol, permisos efectivos agrupables por módulo, creación/actualización, creador derivado del evento `CREATED` y resumen de sesiones. Si no existe evento histórico o el solicitante no posee `audit:read`, el creador o la auditoría reciente pueden ser nulos.
+- Audit expone consultas protegidas por `audit:read`, conserva `oldValues` y `newValues` sanitizados y nunca registra contraseñas, hashes, tokens, cookies, encabezados de autorización, secretos ni contenido binario.
