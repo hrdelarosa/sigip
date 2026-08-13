@@ -11,6 +11,34 @@ export interface UserResponse {
 
 export type UsersResponse = UserResponse[];
 
+export interface UserRoleDetailsResponse {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+}
+
+export interface UserPermissionResponse {
+  id: string;
+  code: string;
+  description: string | null;
+}
+
+export interface UserSessionSummaryResponse {
+  activeCount: number;
+  recentCount: number;
+  currentSessionExpiresAt: string | null;
+}
+
+export interface UserDetailsResponse extends UserResponse {
+  role: UserRoleDetailsResponse;
+  permissions: UserPermissionResponse[];
+  sessionSummary: UserSessionSummaryResponse | null;
+  recentAudit: import('../audit').AuditLogResponse[] | null;
+  createdBy: import('../audit').AuditActorResponse | null;
+}
+
 export interface CreateUserRequest {
   roleId: string;
   username: string;

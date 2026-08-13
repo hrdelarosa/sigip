@@ -4,6 +4,10 @@ export type {
   CreateUserRequest,
   UpdateUserRequest,
   UserResponse,
+  UserDetailsResponse,
+  UserRoleDetailsResponse,
+  UserPermissionResponse,
+  UserSessionSummaryResponse,
   UsersResponse,
 } from './users'
 
@@ -68,3 +72,5 @@ export { EMPLOYEE_STATUSES, APPOINTMENT_TYPES } from './employees'
 export type { PaginatedResponse, PaginationMeta } from './common'
 
 export * from './auth'
+
+export * from './audit'
