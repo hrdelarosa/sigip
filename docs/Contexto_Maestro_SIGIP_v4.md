@@ -69,7 +69,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
-- El backend contiene módulos funcionales de `auth`, `sessions` y `audit`; el frontend incluye restauración de sesión, administración de sesiones por usuario y consulta visual de auditoría. Siguen pendientes `incident-types`, `incidents`, `document-types`, `documents` y `dashboard`.
+- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents` y `documents`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. Siguen pendientes la administración de `document-types`, otros anexos opcionales y `dashboard`.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
 - La auditoría es append-only y ya registra autenticación, sesiones y mutaciones de usuarios. Su integración transversal continúa a medida que se modifiquen roles, permisos, empleados, asignaciones y nuevos módulos de dominio.
 
@@ -150,10 +150,10 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `employees` | `employees` y `employee_assignments`. | Backend y frontend implementados. |
 | `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Backend y frontend implementados. |
 | `sessions` | `sessions`. | Persistencia, expiración, revocación y administración por usuario implementadas. |
-| `incident-types` | `incident_types`. | Pendiente. |
-| `incidents` | `incidents` e `incident_occurrences`. | Pendiente; núcleo funcional del sistema. |
-| `document-types` | `document_types`. | Pendiente. |
-| `documents` | `documents` y almacenamiento privado. | Pendiente. |
+| `incident-types` | `incident_types`. | Backend implementado; el catálogo alimenta la captura de incidencias. |
+| `incidents` | `incidents` e `incident_occurrences`. | Backend y frontend implementados para alta, consulta, edición y cancelación. |
+| `document-types` | `document_types`. | Esquema y tipo `FORMATO_INCIDENCIA` implementados; administración pendiente. |
+| `documents` | `documents` y almacenamiento privado. | PDF principal, listado, descarga privada, baja lógica y oficio opcional de Comisión implementados; otros anexos quedan pendientes. |
 | `audit` | `audit_logs`. | Esquema, migraciones, consulta backend y frontend implementados; autenticación, sesiones y usuarios ya producen eventos. Resta integrar las demás mutaciones administrativas y de dominio. |
 | `dashboard` | Consultas agregadas; no tiene tabla propia. | Pendiente. |
 
@@ -441,12 +441,15 @@ La infraestructura administrativa previa al núcleo de incidencias se considera 
 - Monorepo pnpm con contratos compartidos.
 - Backend NestJS conectado a MySQL mediante Drizzle.
 - Docker Compose para MySQL 8.4.
-- Esquemas y cuatro migraciones para acceso, estructura organizacional, sesiones y auditoría, además del seed de desarrollo.
+- Esquemas y migraciones para acceso, estructura organizacional, sesiones, auditoría, incidencias y documentos, además del seed de desarrollo.
 - Health check de API y base de datos.
 - Backend de roles, permisos, usuarios, unidades organizacionales, puestos, empleados y asignaciones.
 - Frontend administrativo para esos mismos módulos, con consultas, formularios y flujos de alta/edición/estado según corresponda.
 - Administración de sesiones desde las acciones de cada usuario, con consulta de actividad y revocación autorizada.
 - Auditoría persistente y append-only con filtros, detalle visual y valores anteriores/nuevos.
+- Tipos de incidencia, incidencias y ocurrencias persistentes con validación de nombramiento, vigencia, modalidad temporal, superposición y cancelación lógica.
+- PDF principal obligatorio almacenado fuera de archivos públicos, con metadatos privados y descarga autenticada.
+- Frontend de incidencias con filtros URL, paginación, captura guiada, edición, cancelación, detalle histórico y expediente documental.
 
 ### Alcance inmediato completado
 
@@ -472,9 +475,8 @@ Esta secuencia evita que `incidents`, `documents` y `audit` reciban identificado
 
 ### Trabajo todavía pendiente
 
-- Catálogos de tipos de incidencia y tipos documentales.
-- Incidencias y ocurrencias con todas sus reglas transaccionales.
-- Almacenamiento privado y descarga autorizada de documentos.
+- Administración visual de tipos de incidencia y tipos documentales.
+- Carga de anexos opcionales distintos del oficio de Comisión y del formato principal.
 - Integración transversal restante de auditoría en roles, permisos, empleados, asignaciones y catálogos.
 - Dashboard y consultas agregadas.
 - Ampliar pruebas automatizadas para las fases de dominio y los flujos visuales; Auth, Sessions, Users y Audit ya cuentan con cobertura unitaria/e2e focalizada en backend.
@@ -549,15 +551,13 @@ Nunca deben registrarse contraseñas, hashes de contraseña, tokens, hashes de s
 ## 15. Decisiones todavía pendientes
 
 - Catálogo definitivo de tipos de incidencia.
-- Estados definitivos de empleados e incidencias.
+- Estados definitivos adicionales de empleados, si se requieren más allá del modelo actual.
 - Reglas de desactivación de empleados.
-- Modalidades temporales definitivas.
-- Significado exacto de `format_date`.
+- Posibles modalidades temporales adicionales a `SINGLE_DATE`, `MULTIPLE_DATES` y `DATE_RANGE`.
 - Regla institucional de quincena.
 - Tipos definitivos de nombramiento.
-- Requisitos documentales.
 - Posible folio del formato.
-- MIME y tamaño máximo de archivos.
+- MIME y tamaño máximo de otros anexos opcionales; el formato principal es PDF de hasta 10 MB y el oficio de Comisión es PDF de hasta 5 MB.
 - Política antivirus, respaldo y retención.
 - Configuración definitiva de la cookie de sesión según el entorno.
 - Rotación de tokens y política definitiva de sesiones concurrentes.
