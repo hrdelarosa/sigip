@@ -6,6 +6,10 @@ export function formatCalendarDate(value: string): string {
   return format(parseISO(value), 'd MMM yyyy', { locale: es })
 }
 
+export function formatCalendarDateNumeric(value: string): string {
+  return format(parseISO(value), 'dd/MM/yyyy', { locale: es })
+}
+
 export function formatIncidentOccurrences(
   occurrences: IncidentOccurrenceResponse[],
 ): string {

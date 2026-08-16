@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { DownloadIcon, FileTextIcon, FileXCornerIcon } from 'lucide-react'
+import {
+  DownloadIcon,
+  EyeIcon,
+  FileTextIcon,
+  FileXCornerIcon,
+} from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
+import { DetailsErrorAlert } from '@/components/details/details-error-alert'
+import { DetailsEmpty } from '@/components/details/details-empty'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -11,21 +20,20 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item'
-import { formatDate } from '@/lib/formatters'
+import { cn } from '@/lib/utils'
+import { downloadIncidentDocument } from '../api/incidents.api'
 import { useIncidentDocumentDownload } from '../hooks/useIncidentDocumentDownload'
 import { incidentDocumentsQueryOptions } from '../queries/incident-query-options'
-import { DetailsErrorAlert } from '@/components/details/details-error-alert'
-import { DetailsEmpty } from '@/components/details/details-empty'
+import type { IncidentDocuments } from '../types/incident.types'
 import { CommissionAnnexUpload } from './CommissionAnnexUpload'
+
+type IncidentDocument = IncidentDocuments[number]
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
 
 export function IncidentDocuments({
   incidentId,
@@ -36,15 +44,38 @@ export function IncidentDocuments({
 }) {
   const query = useQuery(incidentDocumentsQueryOptions(incidentId))
   const { download, downloadingId } = useIncidentDocumentDownload()
+  const [viewingId, setViewingId] = useState<string | null>(null)
   const hasCommissionAnnex = query.data?.some(
     (document) => document.documentType.code === 'OFICIO_COMISION',
   )
 
+  async function view(document: IncidentDocument) {
+    setViewingId(document.id)
+
+    try {
+      const file = await downloadIncidentDocument(
+        document.id,
+        document.originalName,
+      )
+      const url = URL.createObjectURL(file.blob)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (error) {
+      toast.error('No se pudo visualizar el documento', {
+        description:
+          error instanceof Error ? error.message : 'Intente nuevamente.',
+      })
+    } finally {
+      setViewingId(null)
+    }
+  }
+
   return (
-    <Card>
+    <Card className="min-w-0 shadow-sm">
       <CardHeader>
-        <CardTitle>
-          <h2>Expediente documental</h2>
+        <CardTitle className="text-base">
+          Documentos adjuntos
+          {query.isSuccess ? ` (${query.data.length})` : ''}
         </CardTitle>
         <CardDescription>
           Archivos privados asociados a este formato de incidencia.
@@ -58,6 +89,7 @@ export function IncidentDocuments({
       <CardContent>
         {query.isPending ? (
           <div className="flex flex-col gap-3" aria-busy="true">
+            <Skeleton className="h-16" />
             <Skeleton className="h-16" />
           </div>
         ) : null}
@@ -76,37 +108,55 @@ export function IncidentDocuments({
           />
         ) : null}
         {query.isSuccess && query.data.length > 0 ? (
-          <ItemGroup>
+          <ul className="flex flex-col gap-3">
             {query.data.map((document) => (
-              <Item key={document.id} variant="outline">
-                <ItemMedia variant="icon">
-                  <FileTextIcon />
-                </ItemMedia>
+              <li
+                key={document.id}
+                className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className={cn(
+                      'flex size-10 shrink-0 items-center justify-center rounded-md',
+                      'bg-destructive/10 text-destructive',
+                    )}
+                  >
+                    <FileTextIcon className="size-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {document.originalName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {document.documentType.name} ·{' '}
+                      {formatFileSize(document.sizeBytes)}
+                    </p>
+                  </div>
+                </div>
 
-                <ItemContent className="min-w-0">
-                  <ItemTitle>{document.originalName}</ItemTitle>
-
-                  <ItemDescription>
-                    {document.documentType.name} ·{' '}
-                    {(document.sizeBytes / 1024 / 1024).toFixed(2)} MB ·{' '}
-                    {formatDate(document.createdAt)}
-                  </ItemDescription>
-                </ItemContent>
-
-                <ItemActions className="basis-full justify-end sm:basis-auto">
+                <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={downloadingId !== null}
+                    disabled={viewingId !== null || downloadingId !== null}
+                    onClick={() => void view(document)}
+                  >
+                    <EyeIcon data-icon="inline-start" />
+                    Visualizar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={downloadingId !== null || viewingId !== null}
+                    aria-label={`Descargar ${document.originalName}`}
                     onClick={() => void download(document)}
                   >
-                    <DownloadIcon data-icon="inline-start" />
-                    Descargar
+                    <DownloadIcon />
                   </Button>
-                </ItemActions>
-              </Item>
+                </div>
+              </li>
             ))}
-          </ItemGroup>
+          </ul>
         ) : null}
       </CardContent>
     </Card>

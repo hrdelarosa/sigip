@@ -126,3 +126,41 @@ export const commissionAnnexSchema = z
     (file) => (file?.size ?? Number.POSITIVE_INFINITY) <= 5 * 1024 * 1024,
     'El oficio no puede superar 5 MB',
   )
+
+export const createIncidentFormSchema = incidentFormSchema.superRefine(
+  (values, context) => {
+    if (!values.file) {
+      context.addIssue({
+        code: 'custom',
+        path: ['file'],
+        message: 'Seleccione un archivo PDF',
+      })
+    } else {
+      const fileResult = incidentFileSchema.safeParse(values.file)
+
+      if (!fileResult.success) {
+        context.addIssue({
+          code: 'custom',
+          path: ['file'],
+          message:
+            fileResult.error.issues[0]?.message ??
+            'El archivo debe ser un PDF de hasta 10 MB',
+        })
+      }
+    }
+
+    if (values.commissionAnnex) {
+      const annexResult = commissionAnnexSchema.safeParse(values.commissionAnnex)
+
+      if (!annexResult.success) {
+        context.addIssue({
+          code: 'custom',
+          path: ['commissionAnnex'],
+          message:
+            annexResult.error.issues[0]?.message ??
+            'El oficio debe ser un PDF de hasta 5 MB',
+        })
+      }
+    }
+  },
+)

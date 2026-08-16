@@ -7,7 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { IncidentCancelAlert } from '../components/IncidentCancelAlert'
 import { IncidentCancellationCard } from '../components/IncidentCancellationCard'
-import { IncidentDetailsHeader } from '../components/IncidentDetailsHeader'
+import {
+  IncidentDetailsFooter,
+  IncidentDetailsHeader,
+} from '../components/IncidentDetailsHeader'
 import { IncidentDetailsInformation } from '../components/IncidentDetailsInformation'
 import { IncidentDocuments } from '../components/IncidentDocuments'
 import { IncidentEditDialog } from '../components/IncidentEditDialog'
@@ -27,21 +30,9 @@ export function IncidentDetailsPage({ id }: { id: string }) {
     setCancelOpen,
     query,
   } = useIncidentDetails(id)
-  console.log('details', incident)
 
   return (
     <div className="flex min-w-0 w-full flex-col gap-6">
-      <Link
-        href={backHref}
-        className={cn(
-          buttonVariants({ variant: 'ghost', size: 'sm' }),
-          'w-fit',
-        )}
-      >
-        <ArrowLeftIcon data-icon="inline-start" />
-        Volver a incidencias
-      </Link>
-
       {query.isPending ? <IncidentDetailsSkeleton /> : null}
       {query.isError ? (
         <DetailsErrorAlert
@@ -60,7 +51,9 @@ export function IncidentDetailsPage({ id }: { id: string }) {
             onEdit={() => setEditOpen(true)}
             onCancel={() => setCancelOpen(true)}
           />
+
           <IncidentCancellationCard incident={incident} />
+
           <IncidentDetailsInformation
             incident={incident}
             documents={
@@ -76,6 +69,19 @@ export function IncidentDetailsPage({ id }: { id: string }) {
               ) : undefined
             }
           />
+
+          <IncidentDetailsFooter incident={incident} />
+
+          <Link
+            href={backHref}
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'w-fit',
+            )}
+          >
+            <ArrowLeftIcon data-icon="inline-start" />
+            Volver al listado
+          </Link>
 
           {canEdit ? (
             <IncidentEditDialog
@@ -104,12 +110,16 @@ function IncidentDetailsSkeleton() {
       aria-busy="true"
       aria-label="Cargando incidencia"
     >
-      <Skeleton className="h-64" />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <Skeleton className="h-24 w-full max-w-xl" />
+      <div className="grid gap-5 lg:grid-cols-2">
         <Skeleton className="h-72" />
-        <Skeleton className="h-96" />
+        <Skeleton className="h-72" />
       </div>
-      <Skeleton className="h-56" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Skeleton className="h-48" />
+        <Skeleton className="h-48" />
+      </div>
+      <Skeleton className="h-40" />
     </div>
   )
 }

@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useDeferredValue, useState } from 'react'
-import { useFormContext, useWatch } from 'react-hook-form'
+import {
+  type Control,
+  useFormState,
+  type UseFormSetValue,
+  useWatch,
+} from 'react-hook-form'
 
 import { useEmployeeAssignments } from '@/modules/employees/hooks/useEmployeeAssignments'
 import { useEmployees } from '@/modules/employees/hooks/useEmployees'
@@ -14,7 +19,11 @@ export interface EmployeeOption {
   employeeNumber: string
 }
 
-export function useIncidentContextFields(incident?: Incident) {
+export function useIncidentContextFields(
+  control: Control<IncidentFormValues>,
+  setValue: UseFormSetValue<IncidentFormValues>,
+  incident?: Incident,
+) {
   const [employeeSearch, setEmployeeSearch] = useState('')
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeOption | null>(
     () =>
@@ -27,11 +36,10 @@ export function useIncidentContextFields(incident?: Incident) {
         : null,
   )
   const deferredSearch = useDeferredValue(employeeSearch)
-  const {
+  const { errors } = useFormState({
     control,
-    setValue,
-    formState: { errors },
-  } = useFormContext<IncidentFormValues>()
+    name: ['employeeId', 'employeeAssignmentId', 'incidentTypeId'],
+  })
   const employeeId = useWatch({ control, name: 'employeeId' })
   const assignmentId = useWatch({ control, name: 'employeeAssignmentId' })
   const employeesQuery = useEmployees({
@@ -125,7 +133,6 @@ export function useIncidentContextFields(incident?: Incident) {
     assignmentId,
     assignmentItems,
     assignmentsQuery,
-    control,
     employeeId,
     employeeOptions,
     employeesQuery,

@@ -1,33 +1,64 @@
 import { CalendarDaysIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react'
-import { useFieldArray, useFormContext, useFormState } from 'react-hook-form'
-import type { IncidentTemporalMode } from '@sigip/shared'
-
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
-  Field,
+  type Control,
+  Controller,
+  useFieldArray,
+  useFormState,
+  useWatch,
+} from 'react-hook-form'
+import type { IncidentTemporalMode } from '@sigip/shared'
+import type { IncidentFormValues } from '../schemas/incident-form.schema'
+
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
   FieldDescription,
   FieldError,
   FieldGroup,
-  FieldLabel,
   FieldLegend,
   FieldSet,
 } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import type { IncidentFormValues } from '../schemas/incident-form.schema'
+import {
+  buildAssignmentDateConstraints,
+  IncidentDatePickerField,
+} from './IncidentDatePickerField'
+
+function TemporalModeChip({
+  active,
+  children,
+}: {
+  active: boolean
+  children: React.ReactNode
+}) {
+  return <Badge variant={active ? 'default' : 'secondary'}>{children}</Badge>
+}
 
 export function IncidentOccurrencesField({
+  control,
   temporalMode,
   configured,
   disabled,
 }: {
+  control: Control<IncidentFormValues>
   temporalMode: IncidentTemporalMode
   configured: boolean
   disabled?: boolean
 }) {
-  const { control, register } = useFormContext<IncidentFormValues>()
   const { errors } = useFormState({ control, name: 'occurrences' })
+  const assignmentEffectiveFrom = useWatch({
+    control,
+    name: 'assignmentEffectiveFrom',
+  })
+  const assignmentEffectiveTo = useWatch({
+    control,
+    name: 'assignmentEffectiveTo',
+  })
+  const disabledDates = buildAssignmentDateConstraints(
+    assignmentEffectiveFrom,
+    assignmentEffectiveTo,
+  )
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'occurrences',
@@ -36,34 +67,36 @@ export function IncidentOccurrencesField({
   const range = temporalMode === 'DATE_RANGE'
 
   return (
-    <FieldSet>
-      <FieldLegend>Modo temporal</FieldLegend>
-      <div
-        className="flex flex-wrap gap-2"
-        aria-label="Modalidad temporal configurada"
-      >
-        <Badge variant={configured && !multiple && !range ? 'default' : 'outline'}>
-          Fecha única
-        </Badge>
-        <Badge variant={configured && range ? 'default' : 'outline'}>
-          Rango de fechas
-        </Badge>
-        <Badge variant={configured && multiple ? 'default' : 'outline'}>
-          Fechas múltiples
-        </Badge>
+    <FieldSet className="gap-5">
+      <div className="flex flex-col">
+        <FieldLegend className="text-sm font-medium">Modo temporal</FieldLegend>
+        <div
+          className="flex flex-wrap gap-2 mb-2"
+          aria-label="Modalidad temporal configurada"
+        >
+          <TemporalModeChip active={configured && !multiple && !range}>
+            Fecha única
+          </TemporalModeChip>
+          <TemporalModeChip active={configured && range}>
+            Rango de fechas
+          </TemporalModeChip>
+          <TemporalModeChip active={configured && multiple}>
+            Fechas múltiples
+          </TemporalModeChip>
+        </div>
+        <FieldDescription>
+          {configured
+            ? multiple
+              ? 'Agregue cada día por separado, incluso cuando sean consecutivos.'
+              : range
+                ? 'Capture el inicio y fin del periodo continuo.'
+                : 'La incidencia ocurre en un solo día.'
+            : 'La modalidad se define automáticamente al seleccionar el tipo de incidencia.'}
+        </FieldDescription>
       </div>
-      <FieldDescription>
-        {configured
-          ? multiple
-            ? 'Agregue cada día por separado, incluso cuando sean consecutivos.'
-            : range
-              ? 'Capture el inicio y fin del periodo continuo.'
-              : 'La incidencia ocurre en un solo día.'
-          : 'La modalidad se define automáticamente al seleccionar el tipo de incidencia.'}
-      </FieldDescription>
 
       {!configured ? (
-        <Alert className="border-dashed bg-muted/20">
+        <Alert className="border-dashed bg-muted/30">
           <InfoIcon aria-hidden="true" />
           <AlertDescription>
             Seleccione una asignación y un tipo de incidencia para habilitar la
@@ -71,10 +104,10 @@ export function IncidentOccurrencesField({
           </AlertDescription>
         </Alert>
       ) : (
-        <>
+        <div className="">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <CalendarDaysIcon aria-hidden="true" />
+            <div className="flex items-center gap-2 text-sm font-medium mb-1.5">
+              <CalendarDaysIcon className="size-4" aria-hidden="true" />
               Fechas de aplicación
             </div>
             {multiple ? (
@@ -92,7 +125,7 @@ export function IncidentOccurrencesField({
           </div>
 
           <FieldGroup
-            className={multiple ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'}
+            className={`${multiple ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'} mb-3`}
           >
             {fields.map((field, index) => {
               const startError = errors.occurrences?.[index]?.startDate?.message
@@ -101,46 +134,49 @@ export function IncidentOccurrencesField({
               return (
                 <div
                   key={field.id}
-                  className="grid min-w-0 gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2"
+                  className={cn(
+                    'grid min-w-0 gap-3 rounded-lg border bg-muted/20 p-4',
+                    range ? 'sm:grid-cols-2' : multiple ? '' : '',
+                  )}
                 >
-                  <Field
-                    data-invalid={Boolean(startError)}
-                    className="min-w-0 gap-1.5"
-                  >
-                    <FieldLabel htmlFor={`incident-start-${index}`}>
-                      {multiple
-                        ? `Fecha ${index + 1}`
-                        : range
-                          ? 'Fecha inicial'
-                          : 'Fecha'}
-                    </FieldLabel>
-                    <Input
-                      id={`incident-start-${index}`}
-                      type="date"
-                      disabled={disabled}
-                      aria-invalid={Boolean(startError)}
-                      {...register(`occurrences.${index}.startDate`)}
-                    />
-                    <FieldError>{startError}</FieldError>
-                  </Field>
+                  <Controller
+                    name={`occurrences.${index}.startDate`}
+                    control={control}
+                    render={({ field: startField }) => (
+                      <IncidentDatePickerField
+                        id={`incident-start-${index}`}
+                        label={
+                          multiple
+                            ? `Fecha ${index + 1}`
+                            : range
+                              ? 'Fecha inicial'
+                              : 'Fecha'
+                        }
+                        value={startField.value}
+                        onChange={startField.onChange}
+                        disabled={disabled}
+                        errorMessage={startError}
+                        disabledDates={disabledDates}
+                      />
+                    )}
+                  />
 
                   {range ? (
-                    <Field
-                      data-invalid={Boolean(endError)}
-                      className="min-w-0 gap-1.5"
-                    >
-                      <FieldLabel htmlFor={`incident-end-${index}`}>
-                        Fecha final
-                      </FieldLabel>
-                      <Input
-                        id={`incident-end-${index}`}
-                        type="date"
-                        disabled={disabled}
-                        aria-invalid={Boolean(endError)}
-                        {...register(`occurrences.${index}.endDate`)}
-                      />
-                      <FieldError>{endError}</FieldError>
-                    </Field>
+                    <Controller
+                      name={`occurrences.${index}.endDate`}
+                      control={control}
+                      render={({ field: endField }) => (
+                        <IncidentDatePickerField
+                          id={`incident-end-${index}`}
+                          label="Fecha final"
+                          value={endField.value}
+                          onChange={(value) => endField.onChange(value || null)}
+                          disabled={disabled}
+                          errorMessage={endError}
+                          disabledDates={disabledDates}
+                        />
+                      )}
+                    />
                   ) : null}
 
                   {multiple && fields.length > 1 ? (
@@ -148,7 +184,7 @@ export function IncidentOccurrencesField({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="justify-self-end sm:col-start-2"
+                      className="justify-self-end"
                       onClick={() => remove(index)}
                       disabled={disabled}
                       aria-label={`Quitar fecha ${index + 1}`}
@@ -167,7 +203,7 @@ export function IncidentOccurrencesField({
             </FieldError>
             {multiple ? <span>{fields.length} días capturados</span> : null}
           </div>
-        </>
+        </div>
       )}
     </FieldSet>
   )

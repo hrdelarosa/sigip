@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   commissionAnnexSchema,
+  createIncidentFormSchema,
   incidentFileSchema,
   incidentFormSchema,
 } from './incident-form.schema'
@@ -71,6 +72,62 @@ describe('incidentFormSchema', () => {
     expect(result.success).toBe(false)
     expect(result.error?.issues.some((issue) => issue.message.includes('vigencia')))
       .toBe(true)
+  })
+})
+
+describe('createIncidentFormSchema', () => {
+  const createValues = {
+    ...baseValues,
+    occurrences: [{ startDate: '2026-07-14', endDate: null }],
+  }
+
+  it('rejects a missing format file', () => {
+    const result = createIncidentFormSchema.safeParse(createValues)
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((issue) => issue.path.join('.') === 'file'))
+      .toBe(true)
+  })
+
+  it('accepts a valid PDF format file', () => {
+    const result = createIncidentFormSchema.safeParse({
+      ...createValues,
+      file: new File(['pdf'], 'formato.pdf', { type: 'application/pdf' }),
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a format file larger than 10 MB', () => {
+    const result = createIncidentFormSchema.safeParse({
+      ...createValues,
+      file: new File(
+        [new Uint8Array(10 * 1024 * 1024 + 1)],
+        'formato.pdf',
+        { type: 'application/pdf' },
+      ),
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((issue) => issue.path.join('.') === 'file'))
+      .toBe(true)
+  })
+
+  it('rejects a commission annex larger than 5 MB', () => {
+    const result = createIncidentFormSchema.safeParse({
+      ...createValues,
+      file: new File(['pdf'], 'formato.pdf', { type: 'application/pdf' }),
+      commissionAnnex: new File(
+        [new Uint8Array(5 * 1024 * 1024 + 1)],
+        'oficio.pdf',
+        { type: 'application/pdf' },
+      ),
+    })
+
+    expect(result.success).toBe(false)
+    expect(
+      result.error?.issues.some((issue) => issue.path.join('.') === 'commissionAnnex'),
+    ).toBe(true)
   })
 })
 

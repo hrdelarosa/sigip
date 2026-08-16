@@ -6,26 +6,22 @@ import {
 } from 'lucide-react'
 
 import { DetailField } from '@/components/detail-field'
-import { Badge } from '@/components/ui/badge'
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { formatDate } from '@/lib/formatters'
 import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@/components/ui/item'
-import { Separator } from '@/components/ui/separator'
-import { INCIDENT_TEMPORAL_MODE_LABELS } from '../constants/incident.constants'
-import { formatCalendarDate } from '../lib/incident-formatters'
+  INCIDENT_APPOINTMENT_SCOPE_LABELS,
+  INCIDENT_TEMPORAL_MODE_LABELS,
+} from '../constants/incident.constants'
+import {
+  formatCalendarDate,
+  formatCalendarDateNumeric,
+} from '../lib/incident-formatters'
 import type { Incident } from '../types/incident.types'
 
 export function IncidentDetailsInformation({
@@ -37,91 +33,29 @@ export function IncidentDetailsInformation({
 }) {
   return (
     <section
-      className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.8fr)]"
+      className="flex min-w-0 flex-col gap-5"
       aria-label="Información de la incidencia"
     >
-      <div className="flex min-w-0 flex-col gap-6">
-        <Card className="min-w-0 border-t-4 border-t-primary">
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
+        <Card className="min-w-0 shadow-sm" size="sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDaysIcon aria-hidden="true" />
-              <h2>Aplicación de la incidencia</h2>
-            </CardTitle>
-            <CardDescription>
-              Fechas afectadas y notas registradas para este concepto.
-            </CardDescription>
-            <CardAction className="flex items-center gap-2">
-              <Badge variant="outline">
-                {
-                  INCIDENT_TEMPORAL_MODE_LABELS[
-                    incident.incidentType.temporalMode
-                  ]
-                }
-              </Badge>
-              <Badge variant="secondary">{incident.occurrences.length}</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <ItemGroup className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-              {incident.occurrences.map((occurrence, index) => (
-                <Item key={occurrence.id} variant="outline">
-                  <ItemMedia variant="icon">
-                    <CalendarDaysIcon />
-                  </ItemMedia>
-                  <ItemContent className="min-w-0">
-                    <ItemTitle>
-                      {occurrence.endDate
-                        ? `Periodo ${index + 1}`
-                        : `Día ${index + 1}`}
-                    </ItemTitle>
-                    <ItemDescription>
-                      {formatCalendarDate(occurrence.startDate)}
-                      {occurrence.endDate
-                        ? ` al ${formatCalendarDate(occurrence.endDate)}`
-                        : ''}
-                    </ItemDescription>
-                  </ItemContent>
-                </Item>
-              ))}
-            </ItemGroup>
-
-            <Separator />
-
-            <div>
-              <p className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <FileTextIcon aria-hidden="true" />
-                Observaciones
-              </p>
-              <p className="wrap-break-word rounded-lg bg-muted/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">
-                {incident.observations ?? 'Sin observaciones registradas.'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        {documents}
-      </div>
-
-      <aside className="flex min-w-0 flex-col gap-6" aria-label="Contexto del expediente">
-        <Card className="min-w-0" size="sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserRoundIcon aria-hidden="true" />
-              <h2>Empleado y adscripción</h2>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <UserRoundIcon className="size-4" aria-hidden="true" />
+              Empleado y asignación
             </CardTitle>
             <CardDescription>
               Contexto laboral conservado al registrar.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-5">
-            <div>
-              <p className="text-lg font-semibold tracking-tight">
+
+          <CardContent>
+            <dl className="grid gap-5 sm:grid-cols-2">
+              <DetailField label="Empleado">
                 {incident.employee.fullName}
-              </p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
+              </DetailField>
+              <DetailField label="Número">
                 {incident.employee.employeeNumber}
-              </p>
-            </div>
-            <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              </DetailField>
               <DetailField label="Adscripción">
                 {incident.assignment.organizationalUnit.name}
               </DetailField>
@@ -133,7 +67,13 @@ export function IncidentDetailsInformation({
                   ? 'Base'
                   : 'Confianza'}
               </DetailField>
-              <DetailField label="Vigencia">
+              <DetailField label="Horario">
+                {incident.assignment.schedule ?? 'No indicado'}
+              </DetailField>
+              <DetailField
+                label="Vigencia de la asignación"
+                className="sm:col-span-2"
+              >
                 {formatCalendarDate(incident.assignment.effectiveFrom)}
                 {incident.assignment.effectiveTo
                   ? ` al ${formatCalendarDate(incident.assignment.effectiveTo)}`
@@ -143,24 +83,45 @@ export function IncidentDetailsInformation({
           </CardContent>
         </Card>
 
-        <Card className="min-w-0" size="sm">
+        <Card className="min-w-0 shadow-sm" size="sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BriefcaseBusinessIcon aria-hidden="true" />
-              <h2>Control del formato</h2>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BriefcaseBusinessIcon className="size-4" aria-hidden="true" />
+              Datos de la incidencia
             </CardTitle>
+            <CardDescription>
+              Tipo, recepción y metadatos del formato.
+            </CardDescription>
           </CardHeader>
+
           <CardContent>
-            <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <dl className="grid gap-5 sm:grid-cols-2">
               <DetailField label="Tipo">
-                <span className="flex flex-wrap items-center gap-2">
-                  {incident.incidentType.name}
-                  <Badge variant="outline" className="font-mono">
-                    {incident.incidentType.code}
-                  </Badge>
+                {incident.incidentType.name}
+              </DetailField>
+              <DetailField label="Clave">
+                <span className="font-mono text-sm">
+                  {incident.incidentType.code}
                 </span>
               </DetailField>
-              <DetailField label="Emisión">
+              <DetailField label="Modalidad temporal">
+                {
+                  INCIDENT_TEMPORAL_MODE_LABELS[
+                    incident.incidentType.temporalMode
+                  ]
+                }
+              </DetailField>
+              <DetailField label="Alcance">
+                {
+                  INCIDENT_APPOINTMENT_SCOPE_LABELS[
+                    incident.incidentType.appointmentScope
+                  ]
+                }
+              </DetailField>
+              <DetailField label="Fecha de recepción">
+                {formatDate(incident.receivedAt)}
+              </DetailField>
+              <DetailField label="Fecha de emisión">
                 {incident.issuedDate
                   ? formatCalendarDate(incident.issuedDate)
                   : 'No indicada'}
@@ -168,13 +129,80 @@ export function IncidentDetailsInformation({
               <DetailField label="Año de referencia">
                 {incident.referenceYear ?? 'No aplica'}
               </DetailField>
-              <DetailField label="Registró">
-                {incident.registeredBy.fullName}
-              </DetailField>
             </dl>
           </CardContent>
         </Card>
-      </aside>
+      </div>
+
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
+        <Card className="min-w-0 shadow-sm" size="sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarDaysIcon className="size-4" aria-hidden="true" />
+              Fechas de la incidencia ({incident.occurrences.length})
+            </CardTitle>
+            <CardDescription>
+              Periodos o días afectados por esta incidencia.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="flex flex-col gap-4">
+            {incident.occurrences.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Sin fechas registradas.
+              </p>
+            ) : (
+              incident.occurrences.map((occurrence, index) => (
+                <div
+                  key={occurrence.id}
+                  className="rounded-lg border bg-muted/20 px-3 py-2"
+                >
+                  {occurrence.endDate ? (
+                    <div className="flex justify-between items-center gap-3">
+                      <DateValue value={occurrence.startDate} />
+                      <span className="text-sm text-muted-foreground">al</span>
+                      <DateValue value={occurrence.endDate} />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {incident.occurrences.length > 1 ? (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Día {index + 1}
+                        </span>
+                      ) : null}
+                      <DateValue value={occurrence.startDate} />
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="min-w-0 shadow-sm h-full" size="sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileTextIcon className="size-4" aria-hidden="true" />
+              Observaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="wrap-break-word text-sm leading-relaxed whitespace-pre-wrap">
+              {incident.observations ?? 'Sin observaciones registradas.'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {documents}
     </section>
+  )
+}
+
+function DateValue({ value }: { value: string }) {
+  return (
+    <span className="font-mono text-sm tabular-nums">
+      {formatCalendarDateNumeric(value)}
+    </span>
   )
 }

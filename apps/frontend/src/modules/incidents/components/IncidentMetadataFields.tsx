@@ -1,66 +1,113 @@
-import { useFormContext } from 'react-hook-form'
+import {
+  type Control,
+  Controller,
+  useFormState,
+  type UseFormRegister,
+} from 'react-hook-form'
 
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import type { IncidentFormValues } from '../schemas/incident-form.schema'
+import type { IncidentContextFieldsState } from './IncidentContextFields'
+import { IncidentTypeField } from './IncidentContextFields'
+import {
+  IncidentDatePickerField,
+  IncidentReceivedAtField,
+} from './IncidentDatePickerField'
 
-export function IncidentMetadataFields({ disabled }: { disabled?: boolean }) {
-  const {
-    register,
-    formState: { errors },
-  } = useFormContext<IncidentFormValues>()
+export function IncidentMetadataFields({
+  control,
+  register,
+  disabled,
+  context,
+}: {
+  control: Control<IncidentFormValues>
+  register: UseFormRegister<IncidentFormValues>
+  disabled?: boolean
+  context: IncidentContextFieldsState
+}) {
+  const { errors } = useFormState({
+    control,
+    name: ['receivedAt', 'issuedDate', 'referenceYear'],
+  })
 
   return (
-    <FieldGroup className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-      <Field data-invalid={Boolean(errors.receivedAt)} className="gap-1.5">
-        <FieldLabel htmlFor="incident-received-at">Recepción en RH</FieldLabel>
-        <Input
-          id="incident-received-at"
-          type="datetime-local"
+    <div className="flex flex-col gap-5">
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
+        <IncidentTypeField
+          control={control}
           disabled={disabled}
-          aria-invalid={Boolean(errors.receivedAt)}
-          {...register('receivedAt')}
+          context={context}
         />
-        <FieldError>{errors.receivedAt?.message}</FieldError>
-      </Field>
 
-      <Field data-invalid={Boolean(errors.issuedDate)} className="gap-1.5">
-        <FieldLabel htmlFor="incident-issued-date">
-          Fecha de emisión{' '}
-          <span className="font-normal text-muted-foreground">(opcional)</span>
-        </FieldLabel>
-        <Input
-          id="incident-issued-date"
-          type="date"
-          disabled={disabled}
-          aria-invalid={Boolean(errors.issuedDate)}
-          {...register('issuedDate')}
+        <Controller
+          name="receivedAt"
+          control={control}
+          render={({ field }) => (
+            <IncidentReceivedAtField
+              id="incident-received-at"
+              value={field.value}
+              onChange={field.onChange}
+              disabled={disabled}
+              errorMessage={errors.receivedAt?.message}
+            />
+          )}
         />
-        <FieldError>{errors.issuedDate?.message}</FieldError>
-      </Field>
+      </FieldGroup>
 
-      <Field data-invalid={Boolean(errors.referenceYear)} className="gap-1.5">
-        <FieldLabel htmlFor="incident-reference-year">
-          Año de referencia
-        </FieldLabel>
-        <Input
-          id="incident-reference-year"
-          type="number"
-          min={2000}
-          max={2100}
-          inputMode="numeric"
-          placeholder="Ej. 2026"
-          disabled={disabled}
-          aria-invalid={Boolean(errors.referenceYear)}
-          {...register('referenceYear')}
+      <FieldDescription className="text-sm">
+        Determina cómo se capturan las fechas.
+      </FieldDescription>
+
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
+        <Controller
+          name="issuedDate"
+          control={control}
+          render={({ field }) => (
+            <IncidentDatePickerField
+              id="incident-issued-date"
+              label={
+                <>
+                  Fecha de emisión{' '}
+                  <span className="font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </>
+              }
+              value={field.value}
+              onChange={(value) => field.onChange(value || null)}
+              disabled={disabled}
+              errorMessage={errors.issuedDate?.message}
+              placeholder="Seleccione fecha"
+            />
+          )}
         />
-        <FieldError>{errors.referenceYear?.message}</FieldError>
-      </Field>
-    </FieldGroup>
+
+        <Field data-invalid={Boolean(errors.referenceYear)} className="gap-1.5">
+          <FieldLabel htmlFor="incident-reference-year">
+            Año de referencia{' '}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </FieldLabel>
+          <Input
+            id="incident-reference-year"
+            type="number"
+            min={2000}
+            max={2100}
+            inputMode="numeric"
+            placeholder="Ej. 2026"
+            disabled={disabled}
+            aria-invalid={Boolean(errors.referenceYear)}
+            {...register('referenceYear')}
+          />
+          <FieldError>{errors.referenceYear?.message}</FieldError>
+        </Field>
+      </FieldGroup>
+    </div>
   )
 }

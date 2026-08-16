@@ -1,6 +1,6 @@
 import { FileTextIcon, UploadCloudIcon, XIcon } from 'lucide-react'
 import { useRef } from 'react'
-import { useController, useFormContext } from 'react-hook-form'
+import { type Control, useController } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -13,13 +13,15 @@ import { Input } from '@/components/ui/input'
 import type { IncidentFormValues } from '../schemas/incident-form.schema'
 
 export function IncidentFileField({
+  control,
   disabled,
   name = 'file',
   id = 'incident-file',
-  label = 'Formato de incidencia',
+  label = 'Formato de incidencia (PDF)',
   description = 'PDF institucional obligatorio, con un tamaño máximo de 10 MB.',
-  prompt = 'Seleccionar formato PDF',
+  prompt = 'Adjuntar PDF',
 }: {
+  control: Control<IncidentFormValues>
   disabled?: boolean
   name?: 'file' | 'commissionAnnex'
   id?: string
@@ -28,7 +30,6 @@ export function IncidentFileField({
   prompt?: string
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const { control } = useFormContext<IncidentFormValues>()
   const { field, fieldState } = useController({ control, name })
   const file = field.value
 
@@ -41,7 +42,7 @@ export function IncidentFileField({
     <Field data-invalid={fieldState.invalid} className="gap-2">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <FieldDescription>{description}</FieldDescription>
-      <div className="rounded-lg border border-dashed bg-muted/20 p-4">
+      <div className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center transition-colors hover:border-primary/40 hover:bg-primary/2">
         {file ? (
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -69,10 +70,13 @@ export function IncidentFileField({
             htmlFor={id}
             className="flex cursor-pointer flex-col items-center gap-2 py-4 text-center"
           >
-            <UploadCloudIcon className="text-muted-foreground" aria-hidden="true" />
+            <UploadCloudIcon
+              className="text-muted-foreground"
+              aria-hidden="true"
+            />
             <span className="text-sm font-medium">{prompt}</span>
             <span className="text-xs text-muted-foreground">
-              Puede reemplazarlo antes de registrar la incidencia
+              Haga clic para seleccionar un archivo
             </span>
           </label>
         )}
@@ -81,7 +85,7 @@ export function IncidentFileField({
           id={id}
           type="file"
           accept="application/pdf,.pdf"
-          className="sr-only !w-px"
+          className="sr-only w-px"
           disabled={disabled}
           aria-invalid={fieldState.invalid}
           onBlur={field.onBlur}

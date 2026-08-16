@@ -1,9 +1,7 @@
 import { BanIcon, PencilIcon } from 'lucide-react'
 
-import { DetailField } from '@/components/detail-field'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/formatters'
-import { formatCalendarDate } from '../lib/incident-formatters'
 import type { Incident } from '../types/incident.types'
 import { IncidentStatusBadge } from './IncidentStatusBadge'
 
@@ -24,76 +22,58 @@ export function IncidentDetailsHeader({
     incident.status === 'REGISTERED' && (canEdit || canCancel)
 
   return (
-    <section className="flex min-w-0 flex-col gap-5" aria-labelledby="incident-title">
+    <header className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1
+              id="incident-title"
+              className="wrap-break-word text-2xl font-semibold tracking-tight sm:text-3xl"
+            >
+              {incident.incidentType.name}
+            </h1>
             <IncidentStatusBadge status={incident.status} />
-            <span className="font-mono text-xs text-muted-foreground">
-              {incident.incidentType.code}
-            </span>
           </div>
-          <h1
-            id="incident-title"
-            className="wrap-break-word text-2xl font-semibold tracking-tight sm:text-3xl"
-          >
-            {incident.incidentType.name}
-          </h1>
-          <p className="mt-2 wrap-break-word text-sm text-muted-foreground">
-            {incident.employee.fullName} · Número{' '}
-            {incident.employee.employeeNumber}
+          <p className="font-mono text-xs text-muted-foreground">
+            Folio {incident.id}
           </p>
         </div>
 
         {showActions ? (
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-wrap gap-2">
             {canEdit ? (
               <Button variant="outline" onClick={onEdit}>
                 <PencilIcon data-icon="inline-start" />
-                Editar incidencia
+                Editar
               </Button>
             ) : null}
             {canCancel ? (
-              <Button variant="destructive" onClick={onCancel}>
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={onCancel}
+              >
                 <BanIcon data-icon="inline-start" />
-                Cancelar incidencia
+                Cancelar
               </Button>
             ) : null}
           </div>
         ) : null}
       </div>
-
-      <dl className="grid min-w-0 gap-4 rounded-xl border bg-muted/25 p-4 sm:grid-cols-3 sm:gap-6">
-        <DetailField label="Aplicación">
-          {getApplicationSummary(incident.occurrences)}
-        </DetailField>
-        <DetailField label="Recepción en RH">
-          {formatDate(incident.receivedAt)}
-        </DetailField>
-        <DetailField label="Identificador">
-          <span className="break-all font-mono text-xs font-normal text-muted-foreground">
-            {incident.id}
-          </span>
-        </DetailField>
-      </dl>
-    </section>
+    </header>
   )
 }
 
-function getApplicationSummary(
-  occurrences: Incident['occurrences'],
-): string {
-  if (occurrences.length > 1) {
-    return `${occurrences.length} fechas registradas`
-  }
-
-  const occurrence = occurrences[0]
-
-  if (!occurrence) return 'Sin fechas registradas'
-
-  if (occurrence.endDate) {
-    return `${formatCalendarDate(occurrence.startDate)} al ${formatCalendarDate(occurrence.endDate)}`
-  }
-
-  return formatCalendarDate(occurrence.startDate)
+export function IncidentDetailsFooter({ incident }: { incident: Incident }) {
+  return (
+    <footer
+      className="flex flex-col gap-2 border-t pt-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p>
+        Registrada por {incident.registeredBy.fullName} ·{' '}
+        {formatDate(incident.createdAt)}
+      </p>
+      <p>Última actualización · {formatDate(incident.updatedAt)}</p>
+    </footer>
+  )
 }

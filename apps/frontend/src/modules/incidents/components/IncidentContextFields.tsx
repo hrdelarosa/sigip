@@ -1,5 +1,5 @@
 import { SearchIcon } from 'lucide-react'
-import { Controller } from 'react-hook-form'
+import { type Control, Controller, type UseFormSetValue } from 'react-hook-form'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
@@ -31,17 +31,32 @@ import {
   useIncidentContextFields,
   type EmployeeOption,
 } from '../hooks/useIncidentContextFields'
+import type { IncidentFormValues } from '../schemas/incident-form.schema'
 import type { Incident } from '../types/incident.types'
 
-export function IncidentContextFields({
+export type IncidentContextFieldsState = ReturnType<
+  typeof useIncidentContextFields
+>
+
+export function useIncidentFormContext(
+  control: Control<IncidentFormValues>,
+  setValue: UseFormSetValue<IncidentFormValues>,
+  incident?: Incident,
+) {
+  return useIncidentContextFields(control, setValue, incident)
+}
+
+export function IncidentEmployeeFields({
+  control,
   incident,
   disabled,
+  context,
 }: {
+  control: Control<IncidentFormValues>
   incident?: Incident
   disabled?: boolean
+  context: IncidentContextFieldsState
 }) {
-  const context = useIncidentContextFields(incident)
-
   return (
     <div className="flex flex-col gap-4">
       {context.hasCatalogError ? (
@@ -53,14 +68,14 @@ export function IncidentContextFields({
         </Alert>
       ) : null}
 
-      <FieldGroup className="grid min-w-0 gap-5 md:grid-cols-2">
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
         <Controller
           name="employeeId"
-          control={context.control}
+          control={control}
           render={({ field }) => (
             <Field
               data-invalid={Boolean(context.errors.employeeId)}
-              className="min-w-0 gap-1.5 md:col-span-2"
+              className="min-w-0 gap-1.5"
             >
               <FieldLabel htmlFor="incident-employee">Empleado</FieldLabel>
               <Combobox
@@ -81,7 +96,7 @@ export function IncidentContextFields({
                   placeholder={
                     context.employeesQuery.isPending
                       ? 'Cargando empleados...'
-                      : 'Busque por nombre o número de empleado'
+                      : 'Seleccione un empleado'
                   }
                   disabled={disabled || Boolean(incident)}
                   aria-invalid={Boolean(context.errors.employeeId)}
@@ -130,11 +145,11 @@ export function IncidentContextFields({
 
         <Controller
           name="employeeAssignmentId"
-          control={context.control}
+          control={control}
           render={({ field }) => (
             <SelectField
               id="incident-assignment"
-              label="Asignación laboral"
+              label="Asignación"
               value={field.value}
               items={context.assignmentItems}
               disabled={
@@ -144,9 +159,11 @@ export function IncidentContextFields({
                 context.assignmentsQuery.isPending
               }
               placeholder={
-                context.assignmentsQuery.isPending
-                  ? 'Cargando asignaciones...'
-                  : 'Seleccione'
+                !context.employeeId
+                  ? 'Seleccione primero un empleado'
+                  : context.assignmentsQuery.isPending
+                    ? 'Cargando asignaciones...'
+                    : 'Seleccione una asignación'
               }
               error={context.errors.employeeAssignmentId?.message}
               inputRef={field.ref}
@@ -155,38 +172,84 @@ export function IncidentContextFields({
             />
           )}
         />
-
-        <Controller
-          name="incidentTypeId"
-          control={context.control}
-          render={({ field }) => (
-            <SelectField
-              id="incident-type"
-              label="Tipo de incidencia"
-              value={field.value}
-              items={context.typeItems}
-              disabled={
-                disabled ||
-                !context.assignmentId ||
-                !context.selectedAssignment ||
-                context.assignmentsQuery.isPending ||
-                context.assignmentsQuery.isError ||
-                context.typesQuery.isPending ||
-                context.typesQuery.isError
-              }
-              placeholder={
-                context.typesQuery.isPending ? 'Cargando tipos...' : 'Seleccione'
-              }
-              error={context.errors.incidentTypeId?.message}
-              inputRef={field.ref}
-              onBlur={field.onBlur}
-              onValueChange={context.selectType}
-            />
-          )}
-        />
-
       </FieldGroup>
     </div>
+  )
+}
+
+export function IncidentTypeField({
+  control,
+  disabled,
+  context,
+}: {
+  control: Control<IncidentFormValues>
+  disabled?: boolean
+  context: IncidentContextFieldsState
+}) {
+  return (
+    <Controller
+      name="incidentTypeId"
+      control={control}
+      render={({ field }) => (
+        <SelectField
+          id="incident-type"
+          label="Tipo de incidencia"
+          value={field.value}
+          items={context.typeItems}
+          disabled={
+            disabled ||
+            !context.assignmentId ||
+            !context.selectedAssignment ||
+            context.assignmentsQuery.isPending ||
+            context.assignmentsQuery.isError ||
+            context.typesQuery.isPending ||
+            context.typesQuery.isError
+          }
+          placeholder={
+            !context.assignmentId
+              ? 'Seleccione primero una asignación'
+              : context.typesQuery.isPending
+                ? 'Cargando tipos...'
+                : 'Seleccione un tipo'
+          }
+          error={context.errors.incidentTypeId?.message}
+          inputRef={field.ref}
+          onBlur={field.onBlur}
+          onValueChange={context.selectType}
+        />
+      )}
+    />
+  )
+}
+
+/** @deprecated Use IncidentEmployeeFields with shared context */
+export function IncidentContextFields({
+  control,
+  setValue,
+  incident,
+  disabled,
+}: {
+  control: Control<IncidentFormValues>
+  setValue: UseFormSetValue<IncidentFormValues>
+  incident?: Incident
+  disabled?: boolean
+}) {
+  const context = useIncidentContextFields(control, setValue, incident)
+
+  return (
+    <>
+      <IncidentEmployeeFields
+        control={control}
+        incident={incident}
+        disabled={disabled}
+        context={context}
+      />
+      <IncidentTypeField
+        control={control}
+        disabled={disabled}
+        context={context}
+      />
+    </>
   )
 }
 
