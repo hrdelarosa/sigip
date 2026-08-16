@@ -33,6 +33,7 @@ export function EmployeeDatePickerField({
         placeholder={placeholder}
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={errorMessage ? errorId : undefined}
+        buttonClassName="w-full"
       />
       <FieldError id={errorId}>{errorMessage}</FieldError>
     </Field>

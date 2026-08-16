@@ -12,8 +12,14 @@ import { AuthLayout } from '../layouts/AuthLayout'
 import { ProtectedRoute } from './protected-route'
 import { routes } from './routes'
 import { AuditPage } from '@/modules/audit'
+import {
+  CreateIncidentPage,
+  IncidentDetailsPage,
+  IncidentsPage,
+} from '@/modules/incidents'
 
 const destinations = [
+  { permission: 'incidents:read', route: routes.incidents.root },
   { permission: 'employees:read', route: routes.employees.root },
   { permission: 'audit:read', route: routes.audit },
   { permission: 'users:read', route: routes.administration.users },
@@ -75,6 +81,30 @@ export function AppRouter() {
           <EmployeesPage />
         </ProtectedPage>
       </Route>
+      <Route path={routes.incidents.create}>
+        <ProtectedPage
+          permissions={[
+            'incidents:create',
+            'incidents:read',
+            'employees:read',
+            'catalogs:read',
+          ]}
+        >
+          <CreateIncidentPage />
+        </ProtectedPage>
+      </Route>
+      <Route path="/incidents/:incidentId">
+        {(params) => (
+          <ProtectedPage permission="incidents:read">
+            <IncidentDetailsPage id={params.incidentId} />
+          </ProtectedPage>
+        )}
+      </Route>
+      <Route path={routes.incidents.root}>
+        <ProtectedPage permission="incidents:read">
+          <IncidentsPage />
+        </ProtectedPage>
+      </Route>
       <Route path={routes.audit}>
         <ProtectedPage permission="audit:read">
           <AuditPage />
@@ -90,9 +120,13 @@ export function AppRouter() {
 function ProtectedPage({
   children,
   permission,
-}: React.PropsWithChildren<{ permission?: string }>) {
+  permissions,
+}: React.PropsWithChildren<{
+  permission?: string
+  permissions?: readonly string[]
+}>) {
   return (
-    <ProtectedRoute permission={permission}>
+    <ProtectedRoute permission={permission} permissions={permissions}>
       <AppLayout>{children}</AppLayout>
     </ProtectedRoute>
   )

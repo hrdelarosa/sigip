@@ -1,17 +1,32 @@
-import type { PropsWithChildren } from 'react'
+import { useEffect, type PropsWithChildren } from 'react'
 import { Redirect } from 'wouter'
 
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { hasPermission, useAuth } from '@/modules/auth'
 import { routes } from './routes'
+import { toast } from 'sonner'
 
 interface ProtectedRouteProps extends PropsWithChildren {
   permission?: string
+  permissions?: readonly string[]
 }
 
-export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  permission,
+  permissions = [],
+}: ProtectedRouteProps) {
   const auth = useAuth()
+
+  useEffect(() => {
+    if (auth.isFetched && !auth.data) {
+      toast.error('La sesión ha caducado', {
+        description:
+          'Tu sesión ha caducado por inactividad. Inicia sesión de nuevo para continuar.',
+      })
+    }
+  })
 
   if (auth.isPending) {
     return (
@@ -43,6 +58,7 @@ export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
 
   if (!auth.data) {
     const returnTo = `${window.location.pathname}${window.location.search}`
+
     return (
       <Redirect
         to={`${routes.auth.login}?returnTo=${encodeURIComponent(returnTo)}`}
@@ -51,7 +67,17 @@ export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
     )
   }
 
-  if (permission && !hasPermission(auth.data.permissions, permission)) {
+  const requiredPermissions = permission
+    ? [permission, ...permissions]
+    : permissions
+  const grantedPermissions = auth.data.permissions
+
+  if (
+    requiredPermissions.some(
+      (requiredPermission) =>
+        !hasPermission(grantedPermissions, requiredPermission),
+    )
+  ) {
     return (
       <div className="grid min-h-screen place-items-center p-6">
         <div className="max-w-md text-center">

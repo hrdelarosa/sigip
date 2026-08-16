@@ -9,10 +9,16 @@ import {
 
 interface Props {
   itemType?: string
+  title?: string
+  description?: string
   media?: React.ReactNode
 }
 
-export function DetailsEmpty({ itemType, media }: Props) {
+export function DetailsEmpty({ itemType, title, description, media }: Props) {
+  const resolved =
+    title ??
+    (itemType ? `Sin ${itemType} asignados` : 'Sin elementos asignados')
+
   return (
     <Empty className="border p-6">
       <EmptyHeader>
@@ -20,10 +26,10 @@ export function DetailsEmpty({ itemType, media }: Props) {
           {media || <CircleSlash2 aria-hidden="true" />}
         </EmptyMedia>
         <EmptyTitle>
-          <h4>Sin {itemType || 'elementos'} asignados</h4>
+          <h4>{resolved}</h4>
         </EmptyTitle>
         <EmptyDescription>
-          Este permiso todavía no forma parte de ningún rol.
+          {description || 'No hay elementos disponibles para mostrar.'}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

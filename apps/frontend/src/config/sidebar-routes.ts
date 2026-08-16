@@ -6,6 +6,7 @@ import {
   ShieldCheckIcon,
   UsersIcon,
   ScrollTextIcon,
+  ClipboardClockIcon,
 } from 'lucide-react'
 import { routes } from '@/app/router/routes'
 
@@ -13,6 +14,12 @@ export const navigationGroups = [
   {
     label: 'Principal',
     items: [
+      {
+        label: 'Incidencias',
+        href: routes.incidents.root,
+        icon: ClipboardClockIcon,
+        permission: 'incidents:read',
+      },
       {
         label: 'Empleados',
         href: routes.employees.root,

@@ -46,6 +46,20 @@ export async function apiRequest<TResponse>(
   return response.json() as Promise<TResponse>
 }
 
+export async function apiDownload(path: string): Promise<Response> {
+  const sessionGeneration = getSessionGeneration()
+  const response = await fetch(`${env.apiUrl}${path}`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    if (response.status === 401) dispatchUnauthorized(sessionGeneration)
+    throw await createApiError(response)
+  }
+
+  return response
+}
+
 async function createApiError(response: Response): Promise<ApiError> {
   const details = await readErrorResponse(response)
 

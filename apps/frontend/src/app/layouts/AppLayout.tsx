@@ -35,7 +35,7 @@ export function AppLayout({ children }: PropsWithChildren) {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-6 p-4">{children}</main>
+        <main className="flex min-w-0 flex-1 flex-col gap-6 p-4">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )
