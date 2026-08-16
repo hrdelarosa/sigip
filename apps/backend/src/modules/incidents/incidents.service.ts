@@ -1,0 +1,468 @@
+import { Injectable } from '@nestjs/common';
+import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { DocumentStorageService } from '../documents/storage/document-storage.service';
+import { CancelIncidentDto } from './dto/cancel-incident.dto';
+import { CreateIncidentDto } from './dto/create-incident.dto';
+import { ListIncidentsQueryDto } from './dto/list-incidents-query.dto';
+import { UpdateIncidentDto } from './dto/update-incident.dto';
+import {
+  CancelledIncidentModificationError,
+  CommissionAnnexNotAllowedError,
+  CommissionAnnexTypeChangeError,
+  CommissionDocumentTypeMissingError,
+  DuplicateIncidentOccurrenceError,
+  EmptyIncidentUpdateError,
+  InactiveIncidentEmployeeError,
+  IncidentAlreadyCancelledError,
+  IncidentCreateTransactionError,
+  IncidentEmployeeNotFoundError,
+  IncidentFormDocumentTypeMissingError,
+  IncidentFormRequiredError,
+  IncidentNotFoundError,
+  IncidentOutsideAssignmentPeriodError,
+  IncidentPersistenceError,
+  IncidentTypeNotAvailableError,
+  InvalidIncidentAppointmentScopeError,
+  InvalidIncidentAssignmentError,
+  InvalidIncidentDateError,
+  InvalidIncidentTemporalModeError,
+} from './incidents.errors';
+
+import { IncidentsRepository } from './repositories/incidents.repository';
+import { DocumentsRepository } from '../documents/repositories/documents.repository';
+
+import type { IncidentOccurrenceData } from './types/incidents.types';
+import type { UploadedMemoryFile } from '../../common/types/uploaded-memory-file.type';
+
+@Injectable()
+export class IncidentsService {
+  constructor(
+    private readonly repository: IncidentsRepository,
+
+    private readonly storage: DocumentStorageService,
+    private readonly documentsRepository: DocumentsRepository,
+  ) {}
+
+  private parseDate(value: string): Date {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      throw new InvalidIncidentDateError();
+    }
+
+    const date = new Date(`${value}T00:00:00.000Z`);
+
+    if (
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== value
+    ) {
+      throw new InvalidIncidentDateError();
+    }
+
+    return date;
+  }
+
+  private parseNullableDate(value?: string | null): Date | null {
+    return value ? this.parseDate(value) : null;
+  }
+
+  private parseDateTime(value: string): Date {
+    const result = new Date(value);
+
+    if (Number.isNaN(result.getTime())) {
+      throw new InvalidIncidentDateError();
+    }
+
+    return result;
+  }
+
+  private normalizeOccurrences(
+    occurrences: {
+      startDate: string;
+      endDate?: string | null;
+    }[],
+  ): IncidentOccurrenceData[] {
+    const normalized = occurrences.map((occurrence) => {
+      const startDate = this.parseDate(occurrence.startDate);
+      const endDate = this.parseNullableDate(occurrence.endDate);
+
+      if (endDate && endDate.getTime() < startDate.getTime()) {
+        throw new InvalidIncidentDateError();
+      }
+
+      return {
+        id: generateUuidV7(),
+        startDate,
+        endDate,
+      };
+    });
+
+    const keys = normalized.map(
+      (occurrence) =>
+        `${occurrence.startDate.toISOString().slice(0, 10)}|${
+          occurrence.endDate?.toISOString().slice(0, 10) ?? ''
+        }`,
+    );
+
+    if (new Set(keys).size !== keys.length) {
+      throw new DuplicateIncidentOccurrenceError();
+    }
+
+    const sorted = [...normalized].sort(
+      (left, right) => left.startDate.getTime() - right.startDate.getTime(),
+    );
+
+    for (let index = 1; index < sorted.length; index += 1) {
+      const previousEnd =
+        sorted[index - 1].endDate ?? sorted[index - 1].startDate;
+
+      if (sorted[index].startDate <= previousEnd) {
+        throw new DuplicateIncidentOccurrenceError();
+      }
+    }
+
+    return normalized;
+  }
+
+  private validateTemporalMode(
+    temporalMode: 'SINGLE_DATE' | 'MULTIPLE_DATES' | 'DATE_RANGE',
+    occurrences: IncidentOccurrenceData[],
+  ): void {
+    switch (temporalMode) {
+      case 'SINGLE_DATE':
+        if (occurrences.length !== 1 || occurrences[0].endDate !== null) {
+          throw new InvalidIncidentTemporalModeError();
+        }
+        return;
+
+      case 'MULTIPLE_DATES':
+        if (occurrences.some((occurrence) => occurrence.endDate !== null)) {
+          throw new InvalidIncidentTemporalModeError();
+        }
+        return;
+
+      case 'DATE_RANGE':
+        if (occurrences.length !== 1 || occurrences[0].endDate === null) {
+          throw new InvalidIncidentTemporalModeError();
+        }
+        return;
+    }
+  }
+
+  private validateAppointmentScope(
+    scope: 'ALL' | 'BASE' | 'CONFIANZA',
+    appointmentType: string,
+  ): void {
+    if (scope === 'ALL') {
+      return;
+    }
+
+    if (scope !== appointmentType) {
+      throw new InvalidIncidentAppointmentScopeError();
+    }
+  }
+
+  private validateAssignmentCoverage(
+    effectiveFrom: Date,
+    effectiveTo: Date | null,
+    occurrences: IncidentOccurrenceData[],
+  ): void {
+    for (const occurrence of occurrences) {
+      const end = occurrence.endDate ?? occurrence.startDate;
+
+      if (occurrence.startDate < effectiveFrom) {
+        throw new IncidentOutsideAssignmentPeriodError();
+      }
+
+      if (effectiveTo && end > effectiveTo) {
+        throw new IncidentOutsideAssignmentPeriodError();
+      }
+    }
+  }
+
+  async findAll(query: ListIncidentsQueryDto) {
+    const from = query.from ? this.parseDate(query.from) : undefined;
+    const to = query.to ? this.parseDate(query.to) : undefined;
+
+    if (from && to && from > to) {
+      throw new InvalidIncidentDateError();
+    }
+
+    return this.repository.findAll({
+      page: query.page,
+      limit: query.limit,
+      search: query.search?.trim(),
+      status: query.status,
+      employeeId: query.employeeId,
+      incidentTypeId: query.incidentTypeId,
+      organizationalUnitId: query.organizationalUnitId,
+      from,
+      to,
+    });
+  }
+
+  async findById(id: string) {
+    const incident = await this.repository.findById(id);
+
+    if (!incident) throw new IncidentNotFoundError(id);
+
+    return incident;
+  }
+
+  async create(
+    dto: CreateIncidentDto,
+    file: UploadedMemoryFile | undefined,
+    actor: AuthenticatedUserModel,
+    commissionAnnex?: UploadedMemoryFile,
+  ) {
+    if (!file) {
+      throw new IncidentFormRequiredError();
+    }
+
+    const context = await this.repository.findCreationContext(
+      dto.employeeId,
+      dto.employeeAssignmentId,
+      dto.incidentTypeId,
+    );
+
+    if (!context.employee) {
+      throw new IncidentEmployeeNotFoundError();
+    }
+
+    if (context.employee.status !== 'ACTIVE') {
+      throw new InactiveIncidentEmployeeError();
+    }
+
+    if (!context.assignment) {
+      throw new InvalidIncidentAssignmentError();
+    }
+
+    if (context.assignment.employeeId !== dto.employeeId) {
+      throw new InvalidIncidentAssignmentError();
+    }
+
+    if (!context.incidentType || !context.incidentType.isActive) {
+      throw new IncidentTypeNotAvailableError();
+    }
+
+    if (!context.formDocumentType) {
+      throw new IncidentFormDocumentTypeMissingError();
+    }
+
+    if (commissionAnnex && context.incidentType.code !== 'COMISION') {
+      throw new CommissionAnnexNotAllowedError();
+    }
+
+    if (commissionAnnex && !context.commissionDocumentType) {
+      throw new CommissionDocumentTypeMissingError();
+    }
+
+    this.validateAppointmentScope(
+      context.incidentType.appointmentScope,
+      context.assignment.appointmentType,
+    );
+
+    const occurrences = this.normalizeOccurrences(dto.occurrences);
+
+    this.validateTemporalMode(context.incidentType.temporalMode, occurrences);
+
+    this.validateAssignmentCoverage(
+      context.assignment.effectiveFrom,
+      context.assignment.effectiveTo,
+      occurrences,
+    );
+
+    const incidentId = generateUuidV7();
+    const storedPaths: string[] = [];
+
+    try {
+      const formDocumentId = generateUuidV7();
+      const storedForm = await this.storage.storeIncidentDocument(
+        incidentId,
+        formDocumentId,
+        file,
+      );
+      storedPaths.push(storedForm.storagePath);
+
+      const documents = [
+        {
+          id: formDocumentId,
+          documentTypeId: context.formDocumentType.id,
+          originalName: file.originalname,
+          storedName: storedForm.storedName,
+          storagePath: storedForm.storagePath,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          contentHash: storedForm.contentHash,
+          uploadedBy: actor.userId,
+        },
+      ];
+
+      if (commissionAnnex && context.commissionDocumentType) {
+        const annexDocumentId = generateUuidV7();
+        const storedAnnex = await this.storage.storeIncidentDocument(
+          incidentId,
+          annexDocumentId,
+          commissionAnnex,
+        );
+        storedPaths.push(storedAnnex.storagePath);
+        documents.push({
+          id: annexDocumentId,
+          documentTypeId: context.commissionDocumentType.id,
+          originalName: commissionAnnex.originalname,
+          storedName: storedAnnex.storedName,
+          storagePath: storedAnnex.storagePath,
+          mimeType: commissionAnnex.mimetype,
+          sizeBytes: commissionAnnex.size,
+          contentHash: storedAnnex.contentHash,
+          uploadedBy: actor.userId,
+        });
+      }
+
+      return await this.repository.create({
+        incident: {
+          id: incidentId,
+          employeeId: dto.employeeId,
+          employeeAssignmentId: dto.employeeAssignmentId,
+          incidentTypeId: dto.incidentTypeId,
+          issuedDate: this.parseNullableDate(dto.issuedDate),
+          receivedAt: this.parseDateTime(dto.receivedAt),
+          referenceYear: dto.referenceYear ?? null,
+          observations: dto.observations?.trim() || null,
+          registeredBy: actor.userId,
+        },
+        occurrences,
+        documents,
+        audit: {
+          userId: actor.userId,
+          sessionId: actor.sessionId,
+        },
+      });
+    } catch (error) {
+      await Promise.all(
+        storedPaths.map((path) =>
+          this.storage.remove(path).catch(() => undefined),
+        ),
+      );
+
+      if (!(error instanceof IncidentCreateTransactionError)) throw error;
+      throw new IncidentPersistenceError();
+    }
+  }
+
+  async update(
+    id: string,
+    dto: UpdateIncidentDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    if (Object.values(dto).every((value) => value === undefined)) {
+      throw new EmptyIncidentUpdateError();
+    }
+
+    const current = await this.findById(id);
+
+    if (current.status === 'CANCELLED') {
+      throw new CancelledIncidentModificationError();
+    }
+
+    const incidentTypeId = dto.incidentTypeId ?? current.incidentTypeId;
+    const context = await this.repository.findCreationContext(
+      current.employeeId,
+      current.employeeAssignmentId,
+      incidentTypeId,
+    );
+
+    if (!context.incidentType || !context.incidentType.isActive) {
+      throw new IncidentTypeNotAvailableError();
+    }
+
+    if (!context.assignment) {
+      throw new InvalidIncidentAssignmentError();
+    }
+
+    if (
+      current.incidentType.code === 'COMISION' &&
+      context.incidentType.code !== 'COMISION'
+    ) {
+      const incidentDocuments =
+        await this.documentsRepository.findByIncidentId(id);
+      if (
+        incidentDocuments.some(
+          (document) => document.documentType.code === 'OFICIO_COMISION',
+        )
+      ) {
+        throw new CommissionAnnexTypeChangeError();
+      }
+    }
+
+    this.validateAppointmentScope(
+      context.incidentType.appointmentScope,
+      context.assignment.appointmentType,
+    );
+
+    const occurrences = dto.occurrences
+      ? this.normalizeOccurrences(dto.occurrences)
+      : current.occurrences.map((occurrence) => ({
+          id: occurrence.id,
+          startDate: occurrence.startDate,
+          endDate: occurrence.endDate,
+        }));
+
+    this.validateTemporalMode(context.incidentType.temporalMode, occurrences);
+
+    this.validateAssignmentCoverage(
+      context.assignment.effectiveFrom,
+      context.assignment.effectiveTo,
+      occurrences,
+    );
+
+    const result = await this.repository.update(id, {
+      expectedUpdatedAt: current.updatedAt,
+      incidentTypeId: dto.incidentTypeId,
+      issuedDate:
+        dto.issuedDate !== undefined
+          ? this.parseNullableDate(dto.issuedDate)
+          : undefined,
+      receivedAt: dto.receivedAt
+        ? this.parseDateTime(dto.receivedAt)
+        : undefined,
+      referenceYear: dto.referenceYear,
+      observations:
+        dto.observations !== undefined
+          ? dto.observations?.trim() || null
+          : undefined,
+      occurrences: dto.occurrences ? occurrences : undefined,
+      updatedBy: actor.userId,
+      updatedAt: new Date(),
+      sessionId: actor.sessionId,
+    });
+
+    if (!result) throw new IncidentNotFoundError(id);
+
+    return result;
+  }
+
+  async cancel(
+    id: string,
+    dto: CancelIncidentDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const current = await this.findById(id);
+
+    if (current.status === 'CANCELLED') {
+      throw new IncidentAlreadyCancelledError();
+    }
+
+    const now = new Date();
+    const result = await this.repository.cancel(id, {
+      cancelledAt: now,
+      cancelledBy: actor.userId,
+      cancellationReason: dto.reason.trim(),
+      updatedAt: now,
+      sessionId: actor.sessionId,
+    });
+
+    if (!result) throw new IncidentNotFoundError(id);
+
+    return result;
+  }
+}
