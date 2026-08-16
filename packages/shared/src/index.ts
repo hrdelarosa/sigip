@@ -72,5 +72,7 @@ export { EMPLOYEE_STATUSES, APPOINTMENT_TYPES } from './employees'
 export type { PaginatedResponse, PaginationMeta } from './common'
 
 export * from './auth'
-
 export * from './audit'
+export * from './incident-types'
+export * from './incidents'
+export * from './documents'
