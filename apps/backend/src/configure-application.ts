@@ -17,6 +17,7 @@ export function configureApplication(app: NestExpressApplication): void {
   app.enableCors({
     origin: configService.getOrThrow<string>('auth.frontendOrigin'),
     credentials: true,
+    exposedHeaders: ['Content-Disposition'],
   });
   app.enableShutdownHooks();
   app.setGlobalPrefix('api');

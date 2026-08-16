@@ -21,6 +21,9 @@ import { OriginGuard } from './common/guards/origin.guard';
 import { SessionAuthGuard } from './common/guards/session-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AuditModule } from './modules/audit/audit.module';
+import { IncidentsModule } from './modules/incidents/incidents.module';
+import { IncidentTypesModule } from './modules/incident-types/incident-types.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 
 @Module({
   imports: [
@@ -48,6 +51,9 @@ import { AuditModule } from './modules/audit/audit.module';
     AuthModule,
     SessionsModule,
     AuditModule,
+    IncidentsModule,
+    IncidentTypesModule,
+    DocumentsModule,
   ],
   providers: [
     CryptoService,

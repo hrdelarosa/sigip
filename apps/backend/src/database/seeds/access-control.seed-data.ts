@@ -57,6 +57,7 @@ export const rolesSeed = [
     permissions: [
       'dashboard:read',
       'employees:read',
+      'catalogs:read',
       'incidents:read',
       'documents:read',
       'reports:read',
@@ -74,6 +75,7 @@ export const rolesSeed = [
       'employees:create',
       'employees:read',
       'employees:update',
+      'catalogs:read',
       'incidents:create',
       'incidents:read',
       'incidents:update',
@@ -93,6 +95,7 @@ export const rolesSeed = [
     permissions: [
       'dashboard:read',
       'employees:read',
+      'catalogs:read',
       'incidents:create',
       'incidents:read',
       'documents:create',

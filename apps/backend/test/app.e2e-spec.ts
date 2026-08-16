@@ -38,6 +38,18 @@ describe('Authentication flow (e2e)', () => {
     await request(app.getHttpServer()).get('/api/users').expect(401);
   });
 
+  it('exposes the download filename header to the frontend origin', async () => {
+    const response = await request(app.getHttpServer())
+      .options('/api/documents/test')
+      .set('Origin', frontendOrigin)
+      .set('Access-Control-Request-Method', 'GET')
+      .expect(204);
+
+    expect(response.headers['access-control-expose-headers']).toContain(
+      'Content-Disposition',
+    );
+  });
+
   it('rejects invalid credentials without exposing which field failed', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/login')
