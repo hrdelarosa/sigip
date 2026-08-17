@@ -1,0 +1,43 @@
+# ================================
+# 1. Base
+# ================================
+FROM node:24-bookworm-slim AS base
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN corepack enable
+
+WORKDIR /app
+
+
+# ================================
+# 2. Build
+# ================================
+FROM base AS build
+
+# Copiamos el monorepo completo
+COPY . .
+
+# Instalamos todas las dependencias del workspace
+RUN pnpm install --frozen-lockfile
+
+# Compilamos primero el paquete compartido
+RUN pnpm --filter @sigip/shared build
+
+# Compilamos el backend
+RUN pnpm --filter backend build
+
+
+# ================================
+# 3. Producción
+# ================================
+FROM base AS production
+
+ENV NODE_ENV=production
+
+COPY --from=build /app /app
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "backend", "start:prod"]
