@@ -3,6 +3,7 @@ import {
   Building2Icon,
   IdCardIcon,
   KeyRoundIcon,
+  LayoutDashboardIcon,
   ShieldCheckIcon,
   UsersIcon,
   ScrollTextIcon,
@@ -14,6 +15,12 @@ export const navigationGroups = [
   {
     label: 'Principal',
     items: [
+      {
+        label: 'Inicio',
+        href: routes.dashboard,
+        icon: LayoutDashboardIcon,
+        permission: 'dashboard:read',
+      },
       {
         label: 'Incidencias',
         href: routes.incidents.root,

@@ -38,14 +38,6 @@ export type IncidentContextFieldsState = ReturnType<
   typeof useIncidentContextFields
 >
 
-export function useIncidentFormContext(
-  control: Control<IncidentFormValues>,
-  setValue: UseFormSetValue<IncidentFormValues>,
-  incident?: Incident,
-) {
-  return useIncidentContextFields(control, setValue, incident)
-}
-
 export function IncidentEmployeeFields({
   control,
   incident,

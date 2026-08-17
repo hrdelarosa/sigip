@@ -24,6 +24,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { IncidentTypesModule } from './modules/incident-types/incident-types.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
     IncidentsModule,
     IncidentTypesModule,
     DocumentsModule,
+    DashboardModule,
   ],
   providers: [
     CryptoService,

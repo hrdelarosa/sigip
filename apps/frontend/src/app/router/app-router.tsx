@@ -17,8 +17,10 @@ import {
   IncidentDetailsPage,
   IncidentsPage,
 } from '@/modules/incidents'
+import { DashboardPage } from '@/modules/dashboard'
 
 const destinations = [
+  { permission: 'dashboard:read', route: routes.dashboard },
   { permission: 'incidents:read', route: routes.incidents.root },
   { permission: 'employees:read', route: routes.employees.root },
   { permission: 'audit:read', route: routes.audit },
@@ -42,6 +44,12 @@ export function AppRouter() {
         <ProtectedRoute>
           <HomeRedirect />
         </ProtectedRoute>
+      </Route>
+
+      <Route path={routes.dashboard}>
+        <ProtectedPage permission="dashboard:read">
+          <DashboardPage />
+        </ProtectedPage>
       </Route>
 
       <Route path={routes.administration.permissions}>

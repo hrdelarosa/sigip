@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/field'
 import {
   buildAssignmentDateConstraints,
-  IncidentDatePickerField,
-} from './IncidentDatePickerField'
+} from '../lib/incident-date-constraints'
+import { IncidentDatePickerField } from './IncidentDatePickerField'
 
 function TemporalModeChip({
   active,

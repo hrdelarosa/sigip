@@ -16,6 +16,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { useValidatedForm } from '@/hooks/useValidatedForm'
 import { useIncidentSubmit } from '../hooks/useIncidentSubmit'
+import { useIncidentFormContext } from '../hooks/useIncidentFormContext'
 import { getIncidentFormDefaultValues } from '../lib/incident-form-helpers'
 import {
   createIncidentFormSchema,
@@ -23,10 +24,7 @@ import {
   type IncidentFormValues,
 } from '../schemas/incident-form.schema'
 import type { Incident } from '../types/incident.types'
-import {
-  IncidentEmployeeFields,
-  useIncidentFormContext,
-} from './IncidentContextFields'
+import { IncidentEmployeeFields } from './IncidentContextFields'
 import { IncidentFileField } from './IncidentFileField'
 import { IncidentMetadataFields } from './IncidentMetadataFields'
 import { IncidentObservationsField } from './IncidentObservationsField'

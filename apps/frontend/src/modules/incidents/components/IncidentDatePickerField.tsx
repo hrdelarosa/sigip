@@ -1,5 +1,3 @@
-import { parseISO } from 'date-fns'
-
 import { DatePicker } from '@/components/ui/date-picker'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -42,21 +40,6 @@ export function IncidentDatePickerField({
       <FieldError id={errorId}>{errorMessage}</FieldError>
     </Field>
   )
-}
-
-export function buildAssignmentDateConstraints(
-  effectiveFrom?: string,
-  effectiveTo?: string | null,
-): React.ComponentProps<typeof DatePicker>['disabledDates'] {
-  if (!effectiveFrom) return undefined
-
-  const from = parseISO(effectiveFrom)
-
-  if (effectiveTo) {
-    return { before: from, after: parseISO(effectiveTo) }
-  }
-
-  return { before: from }
 }
 
 function splitReceivedAt(value: string): { date: string; time: string } {
