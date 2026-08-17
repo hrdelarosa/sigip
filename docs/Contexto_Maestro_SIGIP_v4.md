@@ -69,7 +69,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
-- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents` y `documents`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. Siguen pendientes la administración de `document-types`, otros anexos opcionales y `dashboard`.
+- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents` y `dashboard`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
 - La auditoría es append-only y ya registra autenticación, sesiones y mutaciones de usuarios. Su integración transversal continúa a medida que se modifiquen roles, permisos, empleados, asignaciones y nuevos módulos de dominio.
 
@@ -155,7 +155,7 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `document-types` | `document_types`. | Esquema y tipo `FORMATO_INCIDENCIA` implementados; administración pendiente. |
 | `documents` | `documents` y almacenamiento privado. | PDF principal, listado, descarga privada, baja lógica y oficio opcional de Comisión implementados; otros anexos quedan pendientes. |
 | `audit` | `audit_logs`. | Esquema, migraciones, consulta backend y frontend implementados; autenticación, sesiones y usuarios ya producen eventos. Resta integrar las demás mutaciones administrativas y de dominio. |
-| `dashboard` | Consultas agregadas; no tiene tabla propia. | Pendiente. |
+| `dashboard` | Consultas agregadas; no tiene tabla propia. | Backend y frontend implementados: resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. |
 
 ### Decisión sobre usuarios y roles
 
@@ -478,7 +478,6 @@ Esta secuencia evita que `incidents`, `documents` y `audit` reciban identificado
 - Administración visual de tipos de incidencia y tipos documentales.
 - Carga de anexos opcionales distintos del oficio de Comisión y del formato principal.
 - Integración transversal restante de auditoría en roles, permisos, empleados, asignaciones y catálogos.
-- Dashboard y consultas agregadas.
 - Ampliar pruebas automatizadas para las fases de dominio y los flujos visuales; Auth, Sessions, Users y Audit ya cuentan con cobertura unitaria/e2e focalizada en backend.
 
 ## 12. Orden de implementación
@@ -506,7 +505,7 @@ NÚCLEO FUNCIONAL
 
 CIERRE FUNCIONAL
 ├── Integración transversal restante de Audit
-└── Dashboard
+└── Dashboard — COMPLETADO
 ```
 
 ### Razón para implementar Auth antes que Incidents
