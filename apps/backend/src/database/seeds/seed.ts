@@ -15,6 +15,7 @@ import {
   organizationalUnitsSeed,
   positionsSeed,
 } from './organization.seed-data';
+import { incidentTypesSeed } from './incident-types.seed-data';
 
 interface IdentifierRow extends RowDataPacket {
   id: Buffer;
@@ -165,6 +166,40 @@ const seed = async (): Promise<void> => {
       );
     }
 
+    for (const incidentType of incidentTypesSeed) {
+      await connection.execute(
+        `INSERT INTO incident_types
+       (
+         id,
+         code,
+         name,
+         description,
+         temporal_mode,
+         appointment_scope,
+         is_active,
+         sort_order
+       )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       description = VALUES(description),
+       temporal_mode = VALUES(temporal_mode),
+       appointment_scope = VALUES(appointment_scope),
+       is_active = VALUES(is_active),
+       sort_order = VALUES(sort_order)`,
+        [
+          uuidBuffer(),
+          incidentType.code,
+          incidentType.name,
+          incidentType.description,
+          incidentType.temporalMode,
+          incidentType.appointmentScope,
+          incidentType.isActive,
+          incidentType.sortOrder,
+        ],
+      );
+    }
+
     for (const employee of employeesSeed) {
       await connection.execute(
         `INSERT INTO employees (id, employee_number, full_name, hire_date, status)
@@ -223,7 +258,7 @@ const seed = async (): Promise<void> => {
     await connection.commit();
 
     console.log(
-      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos, ${employeesSeed.length} empleados y ${assignmentsSeed.length} asignaciones.`,
+      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos, ${incidentTypesSeed.length} tipos de incidencia, ${employeesSeed.length} empleados y ${assignmentsSeed.length} asignaciones.`,
     );
   } catch (error) {
     await connection.rollback();
