@@ -4,7 +4,7 @@
 
 **Estado:** vigente
 
-**Última actualización:** 13 de agosto de 2026
+**Última actualización:** 17 de agosto de 2026
 
 **Fase activa:** tipos de incidencia
 
@@ -69,7 +69,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
-- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents` y `dashboard`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
+- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents`, `dashboard` y `reports`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. Los reportes de incidencias de personal se generan por quincena (primera 1-15 o segunda 16-fin de mes), mes, año o periodo personalizado, con filtros por tipo y unidad, vista previa enriquecida y descarga en PDF. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
 - La auditoría es append-only y ya registra autenticación, sesiones y mutaciones de usuarios. Su integración transversal continúa a medida que se modifiquen roles, permisos, empleados, asignaciones y nuevos módulos de dominio.
 
@@ -431,6 +431,15 @@ GET /api/dashboard/summary
 GET /api/dashboard/active-incidents
 GET /api/dashboard/incidents-by-type
 ```
+
+### Reports
+
+```http
+GET /api/reports/incidents
+GET /api/reports/incidents/pdf
+```
+
+Ambas rutas requieren `reports:read`. El reporte de incidencias acepta un periodo `FORTNIGHT` (con `fortnight` `FIRST`/`SECOND` y `month`/`year`), `MONTH` (con `month`/`year`), `YEAR` (con `year`) o `CUSTOM` (con `startDate`/`endDate`), además de filtros opcionales por tipo de incidencia y unidad organizacional y la inclusión de canceladas. El endpoint `pdf` devuelve el reporte como descarga PDF en formato carta vertical (612×792) con el membrete institucional `modules/reports/assets/institutional-header.jpeg` (copiado a `dist` vía `nest-cli.json`), encabezado de carta con fecha y destinatario, resumen, incidencias por tipo y detalle; el detalle se pagina sin cascada con encabezados repetidos y máximo dos páginas con el volumen habitual.
 
 ## 11. Fase actual del desarrollo
 
