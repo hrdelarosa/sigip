@@ -1,0 +1,29 @@
+FROM node:24-bookworm-slim AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@11.15.1
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json ./apps/frontend/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+
+RUN pnpm install --frozen-lockfile --filter frontend...
+
+COPY apps/frontend ./apps/frontend
+COPY packages/shared ./packages/shared
+
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN pnpm --filter @sigip/shared build
+RUN pnpm --filter frontend build
+
+
+FROM nginx:1.27-alpine AS runner
+
+COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
