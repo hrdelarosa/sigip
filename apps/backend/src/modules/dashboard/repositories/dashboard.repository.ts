@@ -11,7 +11,9 @@ export abstract class DashboardRepository {
     monthEnd: Date,
   ): Promise<DashboardSummaryModel>;
 
-  abstract getActiveIncidents(today: Date): Promise<DashboardActiveIncidentModel[]>;
+  abstract getActiveIncidents(
+    today: Date,
+  ): Promise<DashboardActiveIncidentModel[]>;
 
   abstract getIncidentsByType(
     yearStart: Date,

@@ -9,7 +9,9 @@ export function startOfDayUtc(reference: Date = new Date()): Date {
 }
 
 export function startOfMonthUtc(reference: Date = new Date()): Date {
-  return new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1));
+  return new Date(
+    Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), 1),
+  );
 }
 
 export function startOfNextMonthUtc(reference: Date = new Date()): Date {

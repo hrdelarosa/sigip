@@ -112,7 +112,9 @@ export class DrizzleDashboardRepository implements DashboardRepository {
     };
   }
 
-  async getActiveIncidents(today: Date): Promise<DashboardActiveIncidentModel[]> {
+  async getActiveIncidents(
+    today: Date,
+  ): Promise<DashboardActiveIncidentModel[]> {
     const rows = await this.db
       .select({
         incidentId: incidents.id,

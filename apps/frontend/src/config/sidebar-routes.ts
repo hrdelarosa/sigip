@@ -8,6 +8,7 @@ import {
   UsersIcon,
   ScrollTextIcon,
   ClipboardClockIcon,
+  ChartNoAxesColumnIcon,
 } from 'lucide-react'
 import { routes } from '@/app/router/routes'
 
@@ -20,6 +21,12 @@ export const navigationGroups = [
         href: routes.dashboard,
         icon: LayoutDashboardIcon,
         permission: 'dashboard:read',
+      },
+      {
+        label: 'Reportes',
+        href: routes.reports,
+        icon: ChartNoAxesColumnIcon,
+        permission: 'reports:read',
       },
       {
         label: 'Incidencias',
