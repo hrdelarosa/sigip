@@ -9,6 +9,7 @@ import PositionActions from '../components/PositionActions'
 import { usePositions } from '../hooks/usePositions'
 import { parseAsString, useQueryState } from 'nuqs'
 import PositionDetails from '../components/PositionDetails'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 const columns: DataTableColumn<Position>[] = [
   {
@@ -48,6 +49,8 @@ const columns: DataTableColumn<Position>[] = [
 export function PositionsPage() {
   const positionsQuery = usePositions()
   const [detailsId, setDetailsId] = useQueryState('details', parseAsString)
+  const auth = useAuth()
+  const canCreate = hasPermission(auth.data?.permissions, 'catalogs:update')
 
   return (
     <>
@@ -56,8 +59,7 @@ export function PositionsPage() {
           title="Puestos"
           description="Define los puestos disponibles, controla su estado y administra los permisos disponibles para cada puesto."
         />
-
-        <PositionCreate />
+        {canCreate ? <PositionCreate /> : null}
       </div>
 
       <DataTable
@@ -68,10 +70,15 @@ export function PositionsPage() {
         isSuccess={positionsQuery.isSuccess}
         onRetry={() => positionsQuery.refetch()}
         getRowKey={(position) => position.id}
-        emptyMessage="No hay puestos resgistrados."
+        emptyMessage="No hay puestos registrados."
         errorMessage="No fue posible cargar los puestos."
         skeletonRows={9}
-        renderActions={(position) => <PositionActions position={position} />}
+         renderActions={(position) => (
+           <PositionActions
+             position={position}
+             onDetails={(id) => void setDetailsId(id)}
+           />
+         )}
       />
 
       {detailsId ? (

@@ -48,7 +48,7 @@ export default function OrganizationalUnitEdit({
     },
   })
 
-  function handleOpenChange(nexOpen: boolean) {
+  function handleOpenChange(nextOpen: boolean) {
     if (updateMutation.isPending) return
     reset({
       parentId: organizationalUnit.parentId,
@@ -57,7 +57,7 @@ export default function OrganizationalUnitEdit({
       sortOrder: organizationalUnit.sortOrder,
     })
     updateMutation.reset()
-    onOpenChange(nexOpen)
+    onOpenChange(nextOpen)
   }
 
   return (
@@ -71,32 +71,6 @@ export default function OrganizationalUnitEdit({
       isPending={updateMutation.isPending}
       error={updateMutation.error}
     >
-      <Field data-invalid={!!errors.parentId}>
-        <FieldLabel
-          htmlFor={`organizational-unit-parent-id-${organizationalUnit.id}`}
-        >
-          ID de la unidad superior
-        </FieldLabel>
-        <Input
-          {...register('parentId', {
-            setValueAs: (value) => value || null,
-          })}
-          id={`organizational-unit-parent-id-${organizationalUnit.id}`}
-          disabled={updateMutation.isPending}
-          aria-invalid={!!errors.parentId}
-          aria-describedby={
-            errors.parentId
-              ? `organizational-unit-parent-id-${organizationalUnit.id}-error`
-              : undefined
-          }
-        />
-        <FieldError
-          id={`organizational-unit-parent-id-${organizationalUnit.id}-error`}
-        >
-          {errors.parentId?.message}
-        </FieldError>
-      </Field>
-
       <Field data-disabled>
         <FieldLabel
           htmlFor={`organizational-unit-code-${organizationalUnit.id}`}

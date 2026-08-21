@@ -13,19 +13,21 @@ import {
 import { Eye, MoreHorizontal, Pencil, Power, PowerOff } from 'lucide-react'
 import OrganizationalUnitEdit from './OrganizationalUnitEdit'
 import OrganizationalUnitAlert from './OrganizationalUnitAlert'
-import { useLocation } from 'wouter'
-import { routes } from '@/app/router/routes'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 interface Props {
   organizationalUnit: OrganizationalUnit
+  onDetails: (id: string) => void
 }
 
 export default function OrganizationalUnitActions({
   organizationalUnit,
+  onDetails,
 }: Props) {
+  const auth = useAuth()
+  const canManage = hasPermission(auth.data?.permissions, 'catalogs:update')
   const [editOpen, setEditOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
-  const [, navigate] = useLocation()
 
   return (
     <>
@@ -43,33 +45,35 @@ export default function OrganizationalUnitActions({
         />
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuGroup>
-            <DropdownMenuItem
-              onClick={() =>
-                navigate(
-                  routes.administration.organizationalUnitDetail(
-                    organizationalUnit.id,
-                  ),
-                )
-              }
-            >
+            <DropdownMenuItem onClick={() => onDetails(organizationalUnit.id)}>
               <Eye />
               Ver detalles
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-              <Pencil />
-              Editar
-            </DropdownMenuItem>
+
+            {canManage && (
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <Pencil />
+                Editar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant={organizationalUnit.isActive ? 'destructive' : 'default'}
-              onClick={() => setStatusOpen(true)}
-            >
-              {organizationalUnit.isActive ? <PowerOff /> : <Power />}
-              {organizationalUnit.isActive ? 'Desactivar' : 'Activar'}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+
+          {canManage && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant={
+                    organizationalUnit.isActive ? 'destructive' : 'default'
+                  }
+                  onClick={() => setStatusOpen(true)}
+                >
+                  {organizationalUnit.isActive ? <PowerOff /> : <Power />}
+                  {organizationalUnit.isActive ? 'Desactivar' : 'Activar'}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

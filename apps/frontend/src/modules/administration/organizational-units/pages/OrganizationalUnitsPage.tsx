@@ -9,6 +9,7 @@ import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits'
 import OrganizationalUnitCreate from '../components/OrganizationalUnitCreate'
 import { parseAsString, useQueryState } from 'nuqs'
 import OrganizationalUnitDetails from '../components/OrganizationalUnitDetails'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 const columns: DataTableColumn<OrganizationalUnit>[] = [
   {
@@ -51,6 +52,8 @@ const columns: DataTableColumn<OrganizationalUnit>[] = [
 export function OrganizationalUnitsPage() {
   const organizationalUnitsQuery = useOrganizationalUnits()
   const [detailsId, setDetailsId] = useQueryState('details', parseAsString)
+  const auth = useAuth()
+  const canCreate = hasPermission(auth.data?.permissions, 'catalogs:update')
 
   return (
     <>
@@ -60,7 +63,7 @@ export function OrganizationalUnitsPage() {
           description="Administra las unidades organizacionales de la empresa, su estructura jerárquica y los empleados asignados a cada unidad."
         />
 
-        <OrganizationalUnitCreate />
+        {canCreate ? <OrganizationalUnitCreate /> : null}
       </div>
 
       <DataTable
@@ -71,11 +74,14 @@ export function OrganizationalUnitsPage() {
         isSuccess={organizationalUnitsQuery.isSuccess}
         onRetry={() => organizationalUnitsQuery.refetch()}
         getRowKey={(organizationalUnit) => organizationalUnit.id}
-        emptyMessage="No hay unidades organizacionales resgistradas."
+        emptyMessage="No hay unidades organizacionales registradas."
         errorMessage="No fue posible cargar las unidades organizacionales."
         skeletonRows={9}
         renderActions={(organizationalUnit) => (
-          <OrganizationalUnitActions organizationalUnit={organizationalUnit} />
+          <OrganizationalUnitActions
+            organizationalUnit={organizationalUnit}
+            onDetails={(id) => void setDetailsId(id)}
+          />
         )}
       />
 
