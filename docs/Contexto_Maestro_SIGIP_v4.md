@@ -156,6 +156,7 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `documents` | `documents` y almacenamiento privado. | PDF principal, listado, descarga privada, baja lógica y oficio opcional de Comisión implementados; otros anexos quedan pendientes. |
 | `audit` | `audit_logs`. | Esquema, migraciones, consulta backend y frontend implementados; autenticación, sesiones y usuarios ya producen eventos. Resta integrar las demás mutaciones administrativas y de dominio. |
 | `dashboard` | Consultas agregadas; no tiene tabla propia. | Backend y frontend implementados: resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. |
+| `reports` | Consultas agregadas y generación PDF; no tiene tabla propia. | Backend y frontend implementados para reportes de incidencias, vista previa y exportación protegida. |
 
 ### Decisión sobre usuarios y roles
 
@@ -439,7 +440,7 @@ GET /api/reports/incidents
 GET /api/reports/incidents/pdf
 ```
 
-Ambas rutas requieren `reports:read`. El reporte de incidencias acepta un periodo `FORTNIGHT` (con `fortnight` `FIRST`/`SECOND` y `month`/`year`), `MONTH` (con `month`/`year`), `YEAR` (con `year`) o `CUSTOM` (con `startDate`/`endDate`), además de filtros opcionales por tipo de incidencia y unidad organizacional y la inclusión de canceladas. El endpoint `pdf` devuelve el reporte como descarga PDF en formato carta vertical (612×792) con el membrete institucional `modules/reports/assets/institutional-header.jpeg` (copiado a `dist` vía `nest-cli.json`), encabezado de carta con fecha y destinatario, resumen, incidencias por tipo y detalle; el detalle se pagina sin cascada con encabezados repetidos y máximo dos páginas con el volumen habitual.
+La vista JSON requiere `reports:read`. La descarga PDF requiere simultáneamente `reports:read` y `reports:export`. El reporte de incidencias acepta un periodo `FORTNIGHT` (con `fortnight` `FIRST`/`SECOND` y `month`/`year`), `MONTH` (con `month`/`year`), `YEAR` (con `year`) o `CUSTOM` (con `startDate`/`endDate`), además de filtros opcionales por tipo de incidencia y unidad organizacional y la inclusión de canceladas. El periodo personalizado no puede superar un año. El endpoint `pdf` devuelve el reporte como descarga PDF en formato carta vertical (612×792) con el membrete institucional `modules/reports/assets/institutional-header.jpeg` (copiado a `dist` vía `nest-cli.json`), encabezado de carta con fecha y destinatario, resumen, incidencias por tipo y detalle; el detalle se pagina sin cascada con encabezados repetidos.
 
 ## 11. Fase actual del desarrollo
 
@@ -514,7 +515,8 @@ NÚCLEO FUNCIONAL
 
 CIERRE FUNCIONAL
 ├── Integración transversal restante de Audit
-└── Dashboard — COMPLETADO
+├── Dashboard — COMPLETADO
+└── Reports — COMPLETADO
 ```
 
 ### Razón para implementar Auth antes que Incidents

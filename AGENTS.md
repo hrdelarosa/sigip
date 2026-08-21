@@ -1,5 +1,11 @@
 # Repository Guidelines
 
+## Codebase Discovery With Codebase Memory
+
+Before exploring source files for any codebase question or implementation task, use Codebase Memory as the primary discovery mechanism. Confirm the indexed project with `list_projects` or `index_status`, then use `search_graph` to locate symbols, `trace_path` to inspect callers and dependencies, and `get_code_snippet` to read the exact implementation. Use `get_architecture` for broad orientation and `query_graph` for complex structural questions.
+
+After identifying relevant paths, use `check_index_coverage` before relying on graph results. Fall back to `Glob`, `Grep`, or direct file reads only for literal/configuration searches, non-code files, reported coverage gaps, or when the graph does not provide sufficient evidence. Do not begin by recursively browsing files when Codebase Memory can answer the structural question.
+
 ## Project Structure & Module Organization
 
 SIGIP is a pnpm monorepo. `apps/frontend/` contains the React 19 + Vite client; keep components, styles, and browser assets under `src/`, with static files in `public/`. `apps/backend/` contains the NestJS API and its Drizzle/MySQL integration. Organize domain code in `src/modules/<feature>/`, environment configuration in `src/config/`, database infrastructure and schemas in `src/database/`, generated SQL migrations in `apps/backend/drizzle/`, and end-to-end tests in `test/`. Reusable contracts belong in `packages/shared/src/`. Project decisions and database documentation live in `docs/`. The root `docker-compose.yml` provides the local MySQL 8.4 service.
@@ -21,7 +27,7 @@ The `Auth + Sessions` phase is complete end to end:
 
 Audit infrastructure is also active: `audit_logs` is append-only, `GET /api/audit` and `GET /api/audit/:id` require `audit:read`, and the frontend provides filtering and detailed before/after values. Authentication, session, and user mutations already write audit events; remaining administrative and domain mutations must be integrated as they are touched. Never audit passwords, hashes, tokens, cookies, authorization headers, secrets, or binary content. When a sensitive mutation is transactional, its audit write belongs to the same transaction.
 
-The active phase is now `Incident Types`. Then implement in this order: Incidents with Incident Occurrences; Document Types and private document storage; remaining cross-cutting Audit integration; Dashboard. Incidents are the core domain. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
+The active remaining work is `Document Types` and cross-cutting Audit integration. Incidents, Dashboard, and Reports are implemented. Actor fields such as `registeredBy`, `updatedBy`, `cancelledBy`, and `uploadedBy` must come from the authenticated request context and must never be accepted from client input.
 
 ## Build, Test, and Development Commands
 
@@ -31,9 +37,10 @@ Run commands from the repository root with pnpm 11.15.1:
 - `pnpm dev:frontend` starts the Vite development server.
 - `pnpm dev:backend` starts NestJS in watch mode.
 - `pnpm build` builds every workspace that defines a build script.
-- `pnpm lint` runs workspace lint checks.
-- `pnpm test` runs available Jest suites.
-- `pnpm typecheck` runs workspace TypeScript checks where configured.
+- `pnpm lint` runs workspace lint checks without modifying files; use package `lint:fix` scripts only intentionally.
+- `pnpm test` runs available backend Jest and frontend Vitest suites.
+- `pnpm typecheck` runs TypeScript checks across shared, backend, and frontend.
+- `pnpm verify` runs lint, typecheck, unit tests, backend e2e tests, and builds.
 - `pnpm --filter backend test:e2e` runs backend end-to-end tests.
 - `docker compose up -d mysql` starts the local MySQL service.
 - `pnpm db:generate` generates a Drizzle migration from schema changes.
