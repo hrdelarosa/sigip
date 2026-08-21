@@ -18,3 +18,5 @@ coverage
 .idea
 
 *.log
+.codebase-memory
+apps/frontend/install.ps1

@@ -12,6 +12,7 @@
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm --filter backend test:e2e && pnpm build",
     "db:generate": "pnpm --filter backend db:generate",
     "db:migrate": "pnpm --filter backend db:migrate",
     "db:push": "pnpm --filter backend db:push",
