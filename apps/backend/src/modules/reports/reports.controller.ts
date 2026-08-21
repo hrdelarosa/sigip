@@ -25,6 +25,7 @@ export class ReportsController {
   }
 
   @Get('incidents/pdf')
+  @RequirePermissions('reports:read', 'reports:export')
   async downloadIncidentsReport(
     @Query() filters: GetIncidentsReportDto,
     @Res() response: Response,

@@ -19,6 +19,9 @@ import {
   ReportsRepository,
   type FindIncidentReportOptions,
 } from './reports.repository';
+import { ReportLimitExceededError } from '../reports.errors';
+
+const MAX_REPORT_ROWS = 5_000;
 
 @Injectable()
 export class DrizzleReportsRepository extends ReportsRepository {
@@ -95,7 +98,12 @@ export class DrizzleReportsRepository extends ReportsRepository {
         eq(incidentOccurrences.incidentId, incidents.id),
       )
       .where(and(...conditions))
-      .orderBy(asc(employees.fullName), asc(incidentOccurrences.startDate));
+      .orderBy(asc(employees.fullName), asc(incidentOccurrences.startDate))
+      .limit(MAX_REPORT_ROWS + 1);
+
+    if (rows.length > MAX_REPORT_ROWS) {
+      throw new ReportLimitExceededError(MAX_REPORT_ROWS);
+    }
 
     const incidentsMap = new Map<string, ReportIncidentModel>();
 

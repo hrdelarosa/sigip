@@ -1,6 +1,7 @@
 import { FileDownIcon, EyeIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,10 +31,14 @@ interface ReportFiltersProps {
   onChange: (value: ReportsFilterState) => void
   onPreview: () => void
   onDownload: () => void
+  canExport: boolean
+  isValid: boolean
   downloading: boolean
   typeItems: Array<{ value: string; label: string }>
   unitItems: Array<{ value: string; label: string }>
   catalogsLoading: boolean
+  catalogsError: boolean
+  onRetryCatalogs: () => void
 }
 
 const PERIOD_OPTIONS: Array<{ value: ReportPeriodType; label: string }> = [
@@ -55,10 +60,14 @@ export function ReportFilters({
   onChange,
   onPreview,
   onDownload,
+  canExport,
+  isValid,
   downloading,
   typeItems,
   unitItems,
   catalogsLoading,
+  catalogsError,
+  onRetryCatalogs,
 }: ReportFiltersProps) {
   return (
     <Card>
@@ -67,6 +76,16 @@ export function ReportFilters({
       </CardHeader>
 
       <CardContent className="space-y-5">
+        {catalogsError ? (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>
+              No fue posible cargar los catálogos.{' '}
+              <button type="button" className="font-medium underline" onClick={onRetryCatalogs}>
+                Reintentar
+              </button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <FieldGroup>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Field>
@@ -217,15 +236,17 @@ export function ReportFilters({
         </FieldGroup>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" onClick={onPreview}>
+          <Button type="button" variant="outline" onClick={onPreview} disabled={!isValid}>
             <EyeIcon data-icon="inline-start" />
             Vista previa
           </Button>
 
-          <Button type="button" onClick={onDownload} disabled={downloading}>
+          {canExport ? (
+            <Button type="button" onClick={onDownload} disabled={downloading || !isValid}>
             <FileDownIcon data-icon="inline-start" />
             {downloading ? 'Generando...' : 'Generar PDF'}
-          </Button>
+            </Button>
+          ) : null}
 
           <Badge variant="secondary" className="ml-auto">
             {formatPeriodLabel(value)}

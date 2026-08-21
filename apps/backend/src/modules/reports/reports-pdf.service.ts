@@ -46,6 +46,7 @@ const COLORS = {
   white: '#FFFFFF',
 };
 
+
 @Injectable()
 export class ReportsPdfService {
   async generate(report: IncidentsReportModel): Promise<Buffer> {
@@ -357,6 +358,7 @@ export class ReportsPdfService {
     const contentWidth = pageWidth - PAGE_MARGIN * 2;
     const tableLeft = PAGE_MARGIN;
     const bottomLimit = pageHeight - FOOTER_MARGIN;
+    const maxRowHeight = pageHeight - PAGE_MARGIN - FOOTER_MARGIN;
 
     const widths = this.distributeWidths(
       columns.map((column) => column.fraction),
@@ -415,6 +417,10 @@ export class ReportsPdfService {
         doc.addPage();
         doc.y = PAGE_MARGIN;
         drawHeader();
+      }
+
+      if (rowHeight > maxRowHeight) {
+        throw new Error('Una fila del reporte excede el alto imprimible.');
       }
 
       if (rowIndex % 2 === 1) {

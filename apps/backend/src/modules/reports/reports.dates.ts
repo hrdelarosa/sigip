@@ -108,6 +108,15 @@ function resolveCustomPeriod(
     );
   }
 
+  const maximumPeriodEnd = new Date(startDate);
+  maximumPeriodEnd.setUTCFullYear(maximumPeriodEnd.getUTCFullYear() + 1);
+
+  if (endDate > maximumPeriodEnd) {
+    throw new BadRequestException(
+      'El periodo personalizado no puede superar un año.',
+    );
+  }
+
   return {
     type: 'CUSTOM',
     startDate,

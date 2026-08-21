@@ -56,7 +56,7 @@ export class GetIncidentsReportDto {
   organizationalUnitId?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   includeCancelled = false;
 }
@@ -69,4 +69,11 @@ function toOptionalNumber(value: unknown): number | undefined {
   const parsed = Number(value);
 
   return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function parseOptionalBoolean(value: unknown): unknown {
+  if (value === true || value === false) return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
 }

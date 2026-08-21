@@ -61,6 +61,13 @@ export function buildIncidentsReportFilters(
   return filters
 }
 
+export function isReportFilterValid(state: ReportsFilterState): boolean {
+  if (state.period !== 'CUSTOM') return true
+  if (!state.startDate || !state.endDate) return false
+
+  return state.startDate <= state.endDate
+}
+
 export function formatPeriodLabel(state: ReportsFilterState): string {
   if (state.period === 'CUSTOM') {
     if (state.startDate && state.endDate) {

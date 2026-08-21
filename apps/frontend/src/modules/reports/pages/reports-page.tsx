@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useQueryStates } from 'nuqs'
 import { RotateCcwIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api/api-error'
 import { useOrganizationalUnits } from '@/modules/administration/organizational-units/hooks/useOrganizationalUnits'
+import { hasPermission, useAuth } from '@/modules/auth'
 import { incidentTypesQueryOptions } from '@/modules/incidents/queries/incident-query-options'
 
 import { downloadIncidentsReport } from '../api/reports.api'
@@ -16,17 +18,30 @@ import { ReportPreview } from '../components/report-preview'
 import { useIncidentsReport } from '../hooks/use-incidents-report'
 import {
   buildIncidentsReportFilters,
-  defaultReportsFilterState,
+  isReportFilterValid,
   type ReportsFilterState,
 } from '../lib/report-filters'
+import { reportSearchParams } from '../queries/report-search-params'
 
 export function ReportsPage() {
-  const [state, setState] = useState<ReportsFilterState>(
-    defaultReportsFilterState,
-  )
+  const auth = useAuth()
+  const [filters, setFilters] = useQueryStates(reportSearchParams)
+  const state: ReportsFilterState = {
+    period: filters.period,
+    fortnight: filters.fortnight,
+    month: filters.month,
+    year: filters.year,
+    startDate: filters.startDate ?? undefined,
+    endDate: filters.endDate ?? undefined,
+    incidentTypeId: filters.incidentTypeId ?? undefined,
+    organizationalUnitId: filters.organizationalUnitId ?? undefined,
+    includeCancelled: filters.includeCancelled,
+  }
   const [previewEnabled, setPreviewEnabled] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const report = useIncidentsReport(state, previewEnabled)
+  const canExport = hasPermission(auth.data?.permissions, 'reports:export')
+  const isValid = isReportFilterValid(state)
 
   const typesQuery = useQuery(
     incidentTypesQueryOptions({ page: 1, limit: 100, isActive: true }),
@@ -51,11 +66,8 @@ export function ReportsPage() {
     [unitsQuery.data],
   )
 
-  const catalogsLoading =
-    typesQuery.isPending ||
-    typesQuery.isError ||
-    unitsQuery.isPending ||
-    unitsQuery.isError
+  const catalogsLoading = typesQuery.isPending || unitsQuery.isPending
+  const catalogsError = typesQuery.isError || unitsQuery.isError
 
   async function handleDownload() {
     setDownloading(true)
@@ -74,7 +86,7 @@ export function ReportsPage() {
   }
 
   function handleChange(next: ReportsFilterState) {
-    setState(next)
+    void setFilters(next)
     setPreviewEnabled(false)
   }
 
@@ -90,10 +102,17 @@ export function ReportsPage() {
         onChange={handleChange}
         onPreview={() => setPreviewEnabled(true)}
         onDownload={handleDownload}
+        canExport={canExport}
+        isValid={isValid}
         downloading={downloading}
         typeItems={typeItems}
         unitItems={unitItems}
         catalogsLoading={catalogsLoading}
+        catalogsError={catalogsError}
+        onRetryCatalogs={() => {
+          void typesQuery.refetch()
+          void unitsQuery.refetch()
+        }}
       />
 
       {previewEnabled ? <ReportResult report={report} /> : null}
