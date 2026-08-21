@@ -43,6 +43,23 @@ export const navigationGroups = [
     ],
   },
   {
+    label: 'Catálogos',
+    items: [
+      {
+        label: 'Unidades organizativas',
+        href: routes.administration.organizationalUnits,
+        icon: Building2Icon,
+        permission: 'catalogs:read',
+      },
+      {
+        label: 'Puestos',
+        href: routes.administration.positions,
+        icon: BriefcaseBusinessIcon,
+        permission: 'catalogs:read',
+      },
+    ],
+  },
+  {
     label: 'Administración',
     items: [
       {
@@ -68,18 +85,6 @@ export const navigationGroups = [
         href: routes.administration.permissions,
         icon: KeyRoundIcon,
         permission: 'permissions:read',
-      },
-      {
-        label: 'Unidades organizativas',
-        href: routes.administration.organizationalUnits,
-        icon: Building2Icon,
-        permission: 'catalogs:read',
-      },
-      {
-        label: 'Puestos',
-        href: routes.administration.positions,
-        icon: BriefcaseBusinessIcon,
-        permission: 'catalogs:read',
       },
     ],
   },

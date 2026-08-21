@@ -1,11 +1,10 @@
-import { useEffect, type PropsWithChildren } from 'react'
+import type { PropsWithChildren } from 'react'
 import { Redirect } from 'wouter'
 
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { hasPermission, useAuth } from '@/modules/auth'
 import { routes } from './routes'
-import { toast } from 'sonner'
 
 interface ProtectedRouteProps extends PropsWithChildren {
   permission?: string
@@ -18,15 +17,6 @@ export function ProtectedRoute({
   permissions = [],
 }: ProtectedRouteProps) {
   const auth = useAuth()
-
-  useEffect(() => {
-    if (auth.isFetched && !auth.data) {
-      toast.error('La sesión ha caducado', {
-        description:
-          'Tu sesión ha caducado por inactividad. Inicia sesión de nuevo para continuar.',
-      })
-    }
-  })
 
   if (auth.isPending) {
     return (

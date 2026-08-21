@@ -1,4 +1,4 @@
-import { Redirect, Route, Switch } from 'wouter'
+import { Route, Switch } from 'wouter'
 
 import { OrganizationalUnitsPage } from '@/modules/administration/organizational-units'
 import { PermissionsPage } from '@/modules/administration/permissions'
@@ -6,9 +6,6 @@ import { PositionsPage } from '@/modules/administration/positions'
 import { RolesPage } from '@/modules/administration/roles'
 import { UsersPage } from '@/modules/administration/users'
 import { EmployeeDetailsPage, EmployeesPage } from '@/modules/employees'
-import { hasPermission, LoginPage, useAuth } from '@/modules/auth'
-import { AppLayout } from '../layouts/AppLayout'
-import { AuthLayout } from '../layouts/AuthLayout'
 import { ProtectedRoute } from './protected-route'
 import { routes } from './routes'
 import { AuditPage } from '@/modules/audit'
@@ -19,21 +16,10 @@ import {
 } from '@/modules/incidents'
 import { DashboardPage } from '@/modules/dashboard'
 import { ReportsPage } from '@/modules/reports'
-
-const destinations = [
-  { permission: 'dashboard:read', route: routes.dashboard },
-  { permission: 'incidents:read', route: routes.incidents.root },
-  { permission: 'reports:read', route: routes.reports },
-  { permission: 'employees:read', route: routes.employees.root },
-  { permission: 'audit:read', route: routes.audit },
-  { permission: 'users:read', route: routes.administration.users },
-  { permission: 'roles:read', route: routes.administration.roles },
-  { permission: 'permissions:read', route: routes.administration.permissions },
-  {
-    permission: 'catalogs:read',
-    route: routes.administration.organizationalUnits,
-  },
-] as const
+import { HomeRedirect } from './home-redirect'
+import { LoginRoute } from './login-route'
+import { NotFoundPage } from './not-found-page'
+import { ProtectedPage } from './protected-page'
 
 export function AppRouter() {
   return (
@@ -130,68 +116,5 @@ export function AppRouter() {
         <NotFoundPage />
       </Route>
     </Switch>
-  )
-}
-
-function ProtectedPage({
-  children,
-  permission,
-  permissions,
-}: React.PropsWithChildren<{
-  permission?: string
-  permissions?: readonly string[]
-}>) {
-  return (
-    <ProtectedRoute permission={permission} permissions={permissions}>
-      <AppLayout>{children}</AppLayout>
-    </ProtectedRoute>
-  )
-}
-
-function LoginRoute() {
-  const auth = useAuth()
-  if (auth.data) return <Redirect to={routes.home} replace />
-  return (
-    <AuthLayout>
-      <LoginPage />
-    </AuthLayout>
-  )
-}
-
-function HomeRedirect() {
-  const auth = useAuth()
-  const destination = destinations.find(({ permission }) =>
-    hasPermission(auth.data?.permissions, permission),
-  )
-  return destination ? (
-    <Redirect to={destination.route} replace />
-  ) : (
-    <AccessEmptyState />
-  )
-}
-
-function AccessEmptyState() {
-  return (
-    <div className="grid min-h-screen place-items-center p-6 text-center">
-      <div>
-        <h1 className="text-xl font-semibold">Sin módulos asignados</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          La cuenta es válida, pero no tiene permisos de consulta asignados.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function NotFoundPage() {
-  return (
-    <div className="grid min-h-screen place-items-center p-6 text-center">
-      <div>
-        <h1 className="text-4xl font-bold">404</h1>
-        <p className="mt-2 text-muted-foreground">
-          La página solicitada no existe.
-        </p>
-      </div>
-    </div>
   )
 }

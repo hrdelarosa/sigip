@@ -15,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '../ui/sidebar'
 import { hasPermission, useAuth, useLogout } from '@/modules/auth'
 
@@ -22,6 +23,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
   const [location] = useLocation()
   const auth = useAuth()
   const logout = useLogout()
+  const { setOpenMobile } = useSidebar()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -51,18 +53,23 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {navigationGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items
-                  .filter(
-                    (item) =>
-                      !('permission' in item) ||
-                      hasPermission(auth.data?.permissions, item.permission),
-                  )
-                  .map((item) => {
+        {navigationGroups.map((group) => {
+          const visibleItems = group.items.filter(
+            (item) =>
+              !('permission' in item) ||
+              hasPermission(auth.data?.permissions, item.permission),
+          )
+
+          if (visibleItems.length === 0) {
+            return null
+          }
+
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map((item) => {
                     const isActive =
                       location === item.href ||
                       location.startsWith(`${item.href}/`)
@@ -77,6 +84,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                             <Link
                               href={item.href}
                               aria-current={isActive ? 'page' : undefined}
+                              onClick={() => setOpenMobile(false)}
                             />
                           }
                         >
@@ -86,10 +94,11 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                       </SidebarMenuItem>
                     )
                   })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
       <SidebarFooter>

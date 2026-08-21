@@ -35,10 +35,10 @@ export function useEmployeesPage() {
   const totalPages = meta?.totalPages
   const hasFilters = Boolean(
     filters.search ||
-      filters.sort ||
-      filters.status ||
-      filters.organizationalUnitId ||
-      filters.positionId,
+    filters.sort ||
+    filters.status ||
+    filters.organizationalUnitId ||
+    filters.positionId,
   )
 
   useEffect(() => {
@@ -54,11 +54,7 @@ export function useEmployeesPage() {
     pageSizes: employeePageSizes,
     hasFilters,
     setPageSize: pagination.setPageSize,
-    goToPreviousPage: () => {
-      if (meta) pagination.goToPreviousPage(meta)
-    },
-    goToNextPage: () => {
-      if (meta) pagination.goToNextPage(meta)
-    },
+    goToPreviousPage: () => meta && pagination.goToPreviousPage(meta),
+    goToNextPage: () => meta && pagination.goToNextPage(meta),
   }
 }
