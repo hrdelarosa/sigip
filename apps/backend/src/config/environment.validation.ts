@@ -19,4 +19,6 @@ export const environmentValidationSchema = Joi.object({
     .uri({ scheme: ['http', 'https'] })
     .required(),
   TRUST_PROXY_HOPS: Joi.number().integer().min(0).default(0),
+  STORAGE_ROOT: Joi.string().min(1).default('storage'),
+  ALLOW_DEVELOPMENT_SEED: Joi.boolean().default(false),
 });

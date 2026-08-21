@@ -35,8 +35,15 @@ RUN pnpm --filter backend build
 FROM base AS production
 
 ENV NODE_ENV=production
+ENV STORAGE_ROOT=/app/storage
 
 COPY --from=build /app /app
+
+RUN mkdir -p /app/storage && chown -R node:node /app
+
+USER node
+
+VOLUME ["/app/storage"]
 
 EXPOSE 3000
 

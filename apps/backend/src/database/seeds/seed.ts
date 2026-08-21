@@ -43,8 +43,12 @@ const seed = async (): Promise<void> => {
   loadEnvironment();
 
   if (process.env.NODE_ENV === 'production') {
+    throw new Error('El seed de desarrollo no puede ejecutarse en producción.');
+  }
+
+  if (process.env.ALLOW_DEVELOPMENT_SEED !== 'true') {
     throw new Error(
-      'El seed de desarrollo no puede ejecutarse con NODE_ENV=production.',
+      'El seed requiere ALLOW_DEVELOPMENT_SEED=true de forma explícita.',
     );
   }
 

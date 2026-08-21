@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
@@ -6,7 +7,11 @@ import type { UploadedMemoryFile } from '../../../common/types/uploaded-memory-f
 
 @Injectable()
 export class DocumentStorageService {
-  private readonly root = resolve(process.cwd(), 'storage');
+  private readonly root: string;
+
+  constructor(config: ConfigService) {
+    this.root = resolve(process.cwd(), config.getOrThrow<string>('STORAGE_ROOT'));
+  }
 
   async storeIncidentDocument(
     incidentId: string,
