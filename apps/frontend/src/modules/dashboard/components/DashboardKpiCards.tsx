@@ -1,13 +1,14 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import {
-  CalendarClockIcon,
+  ActivityIcon,
+  CalendarRangeIcon,
   CalendarOffIcon,
-  ClipboardClockIcon,
   UsersIcon,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { DashboardSummaryResponse } from '@sigip/shared'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DashboardError } from './DashboardStates'
 
@@ -36,23 +37,26 @@ export function DashboardKpiCards({ summaryQuery }: Props) {
       <KpiCard
         label="Personal activo"
         value={summary.activeEmployees}
+        description={summary.newEmployeesThisMonth > 0 ? `+${summary.newEmployeesThisMonth} este mes` : undefined}
         icon={UsersIcon}
       />
       <KpiCard
-        label="Ausentes hoy por incidencia"
+        label="Ausentes hoy"
         value={summary.absentToday}
+        description={`${summary.absenceRate}% del personal activo`}
         icon={CalendarOffIcon}
-        hint={`${summary.absenceRate}% del personal activo`}
       />
       <KpiCard
-        label="Incidencias en curso hoy"
+        label="Incidencias activas"
         value={summary.activeIncidentsToday}
-        icon={ClipboardClockIcon}
+        description={`${summary.endingThisWeek} terminan esta semana`}
+        icon={ActivityIcon}
       />
       <KpiCard
-        label="Incidencias del mes"
+        label="Incidencias este mes"
         value={summary.monthIncidents}
-        icon={CalendarClockIcon}
+        description={formatVariation(summary.monthVariationPercentage)}
+        icon={CalendarRangeIcon}
       />
     </div>
   )
@@ -61,30 +65,35 @@ export function DashboardKpiCards({ summaryQuery }: Props) {
 function KpiCard({
   label,
   value,
+  description,
   icon: Icon,
-  hint,
 }: {
   label: string
   value: number
-  icon: typeof UsersIcon
-  hint?: string
+  description?: string
+  icon: LucideIcon
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <Icon aria-hidden="true" className="size-4" />
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-semibold tabular-nums">{value}</div>
-        {hint ? (
-          <p className="mt-1 text-sm text-muted-foreground">{hint}</p>
-        ) : null}
+    <Card className="relative overflow-hidden py-0 shadow-xs">
+      <CardContent className="flex items-start justify-between gap-4 p-5">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">
+            {value}
+          </p>
+          {description ? <p className="mt-2 text-xs text-muted-foreground">{description}</p> : null}
+        </div>
+        <div className="rounded-lg bg-muted p-2.5 text-muted-foreground">
+          <Icon className="size-5" aria-hidden="true" />
+        </div>
       </CardContent>
     </Card>
   )
+}
+
+function formatVariation(value: number): string {
+  if (value === 0) return 'Sin variación frente al mes anterior'
+  return `${value > 0 ? '+' : ''}${value}% frente al mes anterior`
 }
 
 function DashboardKpiSkeleton() {

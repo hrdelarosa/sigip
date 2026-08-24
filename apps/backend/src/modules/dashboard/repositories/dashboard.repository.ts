@@ -1,7 +1,9 @@
 import type {
   DashboardActiveIncidentModel,
   DashboardIncidentTypeCountModel,
+  DashboardRecentIncidentModel,
   DashboardSummaryModel,
+  DashboardUpcomingReturnModel,
 } from '../models/dashboard.model';
 
 export abstract class DashboardRepository {
@@ -9,6 +11,9 @@ export abstract class DashboardRepository {
     today: Date,
     monthStart: Date,
     monthEnd: Date,
+    previousMonthStart: Date,
+    weekEnd: Date,
+    monthStartForEmployees: Date,
   ): Promise<DashboardSummaryModel>;
 
   abstract getActiveIncidents(
@@ -16,7 +21,21 @@ export abstract class DashboardRepository {
   ): Promise<DashboardActiveIncidentModel[]>;
 
   abstract getIncidentsByType(
-    yearStart: Date,
-    yearEnd: Date,
+    periodStart: Date,
+    periodEnd: Date,
   ): Promise<DashboardIncidentTypeCountModel[]>;
+
+  abstract getIncidentTrend(
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<Array<{ period: string; count: number }>>;
+
+  abstract getUpcomingReturns(
+    today: Date,
+    weekEnd: Date,
+  ): Promise<DashboardUpcomingReturnModel[]>;
+
+  abstract getRecentIncidents(
+    limit: number,
+  ): Promise<DashboardRecentIncidentModel[]>;
 }

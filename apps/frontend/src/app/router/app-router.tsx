@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Route, Switch } from 'wouter'
 
 import { OrganizationalUnitsPage } from '@/modules/administration/organizational-units'
@@ -14,12 +15,17 @@ import {
   IncidentDetailsPage,
   IncidentsPage,
 } from '@/modules/incidents'
-import { DashboardPage } from '@/modules/dashboard'
 import { ReportsPage } from '@/modules/reports'
 import { HomeRedirect } from './home-redirect'
 import { LoginRoute } from './login-route'
 import { NotFoundPage } from './not-found-page'
 import { ProtectedPage } from './protected-page'
+
+const DashboardPage = lazy(() =>
+  import('@/modules/dashboard').then((module) => ({
+    default: module.DashboardPage,
+  })),
+)
 
 export function AppRouter() {
   return (
@@ -36,7 +42,18 @@ export function AppRouter() {
 
       <Route path={routes.dashboard}>
         <ProtectedPage permission="dashboard:read">
-          <DashboardPage />
+          <Suspense
+            fallback={
+              <div
+                className="min-h-96 animate-pulse rounded-2xl bg-muted"
+                aria-label="Cargando panel"
+                aria-busy="true"
+                role="status"
+              />
+            }
+          >
+            <DashboardPage />
+          </Suspense>
         </ProtectedPage>
       </Route>
 

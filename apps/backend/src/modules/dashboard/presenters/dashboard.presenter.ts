@@ -1,12 +1,17 @@
 import type {
   DashboardActiveIncidentResponse,
   DashboardIncidentTypeCountResponse,
+  DashboardRecentIncidentResponse,
   DashboardSummaryResponse,
+  DashboardUpcomingReturnResponse,
 } from '@sigip/shared';
 import type {
   DashboardActiveIncidentModel,
+  DashboardIncidentTrendModel,
   DashboardIncidentTypeCountModel,
+  DashboardRecentIncidentModel,
   DashboardSummaryModel,
+  DashboardUpcomingReturnModel,
 } from '../models/dashboard.model';
 
 function formatDate(value: Date | null): string | null {
@@ -22,6 +27,10 @@ export function toDashboardSummaryResponse(
     absenceRate: model.absenceRate,
     activeIncidentsToday: model.activeIncidentsToday,
     monthIncidents: model.monthIncidents,
+    newEmployeesThisMonth: model.newEmployeesThisMonth,
+    endingThisWeek: model.endingThisWeek,
+    previousMonthIncidents: model.previousMonthIncidents,
+    monthVariationPercentage: model.monthVariationPercentage,
   };
 }
 
@@ -53,5 +62,35 @@ export function toDashboardIncidentTypeCountResponse(
     code: model.code,
     name: model.name,
     count: model.count,
+    percentage: model.percentage,
+  };
+}
+
+export function toDashboardIncidentTrendResponse(
+  model: DashboardIncidentTrendModel,
+) {
+  return model;
+}
+
+export function toDashboardUpcomingReturnResponse(
+  model: DashboardUpcomingReturnModel,
+): DashboardUpcomingReturnResponse {
+  return {
+    ...model,
+    endDate: formatDate(model.endDate)!,
+    returnDate: formatDate(model.returnDate)!,
+  };
+}
+
+export function toDashboardRecentIncidentResponse(
+  model: DashboardRecentIncidentModel,
+): DashboardRecentIncidentResponse {
+  return {
+    ...model,
+    occurrence: {
+      startDate: formatDate(model.occurrence.startDate)!,
+      endDate: formatDate(model.occurrence.endDate),
+    },
+    receivedAt: model.receivedAt.toISOString(),
   };
 }

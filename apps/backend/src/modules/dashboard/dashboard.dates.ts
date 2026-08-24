@@ -31,6 +31,17 @@ export function startOfMonthUtc(reference: Date = new Date()): Date {
   return new Date(Date.UTC(year, month - 1, 1));
 }
 
+export function startOfPreviousMonthUtc(reference: Date = new Date()): Date {
+  const { year, month } = calendarParts(reference);
+  return new Date(Date.UTC(year, month - 2, 1));
+}
+
+export function addDaysUtc(reference: Date, days: number): Date {
+  const result = new Date(reference);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
 export function startOfNextMonthUtc(reference: Date = new Date()): Date {
   const { year, month } = calendarParts(reference);
   return new Date(Date.UTC(year, month, 1));

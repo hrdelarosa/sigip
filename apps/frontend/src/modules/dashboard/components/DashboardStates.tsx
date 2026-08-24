@@ -10,7 +10,10 @@ export function DashboardError({
   onRetry: () => void
 }) {
   return (
-    <div className="flex flex-col items-start justify-between gap-3 rounded-xl bg-card p-6 ring-1 ring-foreground/10 sm:flex-row sm:items-center">
+    <div
+      className="flex flex-col items-start justify-between gap-3 rounded-xl bg-card p-6 ring-1 ring-foreground/10 sm:flex-row sm:items-center"
+      role="alert"
+    >
       <p className="text-sm text-muted-foreground">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         <RotateCcwIcon data-icon="inline-start" />
