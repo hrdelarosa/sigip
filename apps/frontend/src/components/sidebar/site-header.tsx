@@ -1,41 +1,11 @@
-import { Link, useLocation } from 'wouter'
-
 import { NavUser } from '../nav-user'
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '../ui/breadcrumb'
 import { Separator } from '../ui/separator'
 import { SidebarTrigger } from '../ui/sidebar'
-import { routes } from '@/app/router/routes'
 import { useAuth } from '@/modules/auth'
-
-const breadcrumbRoutes = [
-  { path: routes.dashboard, label: 'Inicio' },
-  { path: routes.reports, label: 'Reportes' },
-  { path: routes.incidents.root, label: 'Incidencias' },
-  { path: routes.employees.root, label: 'Empleados' },
-  {
-    path: routes.administration.organizationalUnits,
-    label: 'Unidades organizativas',
-  },
-  { path: routes.administration.positions, label: 'Puestos' },
-  { path: routes.administration.users, label: 'Usuarios' },
-  { path: routes.administration.roles, label: 'Roles' },
-  { path: routes.administration.permissions, label: 'Permisos' },
-  { path: routes.audit, label: 'Auditoría' },
-] as const
+import { SiteHeaderBreadcrumb } from './site-header-breadcrumb'
 
 export function SiteHeader() {
   const auth = useAuth()
-  const [location] = useLocation()
-  const current = breadcrumbRoutes.find(
-    (route) => location === route.path || location.startsWith(`${route.path}/`),
-  )
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
@@ -50,23 +20,7 @@ export function SiteHeader() {
           className="mx-2 data-[orientation=vertical]:h-14"
         />
 
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink render={<Link href={routes.home} />}>
-                SIGIP
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {current ? (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{current.label}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            ) : null}
-          </BreadcrumbList>
-        </Breadcrumb>
+        <SiteHeaderBreadcrumb />
 
         <div className="ml-auto flex items-center gap-2">
           <NavUser user={auth.data} />
