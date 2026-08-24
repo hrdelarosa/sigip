@@ -156,7 +156,7 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `documents` | `documents` y almacenamiento privado. | PDF principal, listado, descarga privada, baja lógica y oficio opcional de Comisión implementados; otros anexos quedan pendientes. |
 | `audit` | `audit_logs`. | Esquema, migraciones, consulta backend y frontend implementados; autenticación, sesiones y usuarios ya producen eventos. Resta integrar las demás mutaciones administrativas y de dominio. |
 | `dashboard` | Consultas agregadas; no tiene tabla propia. | Backend y frontend implementados: resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. |
-| `reports` | Consultas agregadas y generación PDF; no tiene tabla propia. | Backend y frontend implementados para reportes de incidencias, vista previa y exportación protegida. |
+| `reports` | Consultas agregadas y generación PDF; no tiene tabla propia. | Backend y frontend implementados para reportes de incidencias, vista previa con tres métricas, distribución por tipo y unidad, detalle compacto y exportación protegida. |
 
 ### Decisión sobre usuarios y roles
 
@@ -431,7 +431,12 @@ Ambas rutas requieren `audit:read`. El listado permite filtrar por acción, enti
 GET /api/dashboard/summary
 GET /api/dashboard/active-incidents
 GET /api/dashboard/incidents-by-type
+GET /api/dashboard/incident-trend?period=6m
+GET /api/dashboard/upcoming-returns
+GET /api/dashboard/recent-incidents
 ```
+
+Las seis rutas requieren `dashboard:read`. El panel presenta el estado operativo del personal, la evolución histórica configurable (`3m`, `6m`, `ytd`, `12m`), la composición anual por tipo, las ausencias vigentes, las próximas reincorporaciones y las incidencias recientes. Las consultas de fecha usan el calendario `America/Mexico_City`.
 
 ### Reports
 
