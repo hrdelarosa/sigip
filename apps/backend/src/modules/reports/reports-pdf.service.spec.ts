@@ -132,6 +132,18 @@ describe('ReportsPdfService', () => {
     expect(mediaBoxes).toContain('0 0 612 792');
   });
 
+  it('uses sober institutional section labels and omits system branding', async () => {
+    const pdf = await service.generate(report);
+    const text = extractTextOps(pdf.toString('latin1'))
+      .map((operation) => operation.text)
+      .join(' ');
+
+    expect(text).toContain('RESUMEN GENERAL');
+    expect(text).toContain('DISTRIBUCIÓN POR TIPO');
+    expect(text).toMatch(/DETALLE DE\s+INCIDENCIAS/);
+    expect(text).not.toContain('SIGIP - INM Guerrero');
+  });
+
   it('draws every cell of a detail row at the same height (no cascade)', async () => {
     const pdf = await service.generate(report);
     const latin = pdf.toString('latin1');

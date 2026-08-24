@@ -33,17 +33,10 @@ function resolveHeaderImagePath(): string {
 }
 
 const COLORS = {
-  primary: '#12304D',
-  primarySoft: '#1E4E7B',
-  accent: '#0E7490',
-  text: '#0F172A',
-  muted: '#475569',
-  light: '#F1F5F9',
-  lighter: '#F8FAFC',
-  border: '#CBD5E1',
-  success: '#15803D',
-  danger: '#B91C1C',
-  white: '#FFFFFF',
+  text: '#171717',
+  muted: '#525252',
+  light: '#F2F2F2',
+  border: '#A3A3A3',
 };
 
 @Injectable()
@@ -75,7 +68,7 @@ export class ReportsPdfService {
     this.renderRecipient(doc);
     this.renderTitle(doc, report);
     this.renderAppliedFilters(doc, report);
-    this.renderSummaryCards(doc, report);
+    this.renderSummary(doc, report);
     this.renderTypeSummary(doc, report);
     this.renderUnitSummary(doc, report);
     this.renderDetail(doc, report);
@@ -104,21 +97,26 @@ export class ReportsPdfService {
 
       headerBottom = 24 + headerHeight;
     } catch {
-      doc.rect(0, 0, pageWidth, 86).fill(COLORS.primary);
-
       doc
-        .fillColor(COLORS.white)
+        .fillColor(COLORS.text)
         .font('Helvetica-Bold')
-        .fontSize(15)
-        .text('INSTITUTO NACIONAL DE MIGRACIÓN', 0, 24, {
-          align: 'center',
-          width: pageWidth,
+        .fontSize(14)
+        .text('SECRETARÍA DE GOBERNACIÓN', PAGE_MARGIN, 30, {
+          width: contentWidth,
         });
 
-      doc.fontSize(10).text('OFICINA DE REPRESENTACIÓN EN GUERRERO', 0, 44, {
-        align: 'center',
-        width: pageWidth,
-      });
+      doc
+        .fontSize(11)
+        .text('INSTITUTO NACIONAL DE MIGRACIÓN', PAGE_MARGIN, 49, {
+          width: contentWidth,
+        });
+
+      doc
+        .font('Helvetica')
+        .fontSize(8)
+        .text('OFICINA DE REPRESENTACIÓN EN GUERRERO', PAGE_MARGIN, 66, {
+          width: contentWidth,
+        });
 
       headerBottom = 86;
     }
@@ -126,8 +124,8 @@ export class ReportsPdfService {
     doc
       .moveTo(PAGE_MARGIN, headerBottom + 10)
       .lineTo(pageWidth - PAGE_MARGIN, headerBottom + 10)
-      .strokeColor(COLORS.border)
-      .lineWidth(0.75)
+      .strokeColor(COLORS.text)
+      .lineWidth(0.5)
       .stroke();
 
     doc.y = headerBottom + 20;
@@ -171,70 +169,85 @@ export class ReportsPdfService {
     doc.moveDown(0.35);
 
     doc
-      .fillColor(COLORS.primarySoft)
+      .fillColor(COLORS.muted)
+      .font('Helvetica')
       .fontSize(9)
-      .text(`Periodo: ${report.period.label}`, {
+      .text(`PERIODO: ${report.period.label.toUpperCase()}`, {
         align: 'center',
       });
 
     doc.moveDown(0.6);
   }
 
-  private renderSummaryCards(
+  private renderSummary(
     doc: PDFKit.PDFDocument,
     report: IncidentsReportModel,
   ): void {
-    const cards = [
+    const metrics = [
       {
-        label: 'Incidencias',
+        label: 'INCIDENCIAS',
         value: report.summary.totalIncidents,
-        color: COLORS.primarySoft,
       },
       {
-        label: 'Trabajadores',
+        label: 'PERSONAS SERVIDORAS PÚBLICAS',
         value: report.summary.totalEmployees,
-        color: COLORS.accent,
       },
       {
-        label: 'Promedio',
+        label: 'PROMEDIO POR PERSONA',
         value: report.summary.averageIncidentsPerEmployee.toFixed(1),
-        color: COLORS.accent,
       },
     ];
 
+    this.renderSectionHeading(doc, 'RESUMEN GENERAL');
+
     const contentWidth = doc.page.width - PAGE_MARGIN * 2;
-    const gap = 8;
-    const cardWidth = (contentWidth - gap * (cards.length - 1)) / cards.length;
-    const cardHeight = 44;
+    const columnWidth = contentWidth / metrics.length;
+    const blockHeight = 40;
     const top = doc.y;
 
-    cards.forEach((card, index) => {
-      const x = PAGE_MARGIN + index * (cardWidth + gap);
+    doc
+      .moveTo(PAGE_MARGIN, top)
+      .lineTo(PAGE_MARGIN + contentWidth, top)
+      .moveTo(PAGE_MARGIN, top + blockHeight)
+      .lineTo(PAGE_MARGIN + contentWidth, top + blockHeight)
+      .strokeColor(COLORS.border)
+      .lineWidth(0.5)
+      .stroke();
 
-      doc.roundedRect(x, top, cardWidth, cardHeight, 5).fill(COLORS.light);
+    metrics.forEach((metric, index) => {
+      const x = PAGE_MARGIN + index * columnWidth;
 
-      doc.rect(x, top, 4, cardHeight).fill(card.color);
+      if (index > 0) {
+        doc
+          .moveTo(x, top + 6)
+          .lineTo(x, top + blockHeight - 6)
+          .strokeColor(COLORS.border)
+          .lineWidth(0.35)
+          .stroke();
+      }
 
       doc
         .fillColor(COLORS.muted)
-        .font('Helvetica')
-        .fontSize(7)
-        .text(card.label, x + 12, top + 8, {
-          width: cardWidth - 16,
+        .font('Helvetica-Bold')
+        .fontSize(6.5)
+        .text(metric.label, x + 6, top + 8, {
+          width: columnWidth - 12,
+          align: 'center',
           lineBreak: false,
         });
 
       doc
         .fillColor(COLORS.text)
         .font('Helvetica-Bold')
-        .fontSize(15)
-        .text(String(card.value), x + 12, top + 19, {
-          width: cardWidth - 16,
+        .fontSize(13)
+        .text(String(metric.value), x + 6, top + 20, {
+          width: columnWidth - 12,
+          align: 'center',
           lineBreak: false,
         });
     });
 
-    doc.y = top + cardHeight + 14;
+    doc.y = top + blockHeight + 14;
   }
 
   private renderAppliedFilters(
@@ -270,7 +283,7 @@ export class ReportsPdfService {
       .font('Helvetica')
       .fontSize(7.5)
       .fillColor(COLORS.muted)
-      .text(`Filtros aplicados: ${labels.join(' · ')}`);
+      .text(`FILTROS APLICADOS: ${labels.join('  |  ')}`);
     doc.moveDown(0.7);
   }
 
@@ -282,13 +295,7 @@ export class ReportsPdfService {
       return;
     }
 
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(COLORS.text)
-      .text('Incidencias por tipo');
-
-    doc.moveDown(0.4);
+    this.renderSectionHeading(doc, 'DISTRIBUCIÓN POR TIPO');
 
     const rows = report.summary.byType.map((item) => [
       { text: item.name },
@@ -314,12 +321,7 @@ export class ReportsPdfService {
   ): void {
     if (report.summary.byOrganizationalUnit.length === 0) return;
 
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(COLORS.text)
-      .text('Incidencias por unidad organizacional');
-    doc.moveDown(0.4);
+    this.renderSectionHeading(doc, 'DISTRIBUCIÓN POR UNIDAD ORGANIZACIONAL');
     const rows = report.summary.byOrganizationalUnit.map((item) => [
       { text: item.name },
       { text: String(item.count), align: 'center' as const },
@@ -340,13 +342,7 @@ export class ReportsPdfService {
     doc: PDFKit.PDFDocument,
     report: IncidentsReportModel,
   ): void {
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(10)
-      .fillColor(COLORS.text)
-      .text('Detalle de incidencias');
-
-    doc.moveDown(0.4);
+    this.renderSectionHeading(doc, 'DETALLE DE INCIDENCIAS');
 
     if (report.items.length === 0) {
       doc
@@ -369,7 +365,6 @@ export class ReportsPdfService {
       {
         text: item.status === 'REGISTERED' ? 'Registrada' : 'Cancelada',
         align: 'center' as const,
-        color: item.status === 'REGISTERED' ? COLORS.success : COLORS.danger,
       },
     ]);
 
@@ -388,6 +383,25 @@ export class ReportsPdfService {
       rows,
       { fontSize: 7 },
     );
+  }
+
+  private renderSectionHeading(doc: PDFKit.PDFDocument, title: string): void {
+    if (doc.y + 48 > doc.page.height - FOOTER_MARGIN) {
+      doc.addPage();
+      doc.y = PAGE_MARGIN;
+    }
+
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.text).text(title);
+
+    const lineY = doc.y + 3;
+    doc
+      .moveTo(PAGE_MARGIN, lineY)
+      .lineTo(doc.page.width - PAGE_MARGIN, lineY)
+      .strokeColor(COLORS.text)
+      .lineWidth(0.5)
+      .stroke();
+
+    doc.y = lineY + 7;
   }
 
   /**
@@ -438,9 +452,11 @@ export class ReportsPdfService {
         padding,
       );
 
-      doc.rect(tableLeft, doc.y, contentWidth, rowHeight).fill(COLORS.primary);
-
       const rowTop = doc.y;
+
+      doc
+        .rect(tableLeft, rowTop, contentWidth, rowHeight)
+        .fillAndStroke(COLORS.light, COLORS.border);
 
       columns.forEach((column, index) => {
         const cellX =
@@ -449,7 +465,7 @@ export class ReportsPdfService {
 
         this.drawCell(
           doc,
-          { text: column.header, align: column.align, color: COLORS.white },
+          { text: column.header, align: column.align, color: COLORS.text },
           cellX,
           rowTop,
           widths[index],
@@ -460,12 +476,14 @@ export class ReportsPdfService {
         );
       });
 
+      this.drawColumnLines(doc, tableLeft, rowTop, rowHeight, widths);
+
       doc.y = rowTop + rowHeight;
     };
 
     drawHeader();
 
-    rows.forEach((row, rowIndex) => {
+    rows.forEach((row) => {
       const rowHeight = this.measureRowHeight(
         doc,
         row,
@@ -482,12 +500,6 @@ export class ReportsPdfService {
 
       if (rowHeight > maxRowHeight) {
         throw new Error('Una fila del reporte excede el alto imprimible.');
-      }
-
-      if (rowIndex % 2 === 1) {
-        doc
-          .rect(tableLeft, doc.y, contentWidth, rowHeight)
-          .fill(COLORS.lighter);
       }
 
       const rowTop = doc.y;
@@ -513,14 +525,35 @@ export class ReportsPdfService {
       doc.y = rowTop + rowHeight;
 
       doc
-        .moveTo(tableLeft, doc.y)
-        .lineTo(tableLeft + contentWidth, doc.y)
+        .rect(tableLeft, rowTop, contentWidth, rowHeight)
+        .strokeColor(COLORS.border)
+        .lineWidth(0.25)
+        .stroke();
+
+      this.drawColumnLines(doc, tableLeft, rowTop, rowHeight, widths);
+    });
+
+    return doc.y;
+  }
+
+  private drawColumnLines(
+    doc: PDFKit.PDFDocument,
+    tableLeft: number,
+    rowTop: number,
+    rowHeight: number,
+    widths: number[],
+  ): void {
+    let x = tableLeft;
+
+    widths.slice(0, -1).forEach((width) => {
+      x += width;
+      doc
+        .moveTo(x, rowTop)
+        .lineTo(x, rowTop + rowHeight)
         .strokeColor(COLORS.border)
         .lineWidth(0.25)
         .stroke();
     });
-
-    return doc.y;
   }
 
   private measureRowHeight(
@@ -613,14 +646,22 @@ export class ReportsPdfService {
     ) {
       doc.switchToPage(pageIndex);
 
+      const footerY = doc.page.height - 28;
+      doc
+        .moveTo(PAGE_MARGIN, footerY - 5)
+        .lineTo(doc.page.width - PAGE_MARGIN, footerY - 5)
+        .strokeColor(COLORS.border)
+        .lineWidth(0.35)
+        .stroke();
+
       doc
         .font('Helvetica')
         .fontSize(7)
         .fillColor(COLORS.muted)
         .text(
-          `SIGIP - INM Guerrero - Página ${pageIndex + 1} de ${range.count}`,
+          `Instituto Nacional de Migración  |  Oficina de Representación en Guerrero  |  Página ${pageIndex + 1} de ${range.count}`,
           PAGE_MARGIN,
-          doc.page.height - 24,
+          footerY,
           {
             width: doc.page.width - PAGE_MARGIN * 2,
             align: 'center',
