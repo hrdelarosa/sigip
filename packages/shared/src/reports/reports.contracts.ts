@@ -76,6 +76,14 @@ export interface IncidentsReportTypeSummaryResponse {
   code: string
   name: string
   count: number
+  percentage: number
+}
+
+export interface IncidentsReportOrganizationalUnitSummaryResponse {
+  organizationalUnitId: string
+  name: string
+  count: number
+  percentage: number
 }
 
 export interface IncidentsReportResponse {
@@ -86,7 +94,9 @@ export interface IncidentsReportResponse {
     totalEmployees: number
     registeredIncidents: number
     cancelledIncidents: number
+    averageIncidentsPerEmployee: number
     byType: IncidentsReportTypeSummaryResponse[]
+    byOrganizationalUnit: IncidentsReportOrganizationalUnitSummaryResponse[]
   }
 
   items: IncidentsReportItemResponse[]

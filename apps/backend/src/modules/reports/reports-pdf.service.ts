@@ -46,7 +46,6 @@ const COLORS = {
   white: '#FFFFFF',
 };
 
-
 @Injectable()
 export class ReportsPdfService {
   async generate(report: IncidentsReportModel): Promise<Buffer> {
@@ -75,8 +74,10 @@ export class ReportsPdfService {
     this.renderInstitutionalHeader(doc);
     this.renderRecipient(doc);
     this.renderTitle(doc, report);
+    this.renderAppliedFilters(doc, report);
     this.renderSummaryCards(doc, report);
     this.renderTypeSummary(doc, report);
+    this.renderUnitSummary(doc, report);
     this.renderDetail(doc, report);
     this.renderPageNumbers(doc);
 
@@ -195,14 +196,9 @@ export class ReportsPdfService {
         color: COLORS.accent,
       },
       {
-        label: 'Registradas',
-        value: report.summary.registeredIncidents,
-        color: COLORS.success,
-      },
-      {
-        label: 'Canceladas',
-        value: report.summary.cancelledIncidents,
-        color: COLORS.danger,
+        label: 'Promedio',
+        value: report.summary.averageIncidentsPerEmployee.toFixed(1),
+        color: COLORS.accent,
       },
     ];
 
@@ -241,6 +237,43 @@ export class ReportsPdfService {
     doc.y = top + cardHeight + 14;
   }
 
+  private renderAppliedFilters(
+    doc: PDFKit.PDFDocument,
+    report: IncidentsReportModel,
+  ): void {
+    const filters = report.filters;
+    if (!filters) return;
+
+    const labels: string[] = [];
+    if (filters.incidentTypeId) {
+      const item = report.items.find(
+        (candidate) => candidate.incidentType.id === filters.incidentTypeId,
+      );
+      labels.push(
+        `Tipo de incidencia: ${item?.incidentType.name ?? 'Aplicado'}`,
+      );
+    }
+    if (filters.organizationalUnitId) {
+      const item = report.items.find(
+        (candidate) =>
+          candidate.organizationalUnit.id === filters.organizationalUnitId,
+      );
+      labels.push(
+        `Unidad organizacional: ${item?.organizationalUnit.name ?? 'Aplicado'}`,
+      );
+    }
+    if (filters.includeCancelled) labels.push('Incluye canceladas: Sí');
+
+    if (labels.length === 0) return;
+
+    doc
+      .font('Helvetica')
+      .fontSize(7.5)
+      .fillColor(COLORS.muted)
+      .text(`Filtros aplicados: ${labels.join(' · ')}`);
+    doc.moveDown(0.7);
+  }
+
   private renderTypeSummary(
     doc: PDFKit.PDFDocument,
     report: IncidentsReportModel,
@@ -272,6 +305,34 @@ export class ReportsPdfService {
       { fontSize: 8 },
     );
 
+    doc.moveDown(0.8);
+  }
+
+  private renderUnitSummary(
+    doc: PDFKit.PDFDocument,
+    report: IncidentsReportModel,
+  ): void {
+    if (report.summary.byOrganizationalUnit.length === 0) return;
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(10)
+      .fillColor(COLORS.text)
+      .text('Incidencias por unidad organizacional');
+    doc.moveDown(0.4);
+    const rows = report.summary.byOrganizationalUnit.map((item) => [
+      { text: item.name },
+      { text: String(item.count), align: 'center' as const },
+    ]);
+    doc.y = this.renderTable(
+      doc,
+      [
+        { header: 'Unidad organizacional', fraction: 0.85 },
+        { header: 'Total', fraction: 0.15, align: 'center' },
+      ],
+      rows,
+      { fontSize: 8 },
+    );
     doc.moveDown(0.8);
   }
 

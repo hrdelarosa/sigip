@@ -13,8 +13,8 @@ import { hasPermission, useAuth } from '@/modules/auth'
 import { incidentTypesQueryOptions } from '@/modules/incidents/queries/incident-query-options'
 
 import { downloadIncidentsReport } from '../api/reports.api'
-import { ReportFilters } from '../components/report-filters'
-import { ReportPreview } from '../components/report-preview'
+import { ReportFilters } from '../components/ReportFilters'
+import { ReportPreview, type ReportPreviewFilters } from '../components/ReportPreview'
 import { useIncidentsReport } from '../hooks/use-incidents-report'
 import {
   buildIncidentsReportFilters,
@@ -68,6 +68,11 @@ export function ReportsPage() {
 
   const catalogsLoading = typesQuery.isPending || unitsQuery.isPending
   const catalogsError = typesQuery.isError || unitsQuery.isError
+  const previewFilters: ReportPreviewFilters = {
+    incidentTypeLabel: typeItems.find((item) => item.value === state.incidentTypeId)?.label,
+    organizationalUnitLabel: unitItems.find((item) => item.value === state.organizationalUnitId)?.label,
+    includeCancelled: state.includeCancelled,
+  }
 
   async function handleDownload() {
     setDownloading(true)
@@ -115,12 +120,20 @@ export function ReportsPage() {
         }}
       />
 
-      {previewEnabled ? <ReportResult report={report} /> : null}
+      {previewEnabled ? (
+        <ReportResult report={report} filters={previewFilters} />
+      ) : null}
     </>
   )
 }
 
-function ReportResult({ report }: { report: ReturnType<typeof useIncidentsReport> }) {
+function ReportResult({
+  report,
+  filters,
+}: {
+  report: ReturnType<typeof useIncidentsReport>
+  filters: ReportPreviewFilters
+}) {
   if (report.isPending) {
     return <ReportPreviewSkeleton />
   }
@@ -144,7 +157,7 @@ function ReportResult({ report }: { report: ReturnType<typeof useIncidentsReport
     )
   }
 
-  return <ReportPreview report={report.data} />
+  return <ReportPreview report={report.data} filters={filters} />
 }
 
 function ReportPreviewSkeleton() {
@@ -155,8 +168,8 @@ function ReportPreviewSkeleton() {
         <Skeleton className="h-4 w-72" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
+      <div className="grid gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }, (_, index) => (
           <div
             key={index}
             className="rounded-xl bg-card p-6 ring-1 ring-foreground/10"

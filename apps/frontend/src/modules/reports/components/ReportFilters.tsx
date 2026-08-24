@@ -3,7 +3,14 @@ import { FileDownIcon, EyeIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -72,10 +79,13 @@ export function ReportFilters({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Generar reporte</CardTitle>
+        <CardTitle>Configuración del reporte</CardTitle>
+        <CardDescription>
+          Define el periodo y los filtros para preparar la vista previa o el PDF.
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-6">
         {catalogsError ? (
           <Alert variant="destructive" role="alert">
             <AlertDescription>
@@ -87,6 +97,12 @@ export function ReportFilters({
           </Alert>
         ) : null}
         <FieldGroup>
+          <div className="border-b pb-3">
+            <p className="text-sm font-semibold">Periodo</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Selecciona el alcance temporal del reporte.
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Field>
               <FieldLabel htmlFor="report-period">Periodo</FieldLabel>
@@ -99,7 +115,9 @@ export function ReportFilters({
                 }}
               >
                 <SelectTrigger id="report-period">
-                  <SelectValue />
+                  <SelectValue>
+                    {PERIOD_OPTIONS.find((option) => option.value === value.period)?.label}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {PERIOD_OPTIONS.map((option) => (
@@ -126,7 +144,12 @@ export function ReportFilters({
                   }}
                 >
                   <SelectTrigger id="report-fortnight">
-                    <SelectValue />
+                    <SelectValue>
+                      {
+                        FORTNIGHT_OPTIONS.find((option) => option.value === value.fortnight)
+                          ?.label
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {FORTNIGHT_OPTIONS.map((option) => (
@@ -192,6 +215,12 @@ export function ReportFilters({
 
           <Separator />
 
+          <div className="border-b pb-3">
+            <p className="text-sm font-semibold">Filtros adicionales</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Acota los resultados por catálogo o incluye incidencias canceladas.
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <FilterSelect
               id="report-type"
@@ -220,7 +249,10 @@ export function ReportFilters({
               }
             />
 
-            <Field className="justify-end">
+            <label
+              htmlFor="report-include-cancelled"
+              className="flex min-h-16 cursor-pointer items-center gap-3 self-end rounded-md border border-input px-4 py-3 transition-colors hover:bg-muted/50 has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+            >
               <Checkbox
                 id="report-include-cancelled"
                 checked={value.includeCancelled}
@@ -228,13 +260,18 @@ export function ReportFilters({
                   onChange({ ...value, includeCancelled: checked === true })
                 }
               />
-              <FieldLabel htmlFor="report-include-cancelled">
-                Incluir canceladas
-              </FieldLabel>
-            </Field>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Incluir canceladas</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Agrega incidencias anuladas al resultado.
+                </span>
+              </span>
+            </label>
           </div>
         </FieldGroup>
+      </CardContent>
 
+      <CardFooter className="flex flex-col items-stretch gap-4 border-t bg-muted/20 sm:flex-row sm:items-center">
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="outline" onClick={onPreview} disabled={!isValid}>
             <EyeIcon data-icon="inline-start" />
@@ -243,16 +280,15 @@ export function ReportFilters({
 
           {canExport ? (
             <Button type="button" onClick={onDownload} disabled={downloading || !isValid}>
-            <FileDownIcon data-icon="inline-start" />
-            {downloading ? 'Generando...' : 'Generar PDF'}
+              <FileDownIcon data-icon="inline-start" />
+              {downloading ? 'Generando PDF...' : 'Generar PDF'}
             </Button>
           ) : null}
-
-          <Badge variant="secondary" className="ml-auto">
-            {formatPeriodLabel(value)}
-          </Badge>
         </div>
-      </CardContent>
+        <Badge variant="secondary" className="w-fit sm:ml-auto">
+          {formatPeriodLabel(value)}
+        </Badge>
+      </CardFooter>
     </Card>
   )
 }
@@ -274,7 +310,9 @@ function MonthField({
         }}
       >
         <SelectTrigger id="report-month">
-          <SelectValue />
+          <SelectValue>
+            {MONTH_OPTIONS.find((option) => option.value === value)?.label}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
@@ -351,7 +389,9 @@ function FilterSelect({
         disabled={disabled}
       >
         <SelectTrigger id={id}>
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>
+            {items.find((item) => item.value === value)?.label ?? placeholder}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

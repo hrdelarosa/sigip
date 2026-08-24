@@ -41,16 +41,29 @@ export interface ReportIncidentModel {
 
 export interface IncidentsReportModel {
   period: ReportDatePeriodModel;
+  filters?: {
+    incidentTypeId?: string;
+    organizationalUnitId?: string;
+    includeCancelled: boolean;
+  };
   summary: {
     totalIncidents: number;
     totalEmployees: number;
     registeredIncidents: number;
     cancelledIncidents: number;
+    averageIncidentsPerEmployee: number;
     byType: Array<{
       incidentTypeId: string;
       code: string;
       name: string;
       count: number;
+      percentage: number;
+    }>;
+    byOrganizationalUnit: Array<{
+      organizationalUnitId: string;
+      name: string;
+      count: number;
+      percentage: number;
     }>;
   };
   items: ReportIncidentModel[];

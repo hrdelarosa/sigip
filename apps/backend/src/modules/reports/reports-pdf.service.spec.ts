@@ -18,18 +18,35 @@ describe('ReportsPdfService', () => {
       totalEmployees: 2,
       registeredIncidents: 1,
       cancelledIncidents: 1,
+      averageIncidentsPerEmployee: 1,
       byType: [
         {
           incidentTypeId: 'type-1',
           code: 'PERMISO',
           name: 'Permiso económico',
           count: 1,
+          percentage: 50,
         },
         {
           incidentTypeId: 'type-2',
           code: 'COMISION',
           name: 'Comisión',
           count: 1,
+          percentage: 50,
+        },
+      ],
+      byOrganizationalUnit: [
+        {
+          organizationalUnitId: 'unit-1',
+          name: 'Unidad Jurídica',
+          count: 1,
+          percentage: 50,
+        },
+        {
+          organizationalUnitId: 'unit-2',
+          name: 'Departamento de RH',
+          count: 1,
+          percentage: 50,
         },
       ],
     },
@@ -92,7 +109,9 @@ describe('ReportsPdfService', () => {
         totalEmployees: 0,
         registeredIncidents: 0,
         cancelledIncidents: 0,
+        averageIncidentsPerEmployee: 0,
         byType: [],
+        byOrganizationalUnit: [],
       },
       items: [],
     };

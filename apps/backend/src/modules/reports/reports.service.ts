@@ -37,6 +37,11 @@ export class ReportsService {
 
     return {
       period,
+      filters: {
+        incidentTypeId: filters.incidentTypeId,
+        organizationalUnitId: filters.organizationalUnitId,
+        includeCancelled: filters.includeCancelled ?? false,
+      },
       summary: this.buildSummary(items),
       items,
     };
@@ -87,7 +92,49 @@ export class ReportsService {
       totalEmployees: employees.size,
       registeredIncidents,
       cancelledIncidents,
-      byType: [...byTypeMap.values()].sort((a, b) => b.count - a.count),
+      averageIncidentsPerEmployee:
+        employees.size > 0
+          ? Math.round((items.length / employees.size) * 10) / 10
+          : 0,
+      byType: [...byTypeMap.values()]
+        .map((item) => ({
+          ...item,
+          percentage:
+            items.length > 0
+              ? Math.round((item.count / items.length) * 1000) / 10
+              : 0,
+        }))
+        .sort((a, b) => b.count - a.count),
+      byOrganizationalUnit: buildUnitSummary(items),
     };
   }
+}
+
+function buildUnitSummary(items: ReportIncidentModel[]) {
+  const byUnit = new Map<
+    string,
+    { organizationalUnitId: string; name: string; count: number }
+  >();
+
+  for (const item of items) {
+    const current = byUnit.get(item.organizationalUnit.id);
+    if (current) current.count++;
+    else {
+      byUnit.set(item.organizationalUnit.id, {
+        organizationalUnitId: item.organizationalUnit.id,
+        name: item.organizationalUnit.name,
+        count: 1,
+      });
+    }
+  }
+
+  return [...byUnit.values()]
+    .map((item) => ({
+      ...item,
+      percentage:
+        items.length > 0
+          ? Math.round((item.count / items.length) * 1000) / 10
+          : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
 }
