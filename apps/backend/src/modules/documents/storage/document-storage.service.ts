@@ -10,7 +10,10 @@ export class DocumentStorageService {
   private readonly root: string;
 
   constructor(config: ConfigService) {
-    this.root = resolve(process.cwd(), config.getOrThrow<string>('STORAGE_ROOT'));
+    this.root = resolve(
+      process.cwd(),
+      config.getOrThrow<string>('STORAGE_ROOT'),
+    );
   }
 
   async storeIncidentDocument(
