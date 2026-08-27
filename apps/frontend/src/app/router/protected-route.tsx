@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react'
-import { Redirect } from 'wouter'
+import { Link, Redirect } from 'wouter'
 
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -38,9 +38,15 @@ export function ProtectedRoute({
           <p className="mt-2 text-sm text-muted-foreground">
             Revise su conexión e intente nuevamente.
           </p>
-          <Button className="mt-4" onClick={() => void auth.refetch()}>
-            Reintentar
-          </Button>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button onClick={() => void auth.refetch()}>Reintentar</Button>
+            <Button
+              variant="outline"
+              render={<Link href={routes.auth.login} />}
+            >
+              Ir al inicio de sesión
+            </Button>
+          </div>
         </div>
       </div>
     )

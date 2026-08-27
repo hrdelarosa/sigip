@@ -7,6 +7,7 @@ import PageHeader from '@/components/page-header'
 import RoleCreate from '../components/RoleCreate'
 import RoleActions from '../components/RoleActions'
 import { useRoles } from '../hooks/useRoles'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 const columns: DataTableColumn<Role>[] = [
   {
@@ -44,6 +45,8 @@ const columns: DataTableColumn<Role>[] = [
 ]
 
 export function RolesPage() {
+  const auth = useAuth()
+  const canManage = hasPermission(auth.data?.permissions, 'settings:update')
   const rolesQuery = useRoles()
 
   return (
@@ -53,7 +56,7 @@ export function RolesPage() {
           title="Roles"
           description="Define responsabilidades, controla su estado y administra los permisos disponibles para cada rol."
         />
-        <RoleCreate />
+        {canManage ? <RoleCreate /> : null}
       </div>
 
       <DataTable

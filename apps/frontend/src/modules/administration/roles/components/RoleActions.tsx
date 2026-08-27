@@ -22,12 +22,17 @@ import RolePermissionsDialog from './RolePermissionsDialog'
 import RoleStatusAlert from './RoleStatusAlert'
 import RoleDetails from './RoleDetails'
 import RoleEdit from './RoleEdit'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 interface Props {
   role: Role
 }
 
 export default function RoleActions({ role }: Props) {
+  const auth = useAuth()
+  const canManage = hasPermission(auth.data?.permissions, 'settings:update')
+  const canManagePermissions =
+    canManage && hasPermission(auth.data?.permissions, 'permissions:read')
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [permissionsOpen, setPermissionsOpen] = useState(false)
@@ -53,25 +58,33 @@ export default function RoleActions({ role }: Props) {
               <Eye />
               Ver detalles
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-              <Pencil />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPermissionsOpen(true)}>
-              <KeyRound />
-              Administrar permisos
-            </DropdownMenuItem>
+            {canManage ? (
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <Pencil />
+                Editar
+              </DropdownMenuItem>
+            ) : null}
+            {canManagePermissions ? (
+              <DropdownMenuItem onClick={() => setPermissionsOpen(true)}>
+                <KeyRound />
+                Administrar permisos
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant={role.isActive ? 'destructive' : 'default'}
-              onClick={() => setStatusOpen(true)}
-            >
-              {role.isActive ? <PowerOff /> : <Power />}
-              {role.isActive ? 'Desactivar' : 'Activar'}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+          {canManage ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant={role.isActive ? 'destructive' : 'default'}
+                  onClick={() => setStatusOpen(true)}
+                >
+                  {role.isActive ? <PowerOff /> : <Power />}
+                  {role.isActive ? 'Desactivar' : 'Activar'}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -80,17 +93,23 @@ export default function RoleActions({ role }: Props) {
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
-      <RoleEdit role={role} open={editOpen} onOpenChange={setEditOpen} />
-      <RolePermissionsDialog
-        role={role}
-        open={permissionsOpen}
-        onOpenChange={setPermissionsOpen}
-      />
-      <RoleStatusAlert
-        role={role}
-        open={statusOpen}
-        onOpenChange={setStatusOpen}
-      />
+      {canManage ? (
+        <RoleEdit role={role} open={editOpen} onOpenChange={setEditOpen} />
+      ) : null}
+      {canManagePermissions ? (
+        <RolePermissionsDialog
+          role={role}
+          open={permissionsOpen}
+          onOpenChange={setPermissionsOpen}
+        />
+      ) : null}
+      {canManage ? (
+        <RoleStatusAlert
+          role={role}
+          open={statusOpen}
+          onOpenChange={setStatusOpen}
+        />
+      ) : null}
     </>
   )
 }

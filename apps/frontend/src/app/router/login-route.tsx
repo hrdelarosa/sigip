@@ -1,14 +1,12 @@
-import { Redirect } from 'wouter'
-
 import { LoginPage, useAuth } from '@/modules/auth'
 
 import { AuthLayout } from '../layouts/AuthLayout'
-import { routes } from './routes'
+import { HomeRedirect } from './home-redirect'
 
 export function LoginRoute() {
   const auth = useAuth()
 
-  if (auth.data) return <Redirect to={routes.home} replace />
+  if (auth.data) return <HomeRedirect />
 
   return (
     <AuthLayout>

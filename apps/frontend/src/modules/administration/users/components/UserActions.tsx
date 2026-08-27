@@ -43,6 +43,15 @@ export default function UserActions({ user, roles }: Props) {
     authQuery.data?.permissions,
     'sessions:read',
   )
+  const canUpdate = hasPermission(authQuery.data?.permissions, 'users:update')
+  const canResetPassword = hasPermission(
+    authQuery.data?.permissions,
+    'users:reset-password',
+  )
+  const canChangeStatus = hasPermission(
+    authQuery.data?.permissions,
+    user.isActive ? 'users:deactivate' : 'users:activate',
+  )
   const currentUser = authQuery.data
 
   return (
@@ -71,29 +80,37 @@ export default function UserActions({ user, roles }: Props) {
                 Ver sesiones
               </DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-              <Pencil />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={!user.isActive}
-              onClick={() => setPasswordOpen(true)}
-            >
-              <KeyRound />
-              Cambiar contraseña
-            </DropdownMenuItem>
+            {canUpdate ? (
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                <Pencil />
+                Editar
+              </DropdownMenuItem>
+            ) : null}
+            {canResetPassword ? (
+              <DropdownMenuItem
+                disabled={!user.isActive}
+                onClick={() => setPasswordOpen(true)}
+              >
+                <KeyRound />
+                Cambiar contraseña
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              variant={user.isActive ? 'destructive' : 'default'}
-              onClick={() => setStatusOpen(true)}
-              disabled={user.id === currentUser?.id}
-            >
-              {user.isActive ? <PowerOff /> : <Power />}
-              {user.isActive ? 'Desactivar' : 'Activar'}
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
+          {canChangeStatus ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant={user.isActive ? 'destructive' : 'default'}
+                  onClick={() => setStatusOpen(true)}
+                  disabled={user.id === currentUser?.id}
+                >
+                  {user.isActive ? <PowerOff /> : <Power />}
+                  {user.isActive ? 'Desactivar' : 'Activar'}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -102,22 +119,28 @@ export default function UserActions({ user, roles }: Props) {
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
-      <UserEdit
-        user={user}
-        roles={roles}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
-      <UserPassword
-        user={user}
-        open={passwordOpen}
-        onOpenChange={setPasswordOpen}
-      />
-      <UserStatusAlert
-        user={user}
-        open={statusOpen}
-        onOpenChange={setStatusOpen}
-      />
+      {canUpdate ? (
+        <UserEdit
+          user={user}
+          roles={roles}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      ) : null}
+      {canResetPassword ? (
+        <UserPassword
+          user={user}
+          open={passwordOpen}
+          onOpenChange={setPasswordOpen}
+        />
+      ) : null}
+      {canChangeStatus ? (
+        <UserStatusAlert
+          user={user}
+          open={statusOpen}
+          onOpenChange={setStatusOpen}
+        />
+      ) : null}
       {canReadSessions ? (
         <UserSessions
           user={user}

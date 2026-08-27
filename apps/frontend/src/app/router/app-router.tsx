@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Switch } from 'wouter'
+import { Redirect, Route, Switch } from 'wouter'
 
 import { OrganizationalUnitsPage } from '@/modules/administration/organizational-units'
 import { PermissionsPage } from '@/modules/administration/permissions'
@@ -7,7 +7,6 @@ import { PositionsPage } from '@/modules/administration/positions'
 import { RolesPage } from '@/modules/administration/roles'
 import { UsersPage } from '@/modules/administration/users'
 import { EmployeeDetailsPage, EmployeesPage } from '@/modules/employees'
-import { ProtectedRoute } from './protected-route'
 import { routes } from './routes'
 import { AuditPage } from '@/modules/audit'
 import {
@@ -16,7 +15,6 @@ import {
   IncidentsPage,
 } from '@/modules/incidents'
 import { ReportsPage } from '@/modules/reports'
-import { HomeRedirect } from './home-redirect'
 import { LoginRoute } from './login-route'
 import { NotFoundPage } from './not-found-page'
 import { ProtectedPage } from './protected-page'
@@ -35,9 +33,7 @@ export function AppRouter() {
       </Route>
 
       <Route path={routes.home}>
-        <ProtectedRoute>
-          <HomeRedirect />
-        </ProtectedRoute>
+        <Redirect to={routes.auth.login} replace />
       </Route>
 
       <Route path={routes.dashboard}>

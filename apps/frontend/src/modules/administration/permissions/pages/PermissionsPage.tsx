@@ -3,35 +3,39 @@ import { formatDate } from '@/lib/formatters'
 
 import { DataTable, type DataTableColumn } from '@/components/data-table'
 import PageHeader from '@/components/page-header'
-import PermissionCreate from '../components/PermissionCreate'
+// import PermissionCreate from '../components/PermissionCreate'
 import PermissionActions from '../components/PermissionActions'
 import { usePermissions } from '../hooks/usePermissions'
+// import { hasPermission, useAuth } from '@/modules/auth'
+
+const columns: DataTableColumn<Permission>[] = [
+  {
+    key: 'code',
+    header: 'Código',
+    cellClassName: 'font-medium',
+    skeletonClassName: 'w-36',
+    render: (permission) => permission.code,
+  },
+  {
+    key: 'description',
+    header: 'Descripción',
+    cellClassName: 'max-w-md whitespace-normal',
+    skeletonClassName: 'w-full max-w-80',
+    render: (permission) => permission.description || 'Sin descripción',
+  },
+  {
+    key: 'createdAt',
+    header: 'Creado en',
+    skeletonClassName: 'w-28',
+    render: (permission) => formatDate(permission.createdAt),
+  },
+]
 
 export function PermissionsPage() {
+  // const auth = useAuth()
+  // const canManage = hasPermission(auth.data?.permissions, 'settings:update')
   const permissionsQuery = usePermissions()
   const permissions = permissionsQuery.data ?? []
-  const columns: DataTableColumn<Permission>[] = [
-    {
-      key: 'code',
-      header: 'Código',
-      cellClassName: 'font-medium',
-      skeletonClassName: 'w-36',
-      render: (permission) => permission.code,
-    },
-    {
-      key: 'description',
-      header: 'Descripción',
-      cellClassName: 'max-w-md whitespace-normal',
-      skeletonClassName: 'w-full max-w-80',
-      render: (permission) => permission.description || 'Sin descripción',
-    },
-    {
-      key: 'createdAt',
-      header: 'Creado en',
-      skeletonClassName: 'w-28',
-      render: (permission) => formatDate(permission.createdAt),
-    },
-  ]
 
   return (
     <>
@@ -41,7 +45,7 @@ export function PermissionsPage() {
           description="Gestiona los permisos de los usuarios en la aplicación y asigna roles específicos según sus responsabilidades."
         />
 
-        <PermissionCreate />
+        {/* {canManage ? <PermissionCreate /> : null} */}
       </div>
 
       <DataTable

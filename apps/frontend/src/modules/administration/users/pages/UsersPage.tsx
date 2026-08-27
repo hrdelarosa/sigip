@@ -17,8 +17,11 @@ import { useRoles } from '../../roles/hooks/useRoles'
 import UserActions from '../components/UserActions'
 import UserCreate from '../components/UserCreate'
 import { useUsers } from '../hooks/useUsers'
+import { hasPermission, useAuth } from '@/modules/auth'
 
 export function UsersPage() {
+  const auth = useAuth()
+  const canCreate = hasPermission(auth.data?.permissions, 'users:create')
   const usersQuery = useUsers()
   const rolesQuery = useRoles()
   const roles = rolesQuery.data ?? []
@@ -68,7 +71,7 @@ export function UsersPage() {
           title="Usuarios"
           description="Administra las cuentas internas, sus roles, credenciales y disponibilidad de acceso."
         />
-        <UserCreate />
+        {canCreate ? <UserCreate /> : null}
       </div>
 
       {rolesQuery.isError ? (
