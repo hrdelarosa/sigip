@@ -180,6 +180,10 @@ export default function UserSessions({ user, open, onOpenChange }: Props) {
                       <p className="mt-3 text-xs text-muted-foreground">
                         Esta sesión ya expiró y no permite acceso al sistema.
                       </p>
+                    ) : session.isCurrent ? (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        No puedes cerrar tu sesión actual desde aquí.
+                      </p>
                     ) : canRevoke ? (
                       <div className="mt-4 flex justify-end border-t pt-3">
                         <Button
