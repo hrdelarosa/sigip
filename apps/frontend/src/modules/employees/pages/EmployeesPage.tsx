@@ -10,6 +10,8 @@ import EmployeeActions from '../components/EmployeeActions'
 import EmployeeFilters from '../components/EmployeeFilters'
 import { PaginationPage } from '@/components/pagination-page'
 import { useEmployeesPage } from '../hooks/useEmployeesPage'
+import { useAuth } from '@/modules/auth'
+import { getEmployeePermissions } from '../lib/employee-permissions'
 
 const columns: DataTableColumn<Employee>[] = [
   {
@@ -51,6 +53,11 @@ const columns: DataTableColumn<Employee>[] = [
 ]
 
 export function EmployeesPage() {
+  const auth = useAuth()
+  const { canCreate } = getEmployeePermissions(
+    auth.data?.permissions,
+    undefined,
+  )
   const {
     employeesQuery,
     meta,
@@ -69,7 +76,7 @@ export function EmployeesPage() {
           title="Empleados"
           description="Gestiona la información de los empleados, sus puestos y su estado en la organización."
         />
-        <EmployeeCreate />
+        {canCreate ? <EmployeeCreate /> : null}
       </div>
 
       <EmployeeFilters />

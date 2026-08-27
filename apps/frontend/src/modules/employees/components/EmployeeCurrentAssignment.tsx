@@ -32,8 +32,10 @@ function formatCalendarDate(value: string) {
 
 export default function EmployeeCurrentAssignment({
   assignment,
+  canUpdate,
 }: {
   assignment: EmployeeAssignment | null
+  canUpdate: boolean
 }) {
   const [editOpen, setEditOpen] = useState(false)
 
@@ -69,14 +71,16 @@ export default function EmployeeCurrentAssignment({
           </CardDescription>
           <CardAction className="flex items-center gap-2">
             <Badge>Vigente</Badge>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Editar asignación actual"
-              onClick={() => setEditOpen(true)}
-            >
-              <Pencil />
-            </Button>
+            {canUpdate ? (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Editar asignación actual"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil />
+              </Button>
+            ) : null}
           </CardAction>
         </CardHeader>
 
@@ -137,11 +141,13 @@ export default function EmployeeCurrentAssignment({
         </CardContent>
       </Card>
 
-      <EmployeeAssignmentEdit
-        assignment={assignment}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      {canUpdate ? (
+        <EmployeeAssignmentEdit
+          assignment={assignment}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      ) : null}
     </>
   )
 }

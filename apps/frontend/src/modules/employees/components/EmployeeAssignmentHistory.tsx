@@ -26,9 +26,11 @@ function formatCalendarDate(value: string) {
 
 export function EmployeeAssignmentHistory({
   assignments,
+  canUpdate,
   emptyMessage = 'No hay asignaciones adicionales para mostrar.',
 }: {
   assignments: EmployeeAssignment[]
+  canUpdate: boolean
   emptyMessage?: string
 }) {
   const [editing, setEditing] = useState<EmployeeAssignment | null>(null)
@@ -99,22 +101,24 @@ export function EmployeeAssignmentHistory({
                   <p className="mt-1 whitespace-pre-wrap text-sm">{assignment.notes}</p>
                 ) : null}
               </ItemContent>
-              <ItemActions>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Editar asignación de ${assignment.position.name}`}
-                  onClick={() => setEditing(assignment)}
-                >
-                  <Pencil />
-                </Button>
-              </ItemActions>
+              {canUpdate ? (
+                <ItemActions>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Editar asignación de ${assignment.position.name}`}
+                    onClick={() => setEditing(assignment)}
+                  >
+                    <Pencil />
+                  </Button>
+                </ItemActions>
+              ) : null}
             </Item>
           )
         })}
       </ItemGroup>
 
-      {editing ? (
+      {canUpdate && editing ? (
         <EmployeeAssignmentEdit
           assignment={editing}
           open
