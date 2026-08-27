@@ -34,10 +34,9 @@ export function NavUser({
             variant="ghost"
             size="lg"
             className="h-11"
-            aria-label={`Abrir menú de ${user.fullName}`}
           >
             <Avatar className="size-8 rounded-lg grayscale after:rounded-lg mr-1">
-              <AvatarFallback className="rounded-lg">
+              <AvatarFallback className="rounded-lg text-foreground">
                 {getInitials(user.fullName)}
               </AvatarFallback>
             </Avatar>

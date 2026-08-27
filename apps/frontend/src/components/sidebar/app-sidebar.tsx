@@ -33,9 +33,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               size="lg"
               tooltip="Inicio de SIGIP"
-              render={
-                <Link href={routes.home} aria-label="Ir al inicio de SIGIP" />
-              }
+              render={<Link href={routes.home} />}
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <ShieldCheckIcon aria-hidden="true" />
