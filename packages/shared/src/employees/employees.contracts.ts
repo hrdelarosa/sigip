@@ -64,6 +64,76 @@ export interface EmployeeAssignmentResponse {
 
 export type EmployeeAssignmentsResponse = EmployeeAssignmentResponse[]
 
+export const VACATION_PERIODS = ['FIRST', 'SECOND'] as const
+export type VacationPeriod = (typeof VACATION_PERIODS)[number]
+
+export const VACATION_BALANCE_STATUSES = [
+  'NOT_ELIGIBLE',
+  'NOT_STARTED',
+  'AVAILABLE',
+  'EXPIRED',
+] as const
+export type VacationBalanceStatus = (typeof VACATION_BALANCE_STATUSES)[number]
+
+export interface EmployeeVacationAdjustmentResponse {
+  id: string
+  year: number
+  period: VacationPeriod
+  daysDelta: number
+  reason: string
+  createdBy: {
+    id: string
+    fullName: string
+  }
+  createdAt: string
+}
+
+export interface CreateEmployeeVacationAdjustmentRequest {
+  year: number
+  period: VacationPeriod
+  daysDelta: number
+  reason: string
+}
+
+export interface EmployeeVacationPeriodBalanceResponse {
+  period: VacationPeriod
+  startDate: string
+  endDate: string
+  entitlementDays: number
+  incidentDays: number
+  adjustmentDays: number
+  consumedDays: number
+  remainingDays: number
+  status: VacationBalanceStatus
+  adjustments: EmployeeVacationAdjustmentResponse[]
+}
+
+export interface EmployeeVacationYearBalanceResponse {
+  year: number
+  periods: EmployeeVacationPeriodBalanceResponse[]
+}
+
+export interface EmployeeVacationControlResponse {
+  eligibilityDate: string | null
+  isEligible: boolean
+  currentYear: number
+  currentPeriod: VacationPeriod
+  years: EmployeeVacationYearBalanceResponse[]
+}
+
+export interface EmployeeJustificationMonthResponse {
+  month: string
+  entryCount: number
+  exitCount: number
+  used: number
+  remaining: number
+}
+
+export interface EmployeeJustificationControlResponse {
+  currentMonth: string
+  months: EmployeeJustificationMonthResponse[]
+}
+
 export interface CreateEmployeeAssignmentRequest {
   organizationalUnitId: string
   positionId: string
@@ -86,4 +156,6 @@ export interface UpdateEmployeeAssignmentRequest {
 
 export interface EmployeeDetailsResponse extends EmployeeResponse {
   assignments: EmployeeAssignmentsResponse
+  vacationControl: EmployeeVacationControlResponse
+  justificationControl: EmployeeJustificationControlResponse
 }

@@ -13,6 +13,20 @@ export type {
   EmployeeAssignmentPositionResponse,
   EmployeeAssignmentsResponse,
   EmployeeStatus,
+  VacationPeriod,
+  VacationBalanceStatus,
+  EmployeeVacationAdjustmentResponse,
+  CreateEmployeeVacationAdjustmentRequest,
+  EmployeeVacationPeriodBalanceResponse,
+  EmployeeVacationYearBalanceResponse,
+  EmployeeVacationControlResponse,
+  EmployeeJustificationMonthResponse,
+  EmployeeJustificationControlResponse,
 } from './employees.contracts'
 
-export { EMPLOYEE_STATUSES, APPOINTMENT_TYPES } from './employees.contracts'
+export {
+  EMPLOYEE_STATUSES,
+  APPOINTMENT_TYPES,
+  VACATION_PERIODS,
+  VACATION_BALANCE_STATUSES,
+} from './employees.contracts'

@@ -8,6 +8,13 @@ export interface DashboardSummaryResponse {
   monthIncidents: number
   previousMonthIncidents: number
   monthVariationPercentage: number
+  currentVacationPeriod: {
+    year: number
+    period: 'FIRST' | 'SECOND'
+    startDate: string
+    endDate: string
+    daysRemaining: number
+  }
 }
 
 export interface DashboardOrganizationalUnitSummaryResponse {
