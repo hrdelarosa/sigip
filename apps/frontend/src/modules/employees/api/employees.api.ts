@@ -10,6 +10,8 @@ import type {
   UpdateEmployeeAssignmentInput,
   UpdateEmployeeInput,
   UpdateEmployeeStatusInput,
+  CreateEmployeeVacationAdjustmentInput,
+  EmployeeVacationAdjustment,
 } from '../types/employee.types'
 
 import { apiRequest } from '@/lib/api/api-client'
@@ -121,5 +123,18 @@ export function updateEmployeeAssignment({
       method: 'PATCH',
       body: input,
     },
+  )
+}
+
+export function createEmployeeVacationAdjustment({
+  employeeId,
+  input,
+}: {
+  employeeId: string
+  input: CreateEmployeeVacationAdjustmentInput
+}): Promise<EmployeeVacationAdjustment> {
+  return apiRequest<EmployeeVacationAdjustment>(
+    `/employees/${employeeId}/vacation-adjustments`,
+    { method: 'POST', body: input },
   )
 }

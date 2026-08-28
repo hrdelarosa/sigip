@@ -28,6 +28,8 @@ import { getEmployeeAssignmentPeriod } from '../lib/employee-assignment-period'
 import { useCalendarToday } from '../hooks/useCalendarToday'
 import { useAuth } from '@/modules/auth'
 import { getEmployeePermissions } from '../lib/employee-permissions'
+import { EmployeeVacationControl } from '../components/EmployeeVacationControl'
+import { EmployeeJustificationControl } from '../components/EmployeeJustificationControl'
 
 export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const employeeQuery = useEmployee(employeeId)
@@ -138,6 +140,17 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
               canUpdate={canUpdate}
             />
             <EmployeeDetails employee={employee} />
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
+            <EmployeeVacationControl
+              employeeId={employee.id}
+              control={employee.vacationControl}
+              canUpdate={canUpdate}
+            />
+            <EmployeeJustificationControl
+              control={employee.justificationControl}
+            />
           </section>
 
           <Card>

@@ -9,6 +9,8 @@ export type {
   EmployeeAssignmentsResponse as EmployeeAssignments,
   CreateEmployeeAssignmentRequest as CreateEmployeeAssignmentInput,
   UpdateEmployeeAssignmentRequest as UpdateEmployeeAssignmentInput,
+  CreateEmployeeVacationAdjustmentRequest as CreateEmployeeVacationAdjustmentInput,
+  EmployeeVacationAdjustmentResponse as EmployeeVacationAdjustment,
 } from '@sigip/shared'
 import type { EMPLOYEE_STATUSES, EmployeeStatus } from '@sigip/shared'
 
