@@ -6,7 +6,11 @@ import { DocumentsRepository } from '../documents/repositories/documents.reposit
 import {
   CommissionAnnexNotAllowedError,
   DuplicateIncidentOccurrenceError,
+  IncidentVacationDayLimitError,
   InvalidIncidentTemporalModeError,
+  IncidentVacationOutsidePeriodError,
+  IncidentVacationNotEligibleError,
+  IncidentVacationPeriodNotAvailableError,
 } from './incidents.errors';
 import { IncidentsService } from './incidents.service';
 import type { IncidentDetailsModel } from './models/incident.model';
@@ -53,6 +57,8 @@ describe('IncidentsService', () => {
     service = module.get(IncidentsService);
   });
 
+  afterEach(() => jest.useRealTimers());
+
   it('rejects overlapping occurrence periods', async () => {
     repository.findCreationContext.mockResolvedValue({
       employee: { id: 'employee-id', status: 'ACTIVE' },
@@ -97,6 +103,165 @@ describe('IncidentsService', () => {
 
     expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['VACACIONES_PRIMER_PERIODO', 'VACACIONES_SEGUNDO_PERIODO'])(
+    'rejects more than 10 days for %s',
+    async (incidentTypeCode) => {
+      repository.findCreationContext.mockResolvedValue(
+        buildMultipleDateCreationContext(incidentTypeCode),
+      );
+
+      await expect(
+        service.create(
+          {
+            ...buildCreateDto(),
+            occurrences: Array.from({ length: 11 }, (_, index) => ({
+              startDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+            })),
+          },
+          buildFile('formato.pdf', 100),
+          actor,
+        ),
+      ).rejects.toBeInstanceOf(IncidentVacationDayLimitError);
+
+      expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+      expect(repository.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('accepts exactly 10 days for an ordinary vacation period', async () => {
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
+    );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      {
+        ...buildCreateDto(),
+        occurrences: Array.from({ length: 10 }, (_, index) => ({
+          startDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+        })),
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(10);
+  });
+
+  it('does not apply the ordinary limit to vacation incentives', async () => {
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_ESTIMULOS'),
+    );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      {
+        ...buildCreateDto(),
+        occurrences: Array.from({ length: 11 }, (_, index) => ({
+          startDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+        })),
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(11);
+  });
+
+  it('enforces the vacation limit when updating occurrences', async () => {
+    repository.findById.mockResolvedValue(buildIncident());
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
+    );
+
+    await expect(
+      service.update(
+        'incident-id',
+        {
+          occurrences: Array.from({ length: 11 }, (_, index) => ({
+            startDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+          })),
+        },
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(IncidentVacationDayLimitError);
+
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects vacation dates outside the selected institutional period', async () => {
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_PRIMER_PERIODO'),
+    );
+
+    await expect(
+      service.create(
+        {
+          ...buildCreateDto(),
+          occurrences: [{ startDate: '2026-08-10' }],
+        },
+        buildFile('formato.pdf', 100),
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(IncidentVacationOutsidePeriodError);
+
+    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+  });
+
+  it('rejects vacation before six months of institutional seniority', async () => {
+    repository.findCreationContext.mockResolvedValue({
+      ...buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
+      employee: {
+        id: 'employee-id',
+        status: 'ACTIVE',
+        hireDate: new Date('2026-04-01T00:00:00.000Z'),
+      },
+    });
+
+    await expect(
+      service.create(
+        {
+          ...buildCreateDto(),
+          occurrences: [{ startDate: '2026-08-10' }],
+        },
+        buildFile('formato.pdf', 100),
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(IncidentVacationNotEligibleError);
+
+    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+  });
+
+  it('rejects vacation from a period that has not started', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-02-01T12:00:00.000Z'));
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
+    );
+
+    await expect(
+      service.create(
+        {
+          ...buildCreateDto(),
+          occurrences: [{ startDate: '2026-07-10' }],
+        },
+        buildFile('formato.pdf', 100),
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(IncidentVacationPeriodNotAvailableError);
+
+    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
   });
 
   it('validates existing occurrences when changing the incident type', async () => {
@@ -208,7 +373,11 @@ function buildFile(originalname: string, size: number) {
 
 function buildCreationContext(code: string) {
   return {
-    employee: { id: 'employee-id', status: 'ACTIVE' },
+    employee: {
+      id: 'employee-id',
+      status: 'ACTIVE',
+      hireDate: new Date('2020-01-01T00:00:00.000Z'),
+    },
     assignment: {
       id: 'assignment-id',
       employeeId: 'employee-id',
@@ -225,6 +394,15 @@ function buildCreationContext(code: string) {
     },
     formDocumentType: { id: 'form-document-type-id' },
     commissionDocumentType: { id: 'commission-document-type-id' },
+  };
+}
+
+function buildMultipleDateCreationContext(code: string) {
+  const context = buildCreationContext(code);
+
+  return {
+    ...context,
+    incidentType: { ...context.incidentType, temporalMode: 'MULTIPLE_DATES' },
   };
 }
 

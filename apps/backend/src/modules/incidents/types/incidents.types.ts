@@ -46,6 +46,9 @@ export interface CreateIncidentData {
     userId: string;
     sessionId: string;
   };
+  control: {
+    incidentTypeCode: string;
+  };
 }
 
 export interface UpdateIncidentData {
@@ -59,6 +62,10 @@ export interface UpdateIncidentData {
   updatedBy: string;
   updatedAt: Date;
   sessionId: string;
+  control: {
+    employeeId: string;
+    incidentTypeCode: string;
+  };
 }
 
 export interface CancelIncidentData {
@@ -73,6 +80,7 @@ export interface IncidentCreationContext {
   employee: {
     id: string;
     status: string;
+    hireDate: Date | null;
   } | null;
   assignment: {
     id: string;

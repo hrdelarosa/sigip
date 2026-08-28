@@ -6,18 +6,24 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   like,
   lte,
+  ne,
   or,
+  sum,
+  sql,
 } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
+import type { DrizzleTransaction } from '../../../database/database.types';
 import {
   documentTypes,
   documents,
   employeeAssignments,
+  employeeVacationAdjustments,
   employees,
   incidentOccurrences,
   incidents,
@@ -40,10 +46,26 @@ import { IncidentsRepository } from './incidents.repository';
 import { AuditService } from '../../audit/audit.service';
 import {
   CancelledIncidentModificationError,
+  DuplicateActiveVacationDateError,
   IncidentConcurrentModificationError,
   IncidentCreateTransactionError,
   IncidentAlreadyCancelledError,
+  IncidentVacationBalanceExceededError,
+  MonthlyJustificationLimitError,
 } from '../incidents.errors';
+import {
+  JUSTIFICATION_CODES,
+  ORDINARY_VACATION_CODES,
+  getVacationPeriodDates,
+  getVacationPeriodFromCode,
+  isJustificationCode,
+} from '../../../common/vacation/vacation-control';
+import {
+  assertJustificationLimit,
+  assertVacationBalance,
+} from '../incident-control-validation';
+
+const ORDINARY_CODES = Object.keys(ORDINARY_VACATION_CODES);
 
 @Injectable()
 export class DrizzleIncidentsRepository implements IncidentsRepository {
@@ -52,6 +74,110 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     private readonly db: DrizzleDatabase,
     private readonly auditService: AuditService,
   ) {}
+
+  private async lockEmployee(
+    tx: DrizzleTransaction,
+    employeeId: string,
+  ): Promise<void> {
+    const id = uuidToBuffer(employeeId);
+    await tx.execute(
+      sql`SELECT ${employees.id} FROM ${employees} WHERE ${employees.id} = ${id} FOR UPDATE`,
+    );
+  }
+
+  private async validateVacationControl(
+    tx: DrizzleTransaction,
+    employeeId: string,
+    incidentTypeCode: string,
+    occurrences: CreateIncidentData['occurrences'],
+    excludeIncidentId?: string,
+    targetOccurrences = occurrences,
+  ): Promise<void> {
+    const period = getVacationPeriodFromCode(incidentTypeCode);
+    if (!period || targetOccurrences.length === 0) return;
+
+    const year = targetOccurrences[0].startDate.getUTCFullYear();
+    const { startDate, endDate } = getVacationPeriodDates(year, period);
+    const incidentConditions = [
+      eq(incidents.employeeId, uuidToBuffer(employeeId)),
+      eq(incidents.status, 'REGISTERED' as const),
+      inArray(incidentTypes.code, ORDINARY_CODES),
+      gte(incidentOccurrences.startDate, startDate),
+      lte(incidentOccurrences.startDate, endDate),
+    ];
+    if (excludeIncidentId) {
+      incidentConditions.push(
+        ne(incidents.id, uuidToBuffer(excludeIncidentId)),
+      );
+    }
+
+    const [existingDates, adjustmentRows] = await Promise.all([
+      tx
+        .select({ date: incidentOccurrences.startDate })
+        .from(incidents)
+        .innerJoin(
+          incidentTypes,
+          eq(incidents.incidentTypeId, incidentTypes.id),
+        )
+        .innerJoin(
+          incidentOccurrences,
+          eq(incidentOccurrences.incidentId, incidents.id),
+        )
+        .where(and(...incidentConditions))
+        .for('update'),
+      tx
+        .select({ value: sum(employeeVacationAdjustments.daysDelta) })
+        .from(employeeVacationAdjustments)
+        .where(
+          and(
+            eq(
+              employeeVacationAdjustments.employeeId,
+              uuidToBuffer(employeeId),
+            ),
+            eq(employeeVacationAdjustments.referenceYear, year),
+            eq(employeeVacationAdjustments.period, period),
+          ),
+        ),
+    ]);
+    assertVacationBalance(
+      existingDates.map(({ date }) => date),
+      occurrences.map((occurrence) => occurrence.startDate),
+      Number(adjustmentRows[0]?.value ?? 0),
+    );
+  }
+
+  private async validateJustificationControl(
+    tx: DrizzleTransaction,
+    employeeId: string,
+    incidentTypeCode: string,
+    occurrences: CreateIncidentData['occurrences'],
+    excludeIncidentId?: string,
+  ): Promise<void> {
+    if (!isJustificationCode(incidentTypeCode)) return;
+
+    const conditions = [
+      eq(incidents.employeeId, uuidToBuffer(employeeId)),
+      eq(incidents.status, 'REGISTERED' as const),
+      inArray(incidentTypes.code, [...JUSTIFICATION_CODES]),
+    ];
+    if (excludeIncidentId) {
+      conditions.push(ne(incidents.id, uuidToBuffer(excludeIncidentId)));
+    }
+    const existing = await tx
+      .select({ date: incidentOccurrences.startDate })
+      .from(incidents)
+      .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
+      .innerJoin(
+        incidentOccurrences,
+        eq(incidentOccurrences.incidentId, incidents.id),
+      )
+      .where(and(...conditions))
+      .for('update');
+    assertJustificationLimit(
+      existing.map(({ date }) => date),
+      occurrences.map((occurrence) => occurrence.startDate),
+    );
+  }
 
   async findCreationContext(
     employeeId: string,
@@ -69,6 +195,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         .select({
           id: employees.id,
           status: employees.status,
+          hireDate: employees.hireDate,
         })
         .from(employees)
         .where(eq(employees.id, uuidToBuffer(employeeId)))
@@ -127,6 +254,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         ? {
             id: bufferToUuid(employee.id),
             status: employee.status,
+            hireDate: employee.hireDate,
           }
         : null,
 
@@ -164,6 +292,20 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
   async create(data: CreateIncidentData): Promise<IncidentDetailsModel> {
     try {
       await this.db.transaction(async (tx) => {
+        await this.lockEmployee(tx, data.incident.employeeId);
+        await this.validateVacationControl(
+          tx,
+          data.incident.employeeId,
+          data.control.incidentTypeCode,
+          data.occurrences,
+        );
+        await this.validateJustificationControl(
+          tx,
+          data.incident.employeeId,
+          data.control.incidentTypeCode,
+          data.occurrences,
+        );
+
         await tx.insert(incidents).values({
           id: uuidToBuffer(data.incident.id),
           employeeId: uuidToBuffer(data.incident.employeeId),
@@ -243,6 +385,13 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         }
       });
     } catch (error) {
+      if (
+        error instanceof DuplicateActiveVacationDateError ||
+        error instanceof IncidentVacationBalanceExceededError ||
+        error instanceof MonthlyJustificationLimitError
+      ) {
+        throw error;
+      }
       throw new IncidentCreateTransactionError({ cause: error });
     }
 
@@ -492,6 +641,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     if (!existing) return null;
 
     const updated = await this.db.transaction(async (tx) => {
+      await this.lockEmployee(tx, existing.employeeId);
       const [locked] = await tx
         .select({
           status: incidents.status,
@@ -508,6 +658,40 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       if (locked.updatedAt.getTime() !== data.expectedUpdatedAt.getTime()) {
         throw new IncidentConcurrentModificationError();
       }
+
+      const effectiveOccurrences = data.occurrences ?? existing.occurrences;
+      if (existing.incidentType.code === data.control.incidentTypeCode) {
+        await this.validateVacationControl(
+          tx,
+          data.control.employeeId,
+          data.control.incidentTypeCode,
+          effectiveOccurrences,
+          id,
+        );
+      } else {
+        await this.validateVacationControl(
+          tx,
+          data.control.employeeId,
+          existing.incidentType.code,
+          [],
+          id,
+          existing.occurrences,
+        );
+        await this.validateVacationControl(
+          tx,
+          data.control.employeeId,
+          data.control.incidentTypeCode,
+          effectiveOccurrences,
+          id,
+        );
+      }
+      await this.validateJustificationControl(
+        tx,
+        data.control.employeeId,
+        data.control.incidentTypeCode,
+        effectiveOccurrences,
+        id,
+      );
 
       await tx
         .update(incidents)
@@ -601,6 +785,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     if (!existing) return null;
 
     const cancelled = await this.db.transaction(async (tx) => {
+      await this.lockEmployee(tx, existing.employeeId);
       const [locked] = await tx
         .select({ status: incidents.status })
         .from(incidents)

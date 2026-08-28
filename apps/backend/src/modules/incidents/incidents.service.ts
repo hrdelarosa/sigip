@@ -23,6 +23,11 @@ import {
   IncidentOutsideAssignmentPeriodError,
   IncidentPersistenceError,
   IncidentTypeNotAvailableError,
+  IncidentVacationDayLimitError,
+  IncidentVacationHireDateRequiredError,
+  IncidentVacationNotEligibleError,
+  IncidentVacationOutsidePeriodError,
+  IncidentVacationPeriodNotAvailableError,
   InvalidIncidentAppointmentScopeError,
   InvalidIncidentAssignmentError,
   InvalidIncidentDateError,
@@ -34,6 +39,14 @@ import { DocumentsRepository } from '../documents/repositories/documents.reposit
 
 import type { IncidentOccurrenceData } from './types/incidents.types';
 import type { UploadedMemoryFile } from '../../common/types/uploaded-memory-file.type';
+import {
+  getVacationPeriodFromCode,
+  getVacationPeriodDates,
+  getCurrentVacationPeriod,
+  institutionalCalendarDate,
+  isDateInVacationPeriod,
+  isVacationDateEligible,
+} from '../../common/vacation/vacation-control';
 
 @Injectable()
 export class IncidentsService {
@@ -145,6 +158,78 @@ export class IncidentsService {
           throw new InvalidIncidentTemporalModeError();
         }
         return;
+    }
+  }
+
+  private validateVacationDayLimit(
+    incidentTypeCode: string,
+    occurrences: IncidentOccurrenceData[],
+  ): void {
+    const ordinaryVacationCodes = [
+      'VACACIONES_PRIMER_PERIODO',
+      'VACACIONES_SEGUNDO_PERIODO',
+    ];
+
+    if (
+      ordinaryVacationCodes.includes(incidentTypeCode) &&
+      occurrences.length > 10
+    ) {
+      throw new IncidentVacationDayLimitError();
+    }
+  }
+
+  private validateOrdinaryVacationTemporalMode(
+    incidentTypeCode: string,
+    temporalMode: 'SINGLE_DATE' | 'MULTIPLE_DATES' | 'DATE_RANGE',
+  ): void {
+    if (
+      getVacationPeriodFromCode(incidentTypeCode) &&
+      temporalMode !== 'MULTIPLE_DATES'
+    ) {
+      throw new InvalidIncidentTemporalModeError();
+    }
+  }
+
+  private validateVacationEligibility(
+    incidentTypeCode: string,
+    hireDate: Date | null,
+    occurrences: IncidentOccurrenceData[],
+  ): void {
+    const period = getVacationPeriodFromCode(incidentTypeCode);
+    if (!period) return;
+    if (!hireDate) throw new IncidentVacationHireDateRequiredError();
+
+    const years = new Set(
+      occurrences.map((occurrence) => occurrence.startDate.getUTCFullYear()),
+    );
+    const currentPeriod = getCurrentVacationPeriod(institutionalCalendarDate());
+    const selectedYear = occurrences[0]?.startDate.getUTCFullYear();
+    if (
+      years.size !== 1 ||
+      occurrences.some(
+        (occurrence) => !isDateInVacationPeriod(occurrence.startDate, period),
+      )
+    ) {
+      throw new IncidentVacationOutsidePeriodError(
+        period,
+        selectedYear,
+        currentPeriod.period,
+        currentPeriod.year,
+      );
+    }
+
+    const year = occurrences[0].startDate.getUTCFullYear();
+    const { startDate } = getVacationPeriodDates(year, period);
+    if (institutionalCalendarDate() < startDate) {
+      throw new IncidentVacationPeriodNotAvailableError(year, period);
+    }
+
+    if (
+      occurrences.some(
+        (occurrence) => !isVacationDateEligible(hireDate, occurrence.startDate),
+      )
+    ) {
+      throw new IncidentVacationNotEligibleError();
     }
   }
 
@@ -263,7 +348,17 @@ export class IncidentsService {
 
     const occurrences = this.normalizeOccurrences(dto.occurrences);
 
+    this.validateOrdinaryVacationTemporalMode(
+      context.incidentType.code,
+      context.incidentType.temporalMode,
+    );
     this.validateTemporalMode(context.incidentType.temporalMode, occurrences);
+    this.validateVacationDayLimit(context.incidentType.code, occurrences);
+    this.validateVacationEligibility(
+      context.incidentType.code,
+      context.employee.hireDate,
+      occurrences,
+    );
 
     this.validateAssignmentCoverage(
       context.assignment.effectiveFrom,
@@ -336,6 +431,9 @@ export class IncidentsService {
           userId: actor.userId,
           sessionId: actor.sessionId,
         },
+        control: {
+          incidentTypeCode: context.incidentType.code,
+        },
       });
     } catch (error) {
       await Promise.all(
@@ -407,7 +505,17 @@ export class IncidentsService {
           endDate: occurrence.endDate,
         }));
 
+    this.validateOrdinaryVacationTemporalMode(
+      context.incidentType.code,
+      context.incidentType.temporalMode,
+    );
     this.validateTemporalMode(context.incidentType.temporalMode, occurrences);
+    this.validateVacationDayLimit(context.incidentType.code, occurrences);
+    this.validateVacationEligibility(
+      context.incidentType.code,
+      context.employee?.hireDate ?? null,
+      occurrences,
+    );
 
     this.validateAssignmentCoverage(
       context.assignment.effectiveFrom,
@@ -434,6 +542,10 @@ export class IncidentsService {
       updatedBy: actor.userId,
       updatedAt: new Date(),
       sessionId: actor.sessionId,
+      control: {
+        employeeId: current.employeeId,
+        incidentTypeCode: context.incidentType.code,
+      },
     });
 
     if (!result) throw new IncidentNotFoundError(id);

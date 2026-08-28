@@ -50,6 +50,89 @@ export class InvalidIncidentTemporalModeError extends BadRequestException {
   }
 }
 
+export class IncidentVacationDayLimitError extends BadRequestException {
+  constructor() {
+    super('Solo se pueden registrar hasta 10 días de vacaciones por periodo');
+  }
+}
+
+export class IncidentVacationHireDateRequiredError extends BadRequestException {
+  constructor() {
+    super(
+      'El empleado debe tener una fecha de ingreso para registrar vacaciones',
+    );
+  }
+}
+
+export class IncidentVacationOutsidePeriodError extends BadRequestException {
+  constructor(
+    selectedPeriod?: 'FIRST' | 'SECOND',
+    selectedYear?: number,
+    currentPeriod?: 'FIRST' | 'SECOND',
+    currentYear?: number,
+  ) {
+    if (
+      selectedPeriod &&
+      selectedYear &&
+      currentPeriod &&
+      currentYear &&
+      selectedYear === currentYear &&
+      selectedPeriod !== currentPeriod
+    ) {
+      const selectedLabel =
+        selectedPeriod === 'FIRST'
+          ? 'primer periodo (enero a junio)'
+          : 'segundo periodo (julio a diciembre)';
+      const currentLabel =
+        currentPeriod === 'FIRST'
+          ? 'primer periodo (enero a junio)'
+          : 'segundo periodo (julio a diciembre)';
+      super(
+        `No es posible registrar vacaciones del ${selectedLabel} de ${selectedYear}, porque actualmente nos encontramos en el ${currentLabel} de ${currentYear}.`,
+      );
+      return;
+    }
+
+    super('Las fechas de vacaciones deben pertenecer al periodo seleccionado');
+  }
+}
+
+export class IncidentVacationNotEligibleError extends ConflictException {
+  constructor() {
+    super('El empleado aún no cumple seis meses desde su fecha de ingreso');
+  }
+}
+
+export class IncidentVacationPeriodNotAvailableError extends ConflictException {
+  constructor(year: number, period: 'FIRST' | 'SECOND') {
+    const periodLabel =
+      period === 'FIRST' ? 'enero a junio' : 'julio a diciembre';
+    super(
+      `El periodo vacacional de ${periodLabel} de ${year} aún no está disponible. Seleccione el periodo vacacional vigente.`,
+    );
+  }
+}
+
+export class IncidentVacationBalanceExceededError extends ConflictException {
+  constructor(availableDays: number) {
+    super(
+      `El empleado solo tiene ${availableDays} ${availableDays === 1 ? 'día disponible' : 'días disponibles'} en el periodo vacacional seleccionado.`,
+    );
+  }
+}
+
+export class DuplicateActiveVacationDateError extends ConflictException {
+  constructor() {
+    super('Una o más fechas ya están registradas como vacaciones activas');
+  }
+}
+
+export class MonthlyJustificationLimitError extends ConflictException {
+  constructor() {
+    super('El empleado ya alcanzó el máximo de 3 justificaciones en el mes');
+  }
+}
+
 export class InvalidIncidentDateError extends BadRequestException {
   constructor() {
     super('Una o más fechas de la incidencia no son válidas');
