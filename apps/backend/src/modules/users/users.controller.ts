@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Req,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -32,11 +33,16 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserApiResponse } from '../../common/swagger/api.models';
+import {
+  UserApiResponse,
+  UsersApiResponse,
+} from '../../common/swagger/api.models';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 import type { AuthenticatedRequest } from '../../common/types/authenticated-request.type';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { toPaginatedResponse } from '../../common/pagination/presenters/pagination.presenter';
 
 @Controller('users')
 @ApiTags('Users')
@@ -46,11 +52,17 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'Listar usuarios' })
-  @ApiOkResponse({ type: UserApiResponse, isArray: true })
-  async findAll(): Promise<UsersResponse> {
-    const users = await this.usersService.findAll();
+  @ApiOkResponse({ type: UsersApiResponse })
+  async findAll(@Query() query: ListUsersQueryDto): Promise<UsersResponse> {
+    const result = await this.usersService.findAll(query);
 
-    return users.map(toUserResponse);
+    return toPaginatedResponse(
+      result.items,
+      result.total,
+      query.page,
+      query.limit,
+      toUserResponse,
+    );
   }
 
   @Get(':id')

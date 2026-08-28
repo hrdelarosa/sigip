@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 
 import type { DrizzleDatabase } from '../../../database/database.types';
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
@@ -10,6 +10,8 @@ import { UsersRepository } from './users.repository';
 import { CreateUserData, UpdateUserData } from '../types/user.types';
 import type { UserAuditContext } from '../types/user.types';
 import { AuditService } from '../../audit/audit.service';
+import type { ListUsersQueryDto } from '../dto/list-users-query.dto';
+import type { PaginatedResult } from '../../../common/pagination/types/pagination.types';
 
 const publicUserColumns = {
   id: users.id,
@@ -45,13 +47,22 @@ export class DrizzleUsersRepository implements UsersRepository {
     };
   }
 
-  async findAll(): Promise<UserModel[]> {
-    const rows = await this.db
-      .select(publicUserColumns)
-      .from(users)
-      .orderBy(desc(users.createdAt));
+  async findAll(query: ListUsersQueryDto): Promise<PaginatedResult<UserModel>> {
+    const offset = (query.page - 1) * query.limit;
+    const [rows, totalRows] = await Promise.all([
+      this.db
+        .select(publicUserColumns)
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(query.limit)
+        .offset(offset),
+      this.db.select({ total: count() }).from(users),
+    ]);
 
-    return rows.map((row) => this.toModel(row));
+    return {
+      items: rows.map((row) => this.toModel(row)),
+      total: totalRows[0]?.total ?? 0,
+    };
   }
 
   async findById(id: string): Promise<UserModel | null> {

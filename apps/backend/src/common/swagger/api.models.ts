@@ -90,6 +90,13 @@ export class EmployeesApiResponse {
   meta!: PaginationMetaApiResponse;
 }
 
+export class UsersApiResponse {
+  @ApiProperty({ type: UserApiResponse, isArray: true })
+  items!: UserApiResponse[];
+  @ApiProperty({ type: PaginationMetaApiResponse })
+  meta!: PaginationMetaApiResponse;
+}
+
 export class AssignmentCatalogApiResponse {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() code!: string;

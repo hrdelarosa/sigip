@@ -20,6 +20,7 @@ import { UserModel, UserWithPasswordModel } from './models/user.model';
 import type { UserAuditContext } from './types/user.types';
 import { SessionsRepository } from '../sessions/repositories/sessions.repository';
 import { AuditRepository } from '../audit/repositories/audit.repository';
+import type { ListUsersQueryDto } from './dto/list-users-query.dto';
 
 @Injectable()
 export class UsersService {
@@ -55,8 +56,8 @@ export class UsersService {
     throw new UserPersistenceError();
   }
 
-  async findAll() {
-    return await this.usersRepository.findAll();
+  async findAll(query: ListUsersQueryDto) {
+    return this.usersRepository.findAll(query);
   }
 
   async findById(id: string) {
