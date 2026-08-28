@@ -38,6 +38,16 @@ export function PaginationPage({
   onPreviousClick,
 }: Props) {
   const selectId = useId()
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+  const handlePreviousClick = () => {
+    onPreviousClick()
+    scrollToTop()
+  }
+  const handleNextClick = () => {
+    onNextClick()
+    scrollToTop()
+  }
+
   if (!meta) return null
   if (meta.total === 0) return null
 
@@ -80,7 +90,9 @@ export function PaginationPage({
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={meta.hasPreviousPage ? onPreviousClick : undefined}
+                  onClick={
+                    meta.hasPreviousPage ? handlePreviousClick : undefined
+                  }
                   text="Anterior"
                   aria-disabled={!meta.hasPreviousPage}
                   tabIndex={meta.hasPreviousPage ? undefined : -1}
@@ -93,7 +105,7 @@ export function PaginationPage({
               </PaginationItem>
               <PaginationItem>
                 <PaginationNext
-                  onClick={meta.hasNextPage ? onNextClick : undefined}
+                  onClick={meta.hasNextPage ? handleNextClick : undefined}
                   text="Siguiente"
                   aria-disabled={!meta.hasNextPage}
                   tabIndex={meta.hasNextPage ? undefined : -1}
