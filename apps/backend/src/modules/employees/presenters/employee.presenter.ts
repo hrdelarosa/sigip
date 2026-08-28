@@ -2,9 +2,12 @@ import type {
   EmployeeAssignmentResponse,
   EmployeeDetailsResponse,
   EmployeeResponse,
+  EmployeeVacationAdjustmentResponse,
 } from '@sigip/shared';
 import type { EmployeeModel } from '../models/employee.model';
 import type { EmployeeAssignmentDetailsModel } from '../models/employee-assignment.model';
+import type { EmployeeVacationAdjustmentModel } from '../models/employee-control.model';
+import type { buildEmployeeControls } from '../employee-controls';
 
 export function toEmployeeResponse(employee: EmployeeModel): EmployeeResponse {
   return {
@@ -45,9 +48,25 @@ export function toEmployeeAssignmentResponse(
 export function toEmployeeDetailsResponse(
   employee: EmployeeModel,
   assignments: EmployeeAssignmentDetailsModel[],
+  controls: ReturnType<typeof buildEmployeeControls>,
 ): EmployeeDetailsResponse {
   return {
     ...toEmployeeResponse(employee),
     assignments: assignments.map(toEmployeeAssignmentResponse),
+    ...controls,
+  };
+}
+
+export function toEmployeeVacationAdjustmentResponse(
+  adjustment: EmployeeVacationAdjustmentModel,
+): EmployeeVacationAdjustmentResponse {
+  return {
+    id: adjustment.id,
+    year: adjustment.year,
+    period: adjustment.period,
+    daysDelta: adjustment.daysDelta,
+    reason: adjustment.reason,
+    createdBy: adjustment.createdBy,
+    createdAt: adjustment.createdAt.toISOString(),
   };
 }

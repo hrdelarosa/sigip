@@ -14,6 +14,7 @@ import type {
   EmployeeDetailsResponse,
   EmployeeResponse,
   EmployeesResponse,
+  EmployeeVacationAdjustmentResponse,
 } from '@sigip/shared';
 
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -25,6 +26,7 @@ import {
   toEmployeeAssignmentResponse,
   toEmployeeDetailsResponse,
   toEmployeeResponse,
+  toEmployeeVacationAdjustmentResponse,
 } from './presenters/employee.presenter';
 import { ListEmployeesQueryDto } from './dto/list-employees-query.dto';
 import { toPaginatedResponse } from '../../common/pagination/presenters/pagination.presenter';
@@ -50,6 +52,7 @@ import {
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { CreateVacationAdjustmentDto } from './dto/create-vacation-adjustment.dto';
 
 @Controller('employees')
 @ApiTags('Employees')
@@ -89,11 +92,29 @@ export class EmployeesController {
   async findById(
     @Param() params: EmployeeIdParamDto,
   ): Promise<EmployeeDetailsResponse> {
-    const { employee, assignments } = await this.employeesService.findDetails(
+    const { employee, assignments, controls } =
+      await this.employeesService.findDetails(params.id);
+
+    return toEmployeeDetailsResponse(employee, assignments, controls);
+  }
+
+  @Post(':id/vacation-adjustments')
+  @RequirePermissions('employees:update')
+  @ApiOperation({ summary: 'Registrar un ajuste de consumo vacacional' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiCreatedResponse({ description: 'Ajuste vacacional registrado' })
+  async createVacationAdjustment(
+    @Param() params: EmployeeIdParamDto,
+    @Body() dto: CreateVacationAdjustmentDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<EmployeeVacationAdjustmentResponse> {
+    const adjustment = await this.employeesService.createVacationAdjustment(
       params.id,
+      dto,
+      actor,
     );
 
-    return toEmployeeDetailsResponse(employee, assignments);
+    return toEmployeeVacationAdjustmentResponse(adjustment);
   }
 
   @Post()

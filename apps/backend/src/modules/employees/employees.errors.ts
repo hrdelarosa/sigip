@@ -104,3 +104,23 @@ export class EmployeePersistenceError extends InternalServerErrorException {
     super('No fue posible completar la operación del empleado.');
   }
 }
+
+export class VacationAdjustmentBalanceError extends ConflictException {
+  constructor() {
+    super(
+      'El ajuste dejaría el consumo vacacional fuera del rango permitido de 0 a 10 días.',
+    );
+  }
+}
+
+export class VacationAdjustmentPeriodNotAvailableError extends ConflictException {
+  constructor() {
+    super('El periodo vacacional seleccionado aún no está disponible.');
+  }
+}
+
+export class VacationAdjustmentNotEligibleError extends ConflictException {
+  constructor() {
+    super('El empleado aún no cumple seis meses desde su fecha de ingreso.');
+  }
+}

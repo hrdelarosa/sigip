@@ -19,6 +19,8 @@ import {
   OrganizationalUnitNotAvailableError,
   OverlappingEmployeeAssignmentError,
   PositionNotAvailableError,
+  VacationAdjustmentNotEligibleError,
+  VacationAdjustmentPeriodNotAvailableError,
 } from './employees.errors';
 import { EmployeesRepository } from './repositories/employees.repository';
 import { ListEmployeesQueryDto } from './dto/list-employees-query.dto';
@@ -29,10 +31,19 @@ import { CreateEmployeeAssignmentDto } from './dto/create-employee-assignment.dt
 import { UpdateEmployeeAssignmentDto } from './dto/update-employee-assignment.dto';
 import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
 import type { EmployeeAssignmentMutationResult } from './types/employees.types';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { EmployeeControlsRepository } from './repositories/employee-controls.repository';
+import { buildEmployeeControls } from './employee-controls';
+import { institutionalCalendarDate } from '../../common/vacation/vacation-control';
+import { CreateVacationAdjustmentDto } from './dto/create-vacation-adjustment.dto';
+import { VacationAdjustmentBalanceError } from './employees.errors';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private readonly employeesRepository: EmployeesRepository) {}
+  constructor(
+    private readonly employeesRepository: EmployeesRepository,
+    private readonly employeeControlsRepository: EmployeeControlsRepository,
+  ) {}
 
   private parseDate(value: string): Date {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -150,12 +161,54 @@ export class EmployeesService {
   async findDetails(id: string): Promise<{
     employee: EmployeeModel;
     assignments: EmployeeAssignmentDetailsModel[];
+    controls: ReturnType<typeof buildEmployeeControls>;
   }> {
     const employee = await this.findById(id);
-    const assignments =
-      await this.employeesRepository.findAssignmentsByEmployeeId(id);
+    const [assignments, snapshot] = await Promise.all([
+      this.employeesRepository.findAssignmentsByEmployeeId(id),
+      this.employeeControlsRepository.findSnapshot(id),
+    ]);
+    const controls = buildEmployeeControls(
+      employee,
+      snapshot,
+      institutionalCalendarDate(),
+    );
 
-    return { employee, assignments };
+    return { employee, assignments, controls };
+  }
+
+  async createVacationAdjustment(
+    employeeId: string,
+    dto: CreateVacationAdjustmentDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const result =
+      await this.employeeControlsRepository.createVacationAdjustment({
+        id: generateUuidV7(),
+        employeeId,
+        year: dto.year,
+        period: dto.period,
+        daysDelta: dto.daysDelta,
+        reason: dto.reason.trim(),
+        createdBy: actor.userId,
+        sessionId: actor.sessionId,
+        createdAt: new Date(),
+      });
+
+    if (result.status === 'employee-not-found') {
+      throw new EmployeeNotFoundError(employeeId);
+    }
+    if (result.status === 'balance-out-of-range') {
+      throw new VacationAdjustmentBalanceError();
+    }
+    if (result.status === 'period-not-available') {
+      throw new VacationAdjustmentPeriodNotAvailableError();
+    }
+    if (result.status === 'not-eligible') {
+      throw new VacationAdjustmentNotEligibleError();
+    }
+
+    return result.adjustment;
   }
 
   async create(dto: CreateEmployeeDto): Promise<EmployeeModel> {
