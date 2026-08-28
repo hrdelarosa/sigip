@@ -1,6 +1,10 @@
 import { z } from 'zod'
 
 import { INCIDENT_TEMPORAL_MODES } from '@sigip/shared'
+import {
+  isOrdinaryVacation,
+  MAX_VACATION_DAYS,
+} from '../lib/vacation-date-range'
 
 const calendarDate = z
   .string()
@@ -41,6 +45,17 @@ export const incidentFormSchema = z
   })
   .superRefine((values, context) => {
     const occurrences = values.occurrences
+
+    if (
+      isOrdinaryVacation(values.incidentTypeCode) &&
+      occurrences.length > MAX_VACATION_DAYS
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['occurrences'],
+        message: `Solo puede capturar hasta ${MAX_VACATION_DAYS} días de vacaciones por periodo`,
+      })
+    }
 
     if (
       values.temporalMode === 'SINGLE_DATE' &&

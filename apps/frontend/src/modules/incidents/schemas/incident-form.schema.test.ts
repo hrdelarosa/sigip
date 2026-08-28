@@ -37,6 +37,35 @@ describe('incidentFormSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('rejects more than 10 days for an ordinary vacation period', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      incidentTypeCode: 'VACACIONES_PRIMER_PERIODO',
+      occurrences: Array.from({ length: 11 }, (_, index) => ({
+        startDate: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        endDate: null,
+      })),
+    })
+
+    expect(result.success).toBe(false)
+    expect(
+      result.error?.issues.some((issue) => issue.message.includes('10 días')),
+    ).toBe(true)
+  })
+
+  it('keeps the general multiple-date limit for vacation incentives', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      incidentTypeCode: 'VACACIONES_ESTIMULOS',
+      occurrences: Array.from({ length: 11 }, (_, index) => ({
+        startDate: `2026-07-${String(index + 1).padStart(2, '0')}`,
+        endDate: null,
+      })),
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   it('rejects duplicate occurrence dates', () => {
     const result = incidentFormSchema.safeParse({
       ...baseValues,

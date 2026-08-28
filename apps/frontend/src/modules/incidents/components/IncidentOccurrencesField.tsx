@@ -1,4 +1,5 @@
 import { CalendarDaysIcon, InfoIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { useState } from 'react'
 import {
   type Control,
   Controller,
@@ -24,6 +25,11 @@ import {
   buildAssignmentDateConstraints,
 } from '../lib/incident-date-constraints'
 import { IncidentDatePickerField } from './IncidentDatePickerField'
+import { isOrdinaryVacation, MAX_VACATION_DAYS } from '../lib/vacation-date-range'
+import {
+  VacationDateCapture,
+  type VacationCaptureMode,
+} from './VacationDateCapture'
 
 function TemporalModeChip({
   active,
@@ -38,11 +44,13 @@ function TemporalModeChip({
 export function IncidentOccurrencesField({
   control,
   temporalMode,
+  incidentTypeCode,
   configured,
   disabled,
 }: {
   control: Control<IncidentFormValues>
   temporalMode: IncidentTemporalMode
+  incidentTypeCode: string
   configured: boolean
   disabled?: boolean
 }) {
@@ -55,16 +63,31 @@ export function IncidentOccurrencesField({
     control,
     name: 'assignmentEffectiveTo',
   })
+  const occurrences = useWatch({ control, name: 'occurrences' })
   const disabledDates = buildAssignmentDateConstraints(
     assignmentEffectiveFrom,
     assignmentEffectiveTo,
   )
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: 'occurrences',
   })
   const multiple = temporalMode === 'MULTIPLE_DATES'
   const range = temporalMode === 'DATE_RANGE'
+  const vacation = incidentTypeCode.startsWith('VACACIONES_')
+  const ordinaryVacation = isOrdinaryVacation(incidentTypeCode)
+  const occurrenceLimit = ordinaryVacation ? MAX_VACATION_DAYS : 366
+  const [vacationCaptureMode, setVacationCaptureMode] =
+    useState<VacationCaptureMode>('INDIVIDUAL')
+  const temporalDescription = !configured
+    ? 'La modalidad se define automáticamente al seleccionar el tipo de incidencia.'
+    : multiple
+      ? vacation
+        ? 'Capture días separados o genere los días a partir de un rango.'
+        : 'Agregue cada día por separado, incluso cuando sean consecutivos.'
+      : range
+        ? 'Capture el inicio y fin del periodo continuo.'
+        : 'La incidencia ocurre en un solo día.'
 
   return (
     <FieldSet className="gap-5">
@@ -84,15 +107,7 @@ export function IncidentOccurrencesField({
             Fechas múltiples
           </TemporalModeChip>
         </div>
-        <FieldDescription>
-          {configured
-            ? multiple
-              ? 'Agregue cada día por separado, incluso cuando sean consecutivos.'
-              : range
-                ? 'Capture el inicio y fin del periodo continuo.'
-                : 'La incidencia ocurre en un solo día.'
-            : 'La modalidad se define automáticamente al seleccionar el tipo de incidencia.'}
-        </FieldDescription>
+        <FieldDescription>{temporalDescription}</FieldDescription>
       </div>
 
       {!configured ? (
@@ -105,18 +120,37 @@ export function IncidentOccurrencesField({
         </Alert>
       ) : (
         <div className="">
+          {multiple && vacation ? (
+            <VacationDateCapture
+              captureMode={vacationCaptureMode}
+              onCaptureModeChange={setVacationCaptureMode}
+              onDatesChange={(dates) =>
+                replace(
+                  dates.length
+                    ? dates.map((startDate) => ({ startDate, endDate: null }))
+                    : [{ startDate: '', endDate: null }],
+                )
+              }
+              occurrenceLimit={occurrenceLimit}
+              ordinaryVacation={ordinaryVacation}
+              occurrencesCount={occurrences.length}
+              disabled={disabled}
+              disabledDates={disabledDates}
+            />
+          ) : null}
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-2 text-sm font-medium mb-1.5">
               <CalendarDaysIcon className="size-4" aria-hidden="true" />
               Fechas de aplicación
             </div>
-            {multiple ? (
+            {multiple && (!vacation || vacationCaptureMode === 'INDIVIDUAL') ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => append({ startDate: '', endDate: null })}
-                disabled={disabled || fields.length >= 366}
+                disabled={disabled || fields.length >= occurrenceLimit}
               >
                 <PlusIcon data-icon="inline-start" />
                 Agregar fecha
@@ -125,7 +159,7 @@ export function IncidentOccurrencesField({
           </div>
 
           <FieldGroup
-            className={`${multiple ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'} mb-3`}
+            className={`${multiple ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'} ${vacation && vacationCaptureMode === 'RANGE' ? 'hidden' : ''} mb-3`}
           >
             {fields.map((field, index) => {
               const startError = errors.occurrences?.[index]?.startDate?.message
@@ -201,7 +235,12 @@ export function IncidentOccurrencesField({
             <FieldError>
               {errors.occurrences?.root?.message || errors.occurrences?.message}
             </FieldError>
-            {multiple ? <span>{fields.length} días capturados</span> : null}
+            {multiple ? (
+              <span>
+                {occurrences.filter((occurrence) => occurrence.startDate).length}
+                {ordinaryVacation ? ` de ${MAX_VACATION_DAYS}` : ''} días capturados
+              </span>
+            ) : null}
           </div>
         </div>
       )}

@@ -112,8 +112,10 @@ export function IncidentForm({
           </CardHeader>
           <CardContent>
             <IncidentOccurrencesField
+              key={incidentTypeId || 'unconfigured'}
               control={control}
               temporalMode={temporalMode}
+              incidentTypeCode={incidentTypeCode}
               configured={Boolean(incidentTypeId)}
               disabled={isPending}
             />
