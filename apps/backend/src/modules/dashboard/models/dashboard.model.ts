@@ -1,4 +1,4 @@
-export interface DashboardSummaryModel {
+export interface DashboardOperationalSummaryModel {
   activeEmployees: number;
   newEmployeesThisMonth: number;
   absentToday: number;
@@ -8,6 +8,16 @@ export interface DashboardSummaryModel {
   monthIncidents: number;
   previousMonthIncidents: number;
   monthVariationPercentage: number;
+}
+
+export interface DashboardSummaryModel extends DashboardOperationalSummaryModel {
+  currentVacationPeriod: {
+    year: number;
+    period: 'FIRST' | 'SECOND';
+    startDate: Date;
+    endDate: Date;
+    daysRemaining: number;
+  };
 }
 
 export interface DashboardActiveIncidentModel {

@@ -2,7 +2,7 @@ import type {
   DashboardActiveIncidentModel,
   DashboardIncidentTypeCountModel,
   DashboardRecentIncidentModel,
-  DashboardSummaryModel,
+  DashboardOperationalSummaryModel,
   DashboardUpcomingReturnModel,
 } from '../models/dashboard.model';
 
@@ -14,7 +14,7 @@ export abstract class DashboardRepository {
     previousMonthStart: Date,
     weekEnd: Date,
     monthStartForEmployees: Date,
-  ): Promise<DashboardSummaryModel>;
+  ): Promise<DashboardOperationalSummaryModel>;
 
   abstract getActiveIncidents(
     today: Date,

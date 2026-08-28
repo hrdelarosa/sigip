@@ -31,6 +31,11 @@ export function toDashboardSummaryResponse(
     endingThisWeek: model.endingThisWeek,
     previousMonthIncidents: model.previousMonthIncidents,
     monthVariationPercentage: model.monthVariationPercentage,
+    currentVacationPeriod: {
+      ...model.currentVacationPeriod,
+      startDate: formatDate(model.currentVacationPeriod.startDate)!,
+      endDate: formatDate(model.currentVacationPeriod.endDate)!,
+    },
   };
 }
 

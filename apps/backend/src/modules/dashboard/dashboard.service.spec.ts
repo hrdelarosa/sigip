@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import type {
   DashboardActiveIncidentModel,
   DashboardIncidentTypeCountModel,
-  DashboardSummaryModel,
+  DashboardOperationalSummaryModel,
 } from './models/dashboard.model';
 import { DashboardService } from './dashboard.service';
 import { DashboardRepository } from './repositories/dashboard.repository';
@@ -39,7 +39,7 @@ describe('DashboardService', () => {
   });
 
   it('returns the summary using today and the current month bounds', async () => {
-    const summary: DashboardSummaryModel = {
+    const summary: DashboardOperationalSummaryModel = {
       activeEmployees: 10,
       newEmployeesThisMonth: 1,
       absentToday: 2,
@@ -52,7 +52,16 @@ describe('DashboardService', () => {
     };
     repository.getSummary.mockResolvedValue(summary);
 
-    await expect(service.getSummary()).resolves.toBe(summary);
+    await expect(service.getSummary()).resolves.toEqual({
+      ...summary,
+      currentVacationPeriod: {
+        year: 2026,
+        period: 'SECOND',
+        startDate: new Date('2026-07-01T00:00:00.000Z'),
+        endDate: new Date('2026-12-31T00:00:00.000Z'),
+        daysRemaining: 138,
+      },
+    });
 
     expect(repository.getSummary).toHaveBeenCalledWith(
       new Date('2026-08-16T00:00:00.000Z'),

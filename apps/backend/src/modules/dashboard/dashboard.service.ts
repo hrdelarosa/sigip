@@ -16,6 +16,7 @@ import type {
   DashboardUpcomingReturnModel,
 } from './models/dashboard.model';
 import { DashboardRepository } from './repositories/dashboard.repository';
+import { getCurrentVacationPeriod } from '../../common/vacation/vacation-control';
 
 @Injectable()
 export class DashboardService {
@@ -30,7 +31,7 @@ export class DashboardService {
     );
     const weekEnd = addDaysUtc(today, 7);
 
-    return this.repository.getSummary(
+    const summary = await this.repository.getSummary(
       today,
       monthStart,
       monthEnd,
@@ -38,6 +39,11 @@ export class DashboardService {
       weekEnd,
       monthStart,
     );
+
+    return {
+      ...summary,
+      currentVacationPeriod: getCurrentVacationPeriod(today),
+    };
   }
 
   async getActiveIncidents(): Promise<DashboardActiveIncidentModel[]> {

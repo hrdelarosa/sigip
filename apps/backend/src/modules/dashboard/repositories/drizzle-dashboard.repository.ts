@@ -28,7 +28,7 @@ import type {
   DashboardActiveIncidentModel,
   DashboardIncidentTypeCountModel,
   DashboardRecentIncidentModel,
-  DashboardSummaryModel,
+  DashboardOperationalSummaryModel,
   DashboardUpcomingReturnModel,
 } from '../models/dashboard.model';
 import { DashboardRepository } from './dashboard.repository';
@@ -47,7 +47,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
     previousMonthStart: Date,
     weekEnd: Date,
     monthStartForEmployees: Date,
-  ): Promise<DashboardSummaryModel> {
+  ): Promise<DashboardOperationalSummaryModel> {
     const [
       activeEmployeesRow,
       newEmployeesRow,
