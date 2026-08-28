@@ -3,10 +3,10 @@ import { getUserById, getUsers } from '../api/users.api'
 import { getUserSessions } from '../api/user-sessions.api'
 import { userQueryKeys } from './user-query-keys'
 
-export const userQueryOptions = () =>
+export const userQueryOptions = (params: { page: number; limit: number }) =>
   queryOptions({
-    queryKey: userQueryKeys.list(),
-    queryFn: getUsers,
+    queryKey: userQueryKeys.list(params),
+    queryFn: () => getUsers(params),
     staleTime: 5 * 60 * 1000,
   })
 

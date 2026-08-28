@@ -9,8 +9,8 @@ import type {
 } from '@sigip/shared'
 import { apiRequest } from '@/lib/api/api-client'
 
-export function getUsers(): Promise<UsersResponse> {
-  return apiRequest<UsersResponse>('/users')
+export function getUsers({ page, limit }: { page: number; limit: number }): Promise<UsersResponse> {
+  return apiRequest<UsersResponse>(`/users?page=${page}&limit=${limit}`)
 }
 
 export function getUserById({ id }: { id: string }): Promise<UserDetailsResponse> {

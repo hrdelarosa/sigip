@@ -16,13 +16,22 @@ import { formatDate } from '@/lib/formatters'
 import { useRoles } from '../../roles/hooks/useRoles'
 import UserActions from '../components/UserActions'
 import UserCreate from '../components/UserCreate'
-import { useUsers } from '../hooks/useUsers'
 import { hasPermission, useAuth } from '@/modules/auth'
+import { PaginationPage } from '@/components/pagination-page'
+import { useUsersPage } from '../hooks/useUsersPage'
 
 export function UsersPage() {
   const auth = useAuth()
   const canCreate = hasPermission(auth.data?.permissions, 'users:create')
-  const usersQuery = useUsers()
+  const {
+    usersQuery,
+    meta,
+    limit,
+    pageSizes,
+    setPageSize,
+    goToPreviousPage,
+    goToNextPage,
+  } = useUsersPage()
   const rolesQuery = useRoles()
   const roles = rolesQuery.data ?? []
   const columns: DataTableColumn<UserResponse>[] = [
@@ -97,7 +106,7 @@ export function UsersPage() {
 
       <DataTable
         columns={columns}
-        data={usersQuery.data ?? []}
+        data={usersQuery.data?.items}
         isPending={usersQuery.isPending}
         isError={usersQuery.isError}
         isSuccess={usersQuery.isSuccess}
@@ -107,6 +116,15 @@ export function UsersPage() {
         errorMessage="No fue posible cargar los usuarios."
         skeletonRows={8}
         renderActions={(user) => <UserActions user={user} roles={roles} />}
+      />
+      <PaginationPage
+        text="usuarios"
+        meta={meta}
+        limit={limit}
+        pageSizes={pageSizes}
+        onValueChange={setPageSize}
+        onPreviousClick={goToPreviousPage}
+        onNextClick={goToNextPage}
       />
     </>
   )
