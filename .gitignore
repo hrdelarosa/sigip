@@ -8,6 +8,5 @@ coverage/
 .DS_Store
 Thumbs.db
 apps/backend/storage/
-.codebase-memory/
 docs/*.jpeg
 install.ps1

@@ -1,11 +1,5 @@
 # Repository Guidelines
 
-## Codebase Discovery With Codebase Memory
-
-Before exploring source files for any codebase question or implementation task, use Codebase Memory as the primary discovery mechanism. Confirm the indexed project with `list_projects` or `index_status`, then use `search_graph` to locate symbols, `trace_path` to inspect callers and dependencies, and `get_code_snippet` to read the exact implementation. Use `get_architecture` for broad orientation and `query_graph` for complex structural questions.
-
-After identifying relevant paths, use `check_index_coverage` before relying on graph results. Fall back to `Glob`, `Grep`, or direct file reads only for literal/configuration searches, non-code files, reported coverage gaps, or when the graph does not provide sufficient evidence. Do not begin by recursively browsing files when Codebase Memory can answer the structural question.
-
 ## Project Structure & Module Organization
 
 SIGIP is a pnpm monorepo. `apps/frontend/` contains the React 19 + Vite client; keep components, styles, and browser assets under `src/`, with static files in `public/`. `apps/backend/` contains the NestJS API and its Drizzle/MySQL integration. Organize domain code in `src/modules/<feature>/`, environment configuration in `src/config/`, database infrastructure and schemas in `src/database/`, generated SQL migrations in `apps/backend/drizzle/`, and end-to-end tests in `test/`. Reusable contracts belong in `packages/shared/src/`. Project decisions and database documentation live in `docs/`. The root `docker-compose.yml` provides the local MySQL 8.4 service.
