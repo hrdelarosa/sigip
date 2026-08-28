@@ -9,7 +9,7 @@ export interface UserResponse {
   updatedAt: string;
 }
 
-export type UsersResponse = UserResponse[];
+export type UsersResponse = PaginatedResponse<UserResponse>;
 
 export interface UserRoleDetailsResponse {
   id: string;
@@ -59,3 +59,4 @@ export interface ChangeUserStatusRequest {
 export interface ChangeUserPasswordRequest {
   password: string;
 }
+import type { PaginatedResponse } from '../common/pagination.contracts'
