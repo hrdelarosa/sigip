@@ -1,7 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import { Link } from 'wouter'
 import type { DashboardActiveIncidentsResponse } from '@sigip/shared'
-import { UserRoundCheckIcon } from 'lucide-react'
+import { CalendarDaysIcon, UserRoundCheckIcon } from 'lucide-react'
 
 import { routes } from '@/app/router/routes'
 import { Badge } from '@/components/ui/badge'
@@ -43,7 +43,7 @@ export function ActiveIncidentsCard({ query }: Props) {
           </div>
         ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {query.isPending ? <ActiveIncidentsSkeleton /> : null}
 
         {query.isError ? (
@@ -54,42 +54,61 @@ export function ActiveIncidentsCard({ query }: Props) {
         ) : null}
 
         {query.isSuccess && query.data.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground" role="status">
-            No hay personal ausente por incidencia hoy.
-          </p>
+          <div className="px-6 py-10 text-center" role="status">
+            <UserRoundCheckIcon
+              className="mx-auto size-8 text-muted-foreground/60"
+              aria-hidden="true"
+            />
+            <p className="mt-3 text-sm font-medium">
+              No hay personal ausente hoy
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No se encontraron incidencias vigentes para esta fecha.
+            </p>
+          </div>
         ) : null}
 
         {query.isSuccess && query.data.items.length > 0 ? (
-          <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="divide-y">
             {query.data.items.map((item) => (
               <li
                 key={item.incidentId}
-                className="rounded-xl border bg-background p-4 transition-colors hover:bg-muted/30"
+                className="group flex flex-col gap-4 px-6 py-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <Badge variant="secondary">{item.incidentType.name}</Badge>
-                  <span className="font-mono text-[11px] text-muted-foreground">
-                    {item.employeeNumber}
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                    aria-hidden="true"
+                  >
+                    {getInitials(item.employeeName)}
+                  </div>
+                  <div className="min-w-0">
+                    <Link
+                      href={routes.incidents.detail(item.incidentId)}
+                      className="block truncate font-semibold underline-offset-4 group-hover:underline"
+                    >
+                      {item.employeeName}
+                    </Link>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {item.position.name} · {item.organizationalUnit.name}
+                    </p>
+                    <p className="font-mono text-[11px] text-muted-foreground">
+                      Expediente {item.employeeNumber}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                  <Badge variant="secondary" className="max-w-full truncate">
+                    {item.incidentType.name}
+                  </Badge>
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarDaysIcon className="size-3.5" aria-hidden="true" />
+                    {formatDashboardOccurrence(
+                      item.occurrence.startDate,
+                      item.occurrence.endDate,
+                    )}
                   </span>
                 </div>
-                <Link
-                  href={routes.incidents.detail(item.incidentId)}
-                  className="mt-4 block font-semibold underline-offset-4 hover:underline"
-                >
-                  {item.employeeName}
-                </Link>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
-                  {item.position.name}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {item.organizationalUnit.name}
-                </p>
-                <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
-                  {formatDashboardOccurrence(
-                    item.occurrence.startDate,
-                    item.occurrence.endDate,
-                  )}
-                </p>
               </li>
             ))}
           </ul>
@@ -114,4 +133,15 @@ function ActiveIncidentsSkeleton() {
       ))}
     </div>
   )
+}
+
+function getInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+
+  return initials.toUpperCase() || '?'
 }

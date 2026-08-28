@@ -8,6 +8,7 @@ import { DashboardKpiCards } from '../components/DashboardKpiCards'
 import { RecentIncidentsTable } from '../components/RecentIncidentsTable'
 import { UpcomingReturnsCard } from '../components/UpcomingReturnsCard'
 import { useDashboardPage, type DashboardTrendPeriod } from '../hooks/useDashboardPage'
+import { VacationPeriodCard } from '../components/VacationPeriodCard'
 
 export function DashboardPage() {
   const [period, setPeriod] = useState<DashboardTrendPeriod>('6m')
@@ -28,6 +29,7 @@ export function DashboardPage() {
       </div>
 
       <DashboardKpiCards summaryQuery={page.summaryQuery} />
+      <VacationPeriodCard summaryQuery={page.summaryQuery} />
 
       <div className="grid gap-4 xl:grid-cols-5">
         <div className="xl:col-span-3">
