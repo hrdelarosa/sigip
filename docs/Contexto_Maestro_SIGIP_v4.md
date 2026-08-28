@@ -4,7 +4,7 @@
 
 **Estado:** vigente
 
-**Última actualización:** 17 de agosto de 2026
+**Última actualización:** 28 de agosto de 2026
 
 **Fase activa:** tipos de incidencia
 
@@ -69,7 +69,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
 - Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
-- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents`, `dashboard` y `reports`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia e incidencias por tipo. Los reportes de incidencias de personal se generan por quincena (primera 1-15 o segunda 16-fin de mes), mes, año o periodo personalizado, con filtros por tipo y unidad, vista previa enriquecida y descarga en PDF. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
+- El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents`, `dashboard` y `reports`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las vacaciones ordinarias permiten capturar fechas individuales o generar días desde un rango, incluyendo fines de semana de manera opcional. El saldo histórico se calcula por empleado, año y periodo desde incidencias activas y ajustes append-only auditados; la cancelación libera los días. También se controla un máximo mensual combinado de tres justificaciones de entrada/salida. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia, incidencias por tipo y el periodo vacacional vigente. Los reportes de incidencias de personal se generan por quincena (primera 1-15 o segunda 16-fin de mes), mes, año o periodo personalizado, con filtros por tipo y unidad, vista previa enriquecida y descarga en PDF. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.
 - La auditoría es append-only y ya registra autenticación, sesiones y mutaciones de usuarios. Su integración transversal continúa a medida que se modifiquen roles, permisos, empleados, asignaciones y nuevos módulos de dominio.
 
@@ -147,7 +147,7 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `users` | `users`. | Backend y frontend implementados con identidad autenticada, detalle enriquecido, permisos efectivos y resumen de sesiones. |
 | `organizational-units` | `organizational_units`. | Backend y frontend implementados. |
 | `positions` | `positions`. | Backend y frontend implementados. |
-| `employees` | `employees` y `employee_assignments`. | Backend y frontend implementados. |
+| `employees` | `employees`, `employee_assignments` y `employee_vacation_adjustments`. | Backend y frontend implementados, incluido control vacacional y de justificaciones. |
 | `auth` | Inicio de sesión, cierre de sesión y usuario autenticado. | Backend y frontend implementados. |
 | `sessions` | `sessions`. | Persistencia, expiración, revocación y administración por usuario implementadas. |
 | `incident-types` | `incident_types`. | Backend implementado; el catálogo alimenta la captura de incidencias. |
@@ -367,6 +367,7 @@ GET   /api/employees/:employeeId/assignments/:assignmentId
 POST  /api/employees/:id/assignments
 PATCH /api/employees/:employeeId/assignments/:assignmentId
 GET   /api/employees/:id/incidents
+POST  /api/employees/:id/vacation-adjustments
 ```
 
 Todas las rutas anteriores de Employees salvo `GET /api/employees/:id/incidents` están implementadas. La consulta de incidencias se incorporará con el módulo `incidents`.
@@ -392,6 +393,12 @@ POST  /api/incidents/:id/cancel
 ```
 
 Las ocurrencias se administran dentro de la incidencia y no tendrán módulo HTTP independiente al inicio.
+
+Las vacaciones continúan persistiendo cada día como una ocurrencia independiente. Provisionalmente, el primer periodo comprende enero-junio y el segundo julio-diciembre; el calendario definitivo deberá sustituir esta configuración centralizada cuando sea confirmado. Cada periodo concede 10 días sin acumulación y solo está disponible después de seis meses desde la fecha de ingreso institucional. El formulario permite agregar días individualmente o expandir un rango, con exclusión de sábados y domingos por defecto y una opción explícita para incluirlos.
+
+El saldo se deriva de ocurrencias activas y movimientos manuales en `employee_vacation_adjustments`. Los movimientos son append-only, requieren `employees:update`, aceptan correcciones positivas o negativas y se auditan en la misma transacción. El consumo resultante debe permanecer entre 0 y 10. Las incidencias canceladas dejan de consumir saldo y sus fechas vuelven a estar disponibles. Se bloquean fechas vacacionales duplicadas entre incidencias activas. `VACACIONES_ESTIMULOS` permanece independiente.
+
+`JUSTIFICACION_ENTRADA` y `JUSTIFICACION_SALIDA` comparten un máximo de tres ocurrencias activas por empleado y mes. Una cancelación libera el cupo. El detalle del empleado muestra el saldo vacacional actual e histórico y el contador mensual actual e histórico de justificaciones.
 
 ### Document Types
 
@@ -436,7 +443,7 @@ GET /api/dashboard/upcoming-returns
 GET /api/dashboard/recent-incidents
 ```
 
-Las seis rutas requieren `dashboard:read`. El panel presenta el estado operativo del personal, la evolución histórica configurable (`3m`, `6m`, `ytd`, `12m`), la composición anual por tipo, las ausencias vigentes, las próximas reincorporaciones y las incidencias recientes. Las consultas de fecha usan el calendario `America/Mexico_City`.
+Las seis rutas requieren `dashboard:read`. El panel presenta el estado operativo del personal, el periodo vacacional institucional vigente con sus fechas y días naturales restantes, la evolución histórica configurable (`3m`, `6m`, `ytd`, `12m`), la composición anual por tipo, las ausencias vigentes, las próximas reincorporaciones y las incidencias recientes. Las consultas de fecha usan el calendario `America/Mexico_City`.
 
 ### Reports
 

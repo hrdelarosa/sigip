@@ -8030,26 +8030,21 @@ porque son datos derivados.
 
 ---
 
-# 82. Regla de vacaciones que dejaría para después
+# 82. Regla histórica de vacaciones
 
-Todavía no bloquearía automáticamente:
-
-```text
-más de 10 días
-```
-
-hasta confirmar completamente:
+El control acumulado está implementado con las siguientes decisiones provisionales:
 
 ```text
-cómo se identifica el periodo;
-si existen saldos anteriores;
-si pueden trasladarse días;
-si vacaciones por estímulos cuentan aparte;
-si una incidencia cancelada devuelve días;
-cómo se tratan días inhábiles.
+primer periodo: enero-junio;
+segundo periodo: julio-diciembre;
+10 días por periodo sin acumulación;
+elegibilidad después de seis meses desde la fecha de ingreso;
+incidencias canceladas devuelven días;
+vacaciones por estímulos no afectan el saldo ordinario;
+ajustes manuales append-only para consumos previos.
 ```
 
-Pero el modelo ya permite posteriormente implementar:
+El saldo se calcula mediante:
 
 ```text
 SUM(días registrados)
@@ -8244,4 +8239,4 @@ Con este bloque implementado tendrás funcionalmente:
 ✓ Integración frontend
 ```
 
-Después de esto, lo que quedaría sería principalmente perfeccionar reglas institucionales específicas —sobre todo el cálculo definitivo de los 10 días de vacaciones—, anexos adicionales y el dashboard.
+Después de esto, queda sustituir el calendario provisional por las fechas institucionales definitivas, además de los anexos adicionales y la administración de tipos documentales.
