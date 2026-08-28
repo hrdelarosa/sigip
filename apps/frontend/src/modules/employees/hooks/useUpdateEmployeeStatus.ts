@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateEmployeeStatus } from '../api/employees.api'
 import { employeeQueryKeys } from '../queries/employee-query-keys'
 import { positionQueryKeys } from '@/modules/administration/positions/queries/position-query-keys'
+import { dashboardQueryKeys } from '@/modules/dashboard/queries/dashboard-query-keys'
 
 export function useUpdateEmployeeStatus() {
   const queryClient = useQueryClient()
@@ -15,6 +16,7 @@ export function useUpdateEmployeeStatus() {
           queryKey: employeeQueryKeys.detail(variables.id),
         }),
         queryClient.invalidateQueries({ queryKey: positionQueryKeys.details() }),
+        queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.summary() }),
       ])
     },
   })
