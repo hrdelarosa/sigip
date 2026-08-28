@@ -8,7 +8,14 @@ import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/configure-application';
 import { DRIZZLE_DATABASE } from '../src/database/database.constants';
 import type { DrizzleDatabase } from '../src/database/database.types';
-import { auditLogs, roles, sessions, users } from '../src/database/schema';
+import {
+  auditLogs,
+  employees,
+  employeeVacationAdjustments,
+  roles,
+  sessions,
+  users,
+} from '../src/database/schema';
 import { uuidToBuffer } from '../src/database/utils/uuid.util';
 import { CryptoService } from '../src/common/crypto/crypto.service';
 import { generateUuidV7 } from '../src/common/utils/generate-uuid-v7.util';
@@ -244,5 +251,100 @@ describe('Authentication flow (e2e)', () => {
       .set('Origin', frontendOrigin)
       .send({ username: 'does-not-exist', password: 'invalid-password' })
       .expect(401);
+  });
+
+  it('registers an audited vacation adjustment and exposes the employee controls', async () => {
+    const admin = request.agent(app.getHttpServer());
+    await admin
+      .post('/api/auth/login')
+      .set('Origin', frontendOrigin)
+      .send({
+        username: process.env.E2E_USERNAME ?? 'admin',
+        password: process.env.E2E_PASSWORD ?? 'admin123',
+      })
+      .expect(200);
+    const employeeNumber = `VAC-${generateUuidV7().slice(-8)}`;
+    const createdEmployee = await admin
+      .post('/api/employees')
+      .set('Origin', frontendOrigin)
+      .send({
+        employeeNumber,
+        fullName: 'Empleado control vacacional E2E',
+        hireDate: '2025-01-01',
+      })
+      .expect(201);
+    const employeeId = (createdEmployee.body as unknown as { id: string }).id;
+    let adjustmentId: string | undefined;
+
+    try {
+      await admin
+        .post(`/api/employees/${employeeId}/vacation-adjustments`)
+        .set('Origin', frontendOrigin)
+        .send({
+          year: 2026,
+          period: 'SECOND',
+          daysDelta: 2,
+          reason: 'Consumo anterior a SIGIP',
+          createdBy: generateUuidV7(),
+        })
+        .expect(400);
+
+      const adjustmentResponse = await admin
+        .post(`/api/employees/${employeeId}/vacation-adjustments`)
+        .set('Origin', frontendOrigin)
+        .send({
+          year: 2026,
+          period: 'SECOND',
+          daysDelta: 2,
+          reason: 'Consumo anterior a SIGIP',
+        })
+        .expect(201);
+      adjustmentId = (adjustmentResponse.body as unknown as { id: string }).id;
+
+      const details = await admin
+        .get(`/api/employees/${employeeId}`)
+        .expect(200);
+      const vacationControl = (
+        details.body as unknown as {
+          vacationControl: {
+            years: Array<{
+              year: number;
+              periods: Array<{
+                period: string;
+                adjustmentDays: number;
+                remainingDays: number;
+              }>;
+            }>;
+          };
+        }
+      ).vacationControl;
+      const secondPeriod = vacationControl.years
+        .find((year) => year.year === 2026)
+        ?.periods.find((period) => period.period === 'SECOND');
+      expect(secondPeriod).toMatchObject({
+        adjustmentDays: 2,
+        remainingDays: 8,
+      });
+
+      const [audit] = await db
+        .select({ entityType: auditLogs.entityType })
+        .from(auditLogs)
+        .where(eq(auditLogs.entityId, uuidToBuffer(adjustmentId)));
+      expect(audit?.entityType).toBe('EMPLOYEE_VACATION_ADJUSTMENT');
+    } finally {
+      if (adjustmentId) {
+        await db
+          .delete(auditLogs)
+          .where(eq(auditLogs.entityId, uuidToBuffer(adjustmentId)));
+      }
+      await db
+        .delete(employeeVacationAdjustments)
+        .where(
+          eq(employeeVacationAdjustments.employeeId, uuidToBuffer(employeeId)),
+        );
+      await db
+        .delete(employees)
+        .where(eq(employees.id, uuidToBuffer(employeeId)));
+    }
   });
 });
