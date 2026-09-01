@@ -13,13 +13,17 @@ import {
   updatedAtColumn,
 } from '../columns/timestamps.columns';
 import { uuidBinary } from '../columns/uuid.column';
+
+import { offices } from '../organization/offices.schema';
 import { roles } from './roles.schema';
 
 export const users = mysqlTable(
   'users',
+
   {
     id: uuidBinary('id').notNull().primaryKey(),
     roleId: uuidBinary('role_id').notNull(),
+    officeId: uuidBinary('office_id').notNull(),
     username: varchar('username', { length: 50 }).notNull(),
     fullName: varchar('full_name', { length: 150 }).notNull(),
     password: varchar('password', { length: 255 }).notNull(),
@@ -34,10 +38,18 @@ export const users = mysqlTable(
   (table) => [
     uniqueIndex('users_username_unique').on(table.username),
     index('users_role_id_is_active_index').on(table.roleId, table.isActive),
+    index('users_office_id_is_active_index').on(table.officeId, table.isActive),
     foreignKey({
       name: 'users_role_id_roles_id_fk',
       columns: [table.roleId],
       foreignColumns: [roles.id],
+    })
+      .onUpdate('restrict')
+      .onDelete('restrict'),
+    foreignKey({
+      name: 'users_office_id_offices_id_fk',
+      columns: [table.officeId],
+      foreignColumns: [offices.id],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),

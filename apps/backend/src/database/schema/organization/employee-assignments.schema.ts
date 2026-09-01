@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+
 import {
   check,
   date,
@@ -18,6 +19,7 @@ import {
 import { uuidBinary } from '../columns/uuid.column';
 
 import { employees } from './employees.schema';
+import { offices } from './offices.schema';
 import { organizationalUnits } from './organizational-units.schema';
 import { positions } from './positions.schema';
 
@@ -30,21 +32,16 @@ export const employeeAssignments = mysqlTable(
   {
     id: uuidBinary('id').notNull().primaryKey(),
     employeeId: uuidBinary('employee_id').notNull(),
+    officeId: uuidBinary('office_id').notNull(),
     organizationalUnitId: uuidBinary('organizational_unit_id').notNull(),
     positionId: uuidBinary('position_id').notNull(),
     appointmentType: varchar('appointment_type', {
       length: 30,
       enum: APPOINTMENT_TYPES,
     }).notNull(),
-    schedule: varchar('schedule', {
-      length: 150,
-    }),
-    effectiveFrom: date('effective_from', {
-      mode: 'date',
-    }).notNull(),
-    effectiveTo: date('effective_to', {
-      mode: 'date',
-    }),
+    schedule: varchar('schedule', { length: 150 }),
+    effectiveFrom: date('effective_from', { mode: 'date' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'date' }),
     notes: text('notes'),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
@@ -59,6 +56,11 @@ export const employeeAssignments = mysqlTable(
       table.effectiveFrom,
       table.effectiveTo,
     ),
+    index('employee_assignments_office_dates_index').on(
+      table.officeId,
+      table.effectiveFrom,
+      table.effectiveTo,
+    ),
     index('employee_assignments_unit_dates_index').on(
       table.organizationalUnitId,
       table.effectiveFrom,
@@ -67,13 +69,18 @@ export const employeeAssignments = mysqlTable(
     index('employee_assignments_position_id_index').on(table.positionId),
     check(
       'employee_assignments_appointment_type_check',
-      sql`${table.appointmentType} IN ('BASE', 'CONFIANZA')`,
+      sql`
+        ${table.appointmentType}
+        IN ('BASE', 'CONFIANZA')
+      `,
     ),
     check(
       'employee_assignments_effective_dates_check',
       sql`
         ${table.effectiveTo} IS NULL
-        OR ${table.effectiveTo} >= ${table.effectiveFrom}
+        OR
+        ${table.effectiveTo}
+          >= ${table.effectiveFrom}
       `,
     ),
     foreignKey({
@@ -84,16 +91,23 @@ export const employeeAssignments = mysqlTable(
       .onUpdate('restrict')
       .onDelete('restrict'),
     foreignKey({
-      name: 'employee_assignments_organizational_unit_id_fk',
-      columns: [table.organizationalUnitId],
-      foreignColumns: [organizationalUnits.id],
+      name: 'employee_assignments_office_id_fk',
+      columns: [table.officeId],
+      foreignColumns: [offices.id],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),
     foreignKey({
-      name: 'employee_assignments_position_id_fk',
-      columns: [table.positionId],
-      foreignColumns: [positions.id],
+      name: 'employee_assignments_unit_office_fk',
+      columns: [table.organizationalUnitId, table.officeId],
+      foreignColumns: [organizationalUnits.id, organizationalUnits.officeId],
+    })
+      .onUpdate('restrict')
+      .onDelete('restrict'),
+    foreignKey({
+      name: 'employee_assignments_position_office_fk',
+      columns: [table.positionId, table.officeId],
+      foreignColumns: [positions.id, positions.officeId],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),
