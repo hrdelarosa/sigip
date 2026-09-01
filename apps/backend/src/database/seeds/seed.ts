@@ -10,16 +10,26 @@ import {
   rolesSeed,
 } from './access-control.seed-data';
 import {
-  assignmentsSeed,
-  employeesSeed,
   organizationalUnitsSeed,
   positionsSeed,
 } from './organization.seed-data';
 import { incidentTypesSeed } from './incident-types.seed-data';
+import { officesSeed } from './offices.seed-data';
+import {
+  templateAssignmentsSeed,
+  templateEmployeesSeed,
+  templateOrganizationalUnitsSeed,
+  templatePositionsSeed,
+} from './template-employees.seed-data';
 
 interface IdentifierRow extends RowDataPacket {
   id: Buffer;
   code: string;
+}
+
+interface OrganizationalUnitIdentifierRow extends IdentifierRow {
+  officeId: Buffer;
+  officeCode: string;
 }
 
 const uuidBuffer = (): Buffer => {
@@ -28,6 +38,13 @@ const uuidBuffer = (): Buffer => {
 
 const namedUuidBuffer = (name: string): Buffer =>
   Buffer.from(name.replaceAll('-', ''), 'hex');
+
+const employeesSeed = templateEmployeesSeed.map((employee, index) => ({
+  employeeNumber: String(652192 + index),
+  fullName: `Empleado Ficticio ${String(index + 1).padStart(3, '0')}`,
+  hireDate: employee.hireDate,
+  status: 'ACTIVE' as const,
+}));
 
 const loadEnvironment = (): void => {
   config({
@@ -62,6 +79,16 @@ const seed = async (): Promise<void> => {
 
   try {
     await connection.beginTransaction();
+
+    if (process.env.RESET_DEVELOPMENT_ORGANIZATION === 'true') {
+      await connection.execute('DELETE FROM documents');
+      await connection.execute('DELETE FROM incident_occurrences');
+      await connection.execute('DELETE FROM incidents');
+      await connection.execute('DELETE FROM employee_vacation_adjustments');
+      await connection.execute('DELETE FROM employee_assignments');
+      await connection.execute('DELETE FROM employees');
+      await connection.execute('DELETE FROM positions');
+    }
 
     for (const permission of permissionsSeed) {
       await connection.execute(
@@ -124,6 +151,113 @@ const seed = async (): Promise<void> => {
       }
     }
 
+    for (const office of officesSeed) {
+      await connection.execute(
+        `
+      INSERT INTO offices
+      (
+        id,
+        code,
+        name,
+        description,
+        municipality,
+        address,
+        is_active,
+        sort_order
+      )
+      VALUES
+      (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        true,
+        ?
+      )
+
+      ON DUPLICATE KEY UPDATE
+
+        name =
+          VALUES(name),
+
+        description =
+          VALUES(description),
+
+        municipality =
+          VALUES(municipality),
+
+        address =
+          VALUES(address),
+
+        is_active =
+          VALUES(is_active),
+
+        sort_order =
+          VALUES(sort_order)
+    `,
+        [
+          uuidBuffer(),
+          office.code,
+          office.name,
+          office.description,
+          office.municipality,
+          office.address,
+          office.sortOrder,
+        ],
+      );
+    }
+
+    const [officeRows] = await connection.query<IdentifierRow[]>(
+      `SELECT id, code FROM offices`,
+    );
+    const officeIds = new Map(officeRows.map(({ code, id }) => [code, id]));
+    const orgroId = officeIds.get('ORGRO');
+
+    if (!orgroId) throw new Error('No se encontró la oficina ORGRO.');
+
+    for (const unit of templateOrganizationalUnitsSeed) {
+      const officeId = officeIds.get(unit.officeCode);
+      if (!officeId) {
+        throw new Error(`No se encontró la oficina ${unit.officeCode}.`);
+      }
+
+      await connection.execute(
+        `INSERT INTO organizational_units (id, office_id, parent_id, code, name, description, is_active, sort_order)
+         VALUES (?, ?, NULL, ?, ?, ?, true, ?)
+         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)`,
+        [
+          uuidBuffer(),
+          officeId,
+          unit.code,
+          unit.name,
+          `Área importada de la plantilla de personal: ${unit.name}.`,
+          100,
+        ],
+      );
+    }
+
+    for (const position of templatePositionsSeed) {
+      const officeId = officeIds.get(position.officeCode);
+      if (!officeId) {
+        throw new Error(`No se encontró la oficina ${position.officeCode}.`);
+      }
+
+      await connection.execute(
+        `INSERT INTO positions (id, office_id, code, name, description, is_active)
+         VALUES (?, ?, ?, ?, ?, true)
+         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
+        [
+          uuidBuffer(),
+          officeId,
+          position.code,
+          position.name,
+          `Puesto de ${position.name}.`,
+        ],
+      );
+    }
+
     const administratorRoleId = roleIds.get(developmentAdministrator.roleCode);
 
     if (!administratorRoleId) {
@@ -135,17 +269,17 @@ const seed = async (): Promise<void> => {
     });
 
     await connection.execute(
-      `INSERT INTO users
-         (id, role_id, username, full_name, password, is_active, last_login_at)
-       VALUES (?, ?, ?, ?, ?, true, NULL)
-       ON DUPLICATE KEY UPDATE
-         role_id = VALUES(role_id),
-         full_name = VALUES(full_name),
-         password = VALUES(password),
-         is_active = VALUES(is_active)`,
+      `
+        INSERT INTO users
+        (id, role_id, office_id, username, full_name, password, is_active, last_login_at)
+        VALUES
+        (?, ?, ?, ?, ?, ?, true, NULL)
+        ON DUPLICATE KEY UPDATE role_id = VALUES(role_id), office_id = VALUES(office_id), full_name = VALUES(full_name), password = VALUES(password), is_active = VALUES(is_active)
+      `,
       [
         uuidBuffer(),
         administratorRoleId,
+        orgroId,
         developmentAdministrator.username,
         developmentAdministrator.fullName,
         passwordHash,
@@ -154,19 +288,34 @@ const seed = async (): Promise<void> => {
 
     for (const unit of organizationalUnitsSeed) {
       await connection.execute(
-        `INSERT INTO organizational_units (id, parent_id, code, name, description, is_active, sort_order)
-         VALUES (?, NULL, ?, ?, ?, true, ?)
-         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)`,
-        [uuidBuffer(), unit[0], unit[1], `Área operativa de ${unit[1]}.`, 0],
+        `
+          INSERT INTO organizational_units (id, office_id, parent_id, code, name, description, is_active, sort_order)
+          VALUES (?, ?, NULL, ?, ?, ?, true, ?)
+          ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)
+        `,
+        [
+          uuidBuffer(),
+          orgroId,
+          unit[0],
+          unit[1],
+          `Área operativa de ${unit[1]}.`,
+          0,
+        ],
       );
     }
 
     for (const position of positionsSeed) {
       await connection.execute(
-        `INSERT INTO positions (id, code, name, description, is_active)
-         VALUES (?, ?, ?, ?, true)
-         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
-        [uuidBuffer(), position[0], position[1], `Puesto de ${position[1]}.`],
+        `INSERT INTO positions (id, office_id, code, name, description, is_active)
+         VALUES (?, ?, ?, ?, ?, true)
+         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
+        [
+          uuidBuffer(),
+          orgroId,
+          position[0],
+          position[1],
+          `Puesto de ${position[1]}.`,
+        ],
       );
     }
 
@@ -219,8 +368,13 @@ const seed = async (): Promise<void> => {
       );
     }
 
-    const [unitRows] = await connection.query<IdentifierRow[]>(
-      'SELECT id, code FROM organizational_units',
+    const [unitRows] = await connection.query<
+      OrganizationalUnitIdentifierRow[]
+    >(
+      `SELECT organizational_units.id, organizational_units.code,
+              organizational_units.office_id AS officeId, offices.code AS officeCode
+       FROM organizational_units
+       INNER JOIN offices ON offices.id = organizational_units.office_id`,
     );
     const [positionRows] = await connection.query<IdentifierRow[]>(
       'SELECT id, code FROM positions',
@@ -228,33 +382,47 @@ const seed = async (): Promise<void> => {
     const [employeeRows] = await connection.query<IdentifierRow[]>(
       'SELECT id, employee_number AS code FROM employees',
     );
-    const unitIds = new Map(unitRows.map(({ code, id }) => [code, id]));
+    const unitIds = new Map(
+      unitRows.map(({ code, id, officeId, officeCode }) => [
+        `${officeCode}:${code}`,
+        {
+          id,
+          officeId,
+        },
+      ]),
+    );
     const positionIds = new Map(positionRows.map(({ code, id }) => [code, id]));
     const employeeIds = new Map(employeeRows.map(({ code, id }) => [code, id]));
 
-    for (const [index, assignment] of assignmentsSeed.entries()) {
+    for (const [index, assignment] of templateAssignmentsSeed.entries()) {
       const employeeId = employeeIds.get(assignment.employeeNumber);
-      const unitId = unitIds.get(assignment.unitCode);
+      const unitId = unitIds.get(
+        `${assignment.officeCode}:${assignment.unitCode}`,
+      );
       const positionId = positionIds.get(assignment.positionCode);
       if (!employeeId || !unitId || !positionId)
         throw new Error(
           `Referencias inválidas en la asignación ${assignment.employeeNumber}`,
         );
+
       await connection.execute(
-        `INSERT INTO employee_assignments (id, employee_id, organizational_unit_id, position_id, appointment_type, schedule, effective_from, effective_to)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE employee_id = VALUES(employee_id), organizational_unit_id = VALUES(organizational_unit_id), position_id = VALUES(position_id), appointment_type = VALUES(appointment_type), schedule = VALUES(schedule), effective_from = VALUES(effective_from), effective_to = VALUES(effective_to)`,
+        `
+          INSERT INTO employee_assignments (id,employee_id,office_id,organizational_unit_id,position_id,appointment_type,schedule,effective_from,effective_to)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE employee_id = VALUES(employee_id), office_id = VALUES(office_id), organizational_unit_id = VALUES(organizational_unit_id), position_id = VALUES(position_id), appointment_type = VALUES(appointment_type), schedule = VALUES(schedule), effective_from = VALUES(effective_from), effective_to = VALUES(effective_to)
+        `,
         [
           namedUuidBuffer(
             `00000000-0000-7000-8000-${String(index + 1).padStart(12, '0')}`,
           ),
           employeeId,
-          unitId,
+          unitId.officeId,
+          unitId.id,
           positionId,
           assignment.appointmentType,
           assignment.schedule,
           assignment.effectiveFrom,
-          assignment.effectiveTo ?? null,
+          null,
         ],
       );
     }
@@ -262,7 +430,7 @@ const seed = async (): Promise<void> => {
     await connection.commit();
 
     console.log(
-      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos, ${incidentTypesSeed.length} tipos de incidencia, ${employeesSeed.length} empleados y ${assignmentsSeed.length} asignaciones.`,
+      `Seed completado: ${rolesSeed.length} roles, ${permissionsSeed.length} permisos, ${incidentTypesSeed.length} tipos de incidencia, ${employeesSeed.length} empleados y ${templateAssignmentsSeed.length} asignaciones.`,
     );
   } catch (error) {
     await connection.rollback();

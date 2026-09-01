@@ -1,5 +1,9 @@
 export const permissionsSeed = [
   { code: 'dashboard:read', description: 'Consultar el panel principal.' },
+  {
+    code: 'offices:access-all',
+    description: 'Acceder a información de todas las oficinas.',
+  },
   { code: 'users:create', description: 'Crear usuarios.' },
   { code: 'users:read', description: 'Consultar usuarios.' },
   { code: 'users:update', description: 'Editar usuarios.' },
