@@ -2,6 +2,7 @@ import type { EmployeeStatus } from '../employees'
 
 export interface PositionResponse {
   id: string
+  officeId: string
   code: string
   name: string
   description: string | null

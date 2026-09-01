@@ -1,5 +1,6 @@
 export interface OrganizationalUnitResponse {
   id: string
+  officeId: string
   parentId: string | null
   code: string
   name: string
