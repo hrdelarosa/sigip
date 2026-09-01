@@ -5,7 +5,10 @@ import type {
 } from '../types/employee-control.types';
 
 export abstract class EmployeeControlsRepository {
-  abstract findSnapshot(employeeId: string): Promise<EmployeeControlSnapshot>;
+  abstract findSnapshot(
+    employeeId: string,
+    officeId?: string,
+  ): Promise<EmployeeControlSnapshot>;
   abstract createVacationAdjustment(
     data: CreateVacationAdjustmentData,
   ): Promise<VacationAdjustmentMutationResult>;

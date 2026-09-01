@@ -13,6 +13,8 @@ import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { UpdatePositionStatusDto } from './dto/update-position-status.dto';
 import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
 import type { PositionModel } from './models/position.model';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 
 @Injectable()
 export class PositionsService {
@@ -38,17 +40,24 @@ export class PositionsService {
     throw new PositionPersistenceError();
   }
 
-  async findAll() {
-    return await this.positionsRepository.findAll();
+  async findAll(actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    return await this.positionsRepository.findAll(
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
   }
 
-  async findById(id: string) {
-    const position = await this.positionsRepository.findById(id);
+  async findById(id: string, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const position = await this.positionsRepository.findById(id, officeId);
 
     if (!position) throw new PositionNotFoundError();
 
-    const employees =
-      await this.positionsRepository.findEmployeesByPositionId(id);
+    const employees = await this.positionsRepository.findEmployeesByPositionId(
+      id,
+      officeId,
+    );
 
     return {
       ...position,
@@ -57,16 +66,21 @@ export class PositionsService {
     };
   }
 
-  async create(dto: CreatePositionDto) {
+  async create(dto: CreatePositionDto, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    const officeId = scope.officeId;
     const normalizedCode = dto.code.trim().toUpperCase();
-    const existingPosition =
-      await this.positionsRepository.findByCode(normalizedCode);
+    const existingPosition = await this.positionsRepository.findByCode(
+      normalizedCode,
+      scope.canAccessAllOffices ? undefined : officeId,
+    );
 
     if (existingPosition) throw new PositionCodeAlreadyExistsError();
 
     try {
       return await this.positionsRepository.create({
         id: generateUuidV7(),
+        officeId,
         code: normalizedCode,
         name: dto.name.trim(),
         description: this.normalizeDescription(dto.description),
@@ -76,8 +90,14 @@ export class PositionsService {
     }
   }
 
-  async update(id: string, dto: UpdatePositionDto) {
-    await this.findById(id);
+  async update(
+    id: string,
+    dto: UpdatePositionDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    await this.findById(id, actor);
 
     if (dto.name === undefined && dto.description === undefined) {
       throw new EmptyPositionUpdateError();
@@ -86,14 +106,18 @@ export class PositionsService {
     let updatePosition: PositionModel | null;
 
     try {
-      updatePosition = await this.positionsRepository.update(id, {
-        name: dto.name !== undefined ? dto.name.trim() : undefined,
-        description:
-          dto.description !== undefined
-            ? this.normalizeDescription(dto.description)
-            : undefined,
-        updatedAt: new Date(),
-      });
+      updatePosition = await this.positionsRepository.update(
+        id,
+        {
+          name: dto.name !== undefined ? dto.name.trim() : undefined,
+          description:
+            dto.description !== undefined
+              ? this.normalizeDescription(dto.description)
+              : undefined,
+          updatedAt: new Date(),
+        },
+        officeId,
+      );
     } catch (error) {
       this.handlePersistenceError(error);
     }
@@ -103,7 +127,12 @@ export class PositionsService {
     return updatePosition;
   }
 
-  async updateStatus(id: string, dto: UpdatePositionStatusDto) {
+  async updateStatus(
+    id: string,
+    dto: UpdatePositionStatusDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
     let updatePosition: PositionModel | null;
 
     try {
@@ -111,6 +140,7 @@ export class PositionsService {
         id,
         dto.isActive,
         new Date(),
+        scope.canAccessAllOffices ? undefined : scope.officeId,
       );
     } catch (error) {
       this.handlePersistenceError(error);

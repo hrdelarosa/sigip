@@ -72,8 +72,9 @@ export class EmployeesController {
   @ApiOkResponse({ type: EmployeesApiResponse })
   async findAll(
     @Query() query: ListEmployeesQueryDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeesResponse> {
-    const result = await this.employeesService.findAll(query);
+    const result = await this.employeesService.findAll(query, actor);
 
     return toPaginatedResponse(
       result.items,
@@ -91,9 +92,10 @@ export class EmployeesController {
   @ApiNotFoundResponse({ description: 'Empleado no encontrado' })
   async findById(
     @Param() params: EmployeeIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeDetailsResponse> {
     const { employee, assignments, controls } =
-      await this.employeesService.findDetails(params.id);
+      await this.employeesService.findDetails(params.id, actor);
 
     return toEmployeeDetailsResponse(employee, assignments, controls);
   }
@@ -137,8 +139,9 @@ export class EmployeesController {
   async update(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: UpdateEmployeeDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeResponse> {
-    const employee = await this.employeesService.update(params.id, dto);
+    const employee = await this.employeesService.update(params.id, dto, actor);
 
     return toEmployeeResponse(employee);
   }
@@ -157,7 +160,11 @@ export class EmployeesController {
     if (!actor.permissions.includes(permission)) {
       throw new ForbiddenException('Permisos insuficientes');
     }
-    const employee = await this.employeesService.updateStatus(params.id, dto);
+    const employee = await this.employeesService.updateStatus(
+      params.id,
+      dto,
+      actor,
+    );
 
     return toEmployeeResponse(employee);
   }
@@ -168,8 +175,12 @@ export class EmployeesController {
   @ApiOkResponse({ type: EmployeeAssignmentApiResponse, isArray: true })
   async findAssignments(
     @Param() params: EmployeeIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentsResponse> {
-    const assignments = await this.employeesService.findAssignments(params.id);
+    const assignments = await this.employeesService.findAssignments(
+      params.id,
+      actor,
+    );
 
     return assignments.map(toEmployeeAssignmentResponse);
   }
@@ -182,10 +193,12 @@ export class EmployeesController {
   @ApiNotFoundResponse({ description: 'Asignación no encontrada' })
   async findAssignment(
     @Param() params: EmployeeAssignmentIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentResponse> {
     const assignment = await this.employeesService.findAssignmentsById(
       params.employeeId,
       params.assignmentId,
+      actor,
     );
 
     return toEmployeeAssignmentResponse(assignment);
@@ -200,10 +213,12 @@ export class EmployeesController {
   async createAssignment(
     @Param() params: EmployeeIdParamDto,
     @Body() dto: CreateEmployeeAssignmentDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentResponse> {
     const assignment = await this.employeesService.createAssignment(
       params.id,
       dto,
+      actor,
     );
 
     return toEmployeeAssignmentResponse(assignment);
@@ -219,11 +234,13 @@ export class EmployeesController {
   async updateAssignment(
     @Param() params: EmployeeAssignmentIdParamDto,
     @Body() dto: UpdateEmployeeAssignmentDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentResponse> {
     const assignment = await this.employeesService.updateAssignment(
       params.employeeId,
       params.assignmentId,
       dto,
+      actor,
     );
 
     return toEmployeeAssignmentResponse(assignment);

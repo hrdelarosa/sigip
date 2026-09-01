@@ -27,6 +27,8 @@ import {
 } from '@nestjs/swagger';
 import { OrganizationalUnitApiResponse } from '../../common/swagger/api.models';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('organizational-units')
 @ApiTags('Organizational units')
@@ -39,8 +41,11 @@ export class OrganizationalUnitsController {
   @Get()
   @ApiOperation({ summary: 'Listar unidades organizativas' })
   @ApiOkResponse({ type: OrganizationalUnitApiResponse, isArray: true })
-  async findAll(): Promise<OrganizationalUnitsResponse> {
-    const organizationalUnits = await this.organizationalUnitsService.findAll();
+  async findAll(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<OrganizationalUnitsResponse> {
+    const organizationalUnits =
+      await this.organizationalUnitsService.findAll(actor);
 
     return organizationalUnits.map(toOrganizationalUnitsResponse);
   }
@@ -52,9 +57,12 @@ export class OrganizationalUnitsController {
   @ApiNotFoundResponse({ description: 'Unidad organizativa no encontrada' })
   async findById(
     @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<OrganizationalUnitResponse> {
-    const organizationalUnit =
-      await this.organizationalUnitsService.findById(id);
+    const organizationalUnit = await this.organizationalUnitsService.findById(
+      id,
+      actor,
+    );
 
     return toOrganizationalUnitsResponse(organizationalUnit);
   }
@@ -66,9 +74,12 @@ export class OrganizationalUnitsController {
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
   async create(
     @Body() dto: CreateOrganizationalUnitDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<OrganizationalUnitResponse> {
-    const organizationalUnit =
-      await this.organizationalUnitsService.create(dto);
+    const organizationalUnit = await this.organizationalUnitsService.create(
+      dto,
+      actor,
+    );
 
     return toOrganizationalUnitsResponse(organizationalUnit);
   }
@@ -82,9 +93,10 @@ export class OrganizationalUnitsController {
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateOrganizationalUnitDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<OrganizationalUnitResponse> {
     const updatedOrganizationalUnit =
-      await this.organizationalUnitsService.update(id, dto);
+      await this.organizationalUnitsService.update(id, dto, actor);
 
     return toOrganizationalUnitsResponse(updatedOrganizationalUnit);
   }
@@ -97,9 +109,10 @@ export class OrganizationalUnitsController {
   async updateStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateOrganizationalUnitStatusDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<OrganizationalUnitResponse> {
     const updatedOrganizationalUnit =
-      await this.organizationalUnitsService.updateStatus(id, dto);
+      await this.organizationalUnitsService.updateStatus(id, dto, actor);
 
     return toOrganizationalUnitsResponse(updatedOrganizationalUnit);
   }

@@ -12,6 +12,8 @@ import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { UpdateOrganizationalUnitStatusDto } from './dto/update-organizational-unit-status.dto';
 import { hasMysqlErrorCode } from '../../database/utils/mysql-error.util';
 import type { OrganizationalUnitsModel } from './models/organizational-units.model';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 
 @Injectable()
 export class OrganizationalUnitsService {
@@ -42,30 +44,62 @@ export class OrganizationalUnitsService {
     throw error;
   }
 
-  async findAll() {
-    return await this.organizationalUnitsRepository.findAll();
+  async findAll(actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    return await this.organizationalUnitsRepository.findAll(
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
   }
 
-  async findById(id: string) {
+  async findById(id: string, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
     const organizationalUnit =
-      await this.organizationalUnitsRepository.findById(id);
+      await this.organizationalUnitsRepository.findById(
+        id,
+        scope.canAccessAllOffices ? undefined : scope.officeId,
+      );
 
     if (!organizationalUnit) throw new OrganizationalUnitsNotFoundError();
 
     return organizationalUnit;
   }
 
-  async create(dto: CreateOrganizationalUnitDto) {
+  async create(
+    dto: CreateOrganizationalUnitDto,
+
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
+    const officeId = scope.officeId;
     const normalizedCode = dto.code.trim().toUpperCase();
     const existingOrganizationalUnit =
-      await this.organizationalUnitsRepository.findByCode(normalizedCode);
+      await this.organizationalUnitsRepository.findByCode(
+        normalizedCode,
+        scope.canAccessAllOffices ? undefined : officeId,
+      );
 
     if (existingOrganizationalUnit)
       throw new OrganizationalUnitCodeAlreadyExistsError();
 
+    if (dto.parentId) {
+      const parent = await this.organizationalUnitsRepository.findById(
+        dto.parentId,
+        officeId,
+      );
+
+      if (!parent) {
+        throw new InvalidOrganizationalUnitParentError();
+      }
+
+      if (parent.officeId !== officeId) {
+        throw new InvalidOrganizationalUnitParentError();
+      }
+    }
+
     try {
       return await this.organizationalUnitsRepository.create({
         id: generateUuidV7(),
+        officeId,
         parentId: dto.parentId,
         code: normalizedCode,
         name: dto.name.trim(),
@@ -77,7 +111,12 @@ export class OrganizationalUnitsService {
     }
   }
 
-  async update(id: string, dto: UpdateOrganizationalUnitDto) {
+  async update(
+    id: string,
+    dto: UpdateOrganizationalUnitDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
     if (
       dto.parentId === undefined &&
       dto.name === undefined &&
@@ -91,16 +130,20 @@ export class OrganizationalUnitsService {
 
     try {
       updatedOrganizationalUnit =
-        await this.organizationalUnitsRepository.update(id, {
-          parentId: dto.parentId,
-          name: dto.name !== undefined ? dto.name.trim() : undefined,
-          description:
-            dto.description !== undefined
-              ? this.normalizeDescription(dto.description)
-              : undefined,
-          sortOrder: dto.sortOrder !== undefined ? dto.sortOrder : undefined,
-          updatedAt: new Date(),
-        });
+        await this.organizationalUnitsRepository.update(
+          id,
+          {
+            parentId: dto.parentId,
+            name: dto.name !== undefined ? dto.name.trim() : undefined,
+            description:
+              dto.description !== undefined
+                ? this.normalizeDescription(dto.description)
+                : undefined,
+            sortOrder: dto.sortOrder !== undefined ? dto.sortOrder : undefined,
+            updatedAt: new Date(),
+          },
+          scope.canAccessAllOffices ? undefined : scope.officeId,
+        );
     } catch (error) {
       this.handlePersistenceError(error);
     }
@@ -111,12 +154,18 @@ export class OrganizationalUnitsService {
     return updatedOrganizationalUnit;
   }
 
-  async updateStatus(id: string, dto: UpdateOrganizationalUnitStatusDto) {
+  async updateStatus(
+    id: string,
+    dto: UpdateOrganizationalUnitStatusDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
     const updatedOrganizationalUnit =
       await this.organizationalUnitsRepository.updateStatus(
         id,
         dto.isActive,
         new Date(),
+        scope.canAccessAllOffices ? undefined : scope.officeId,
       );
 
     if (!updatedOrganizationalUnit)

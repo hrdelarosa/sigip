@@ -27,6 +27,8 @@ import {
   PositionDetailsApiResponse,
 } from '../../common/swagger/api.models';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('positions')
 @ApiTags('Positions')
@@ -37,8 +39,10 @@ export class PositionsController {
   @Get()
   @ApiOperation({ summary: 'Listar puestos' })
   @ApiOkResponse({ type: PositionApiResponse, isArray: true })
-  async findAll(): Promise<PositionsResponse> {
-    const position = await this.positionsService.findAll();
+  async findAll(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<PositionsResponse> {
+    const position = await this.positionsService.findAll(actor);
 
     return position.map(toPositionResponse);
   }
@@ -50,8 +54,9 @@ export class PositionsController {
   @ApiNotFoundResponse({ description: 'Puesto no encontrado' })
   async findById(
     @Param() params: PositionIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<PositionDetailsResponse> {
-    const position = await this.positionsService.findById(params.id);
+    const position = await this.positionsService.findById(params.id, actor);
 
     return toPositionDetailsResponse(position);
   }
@@ -61,8 +66,11 @@ export class PositionsController {
   @ApiOperation({ summary: 'Crear un puesto' })
   @ApiCreatedResponse({ type: PositionApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
-  async create(@Body() dto: CreatePositionDto): Promise<PositionResponse> {
-    const position = await this.positionsService.create(dto);
+  async create(
+    @Body() dto: CreatePositionDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<PositionResponse> {
+    const position = await this.positionsService.create(dto, actor);
 
     return toPositionResponse(position);
   }
@@ -76,8 +84,9 @@ export class PositionsController {
   async update(
     @Param() params: PositionIdParamDto,
     @Body() dto: UpdatePositionDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<PositionResponse> {
-    const position = await this.positionsService.update(params.id, dto);
+    const position = await this.positionsService.update(params.id, dto, actor);
 
     return toPositionResponse(position);
   }
@@ -90,10 +99,12 @@ export class PositionsController {
   async updateStatus(
     @Param() params: PositionIdParamDto,
     @Body() dto: UpdatePositionStatusDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<PositionResponse> {
     const updatePosition = await this.positionsService.updateStatus(
       params.id,
       dto,
+      actor,
     );
 
     return toPositionResponse(updatePosition);

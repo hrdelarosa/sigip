@@ -19,6 +19,7 @@ describe('EmployeesService controls', () => {
     sessionId: 'session-id',
     username: 'admin',
     fullName: 'Administrador',
+    office: { id: 'office-id', code: 'ORGRO', name: 'Oficina' },
     role: { id: 'role-id', code: 'ADMIN', name: 'Administrador' },
     permissions: ['employees:update'],
   };
@@ -56,8 +57,19 @@ describe('EmployeesService controls', () => {
       adjustments: [],
     });
 
-    const result = await service.findDetails('employee-id');
+    const result = await service.findDetails('employee-id', actor);
 
+    expect(employeesRepository.findById).toHaveBeenCalledWith(
+      'employee-id',
+      'office-id',
+    );
+    expect(
+      employeesRepository.findAssignmentsByEmployeeId,
+    ).toHaveBeenCalledWith('employee-id', 'office-id');
+    expect(controlsRepository.findSnapshot).toHaveBeenCalledWith(
+      'employee-id',
+      'office-id',
+    );
     expect(result.controls.vacationControl.currentPeriod).toBe('SECOND');
     expect(result.controls.justificationControl.months[0]).toMatchObject({
       month: '2026-08',

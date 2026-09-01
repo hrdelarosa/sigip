@@ -30,6 +30,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
   private toModel(row: typeof positions.$inferSelect): PositionModel {
     return {
       id: bufferToUuid(row.id),
+      officeId: bufferToUuid(row.officeId),
       code: row.code,
       name: row.name,
       description: row.description,
@@ -45,20 +46,28 @@ export class DrizzlePositionsRepository implements PositionsRepository {
     return today;
   }
 
-  async findAll(): Promise<PositionModel[]> {
+  async findAll(officeId?: string): Promise<PositionModel[]> {
     const row = await this.db
       .select()
       .from(positions)
+      .where(
+        officeId ? eq(positions.officeId, uuidToBuffer(officeId)) : undefined,
+      )
       .orderBy(desc(positions.createdAt));
 
     return row.map((row) => this.toModel(row));
   }
 
-  async findById(id: string): Promise<PositionModel | null> {
+  async findById(id: string, officeId?: string): Promise<PositionModel | null> {
     const [row] = await this.db
       .select()
       .from(positions)
-      .where(eq(positions.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(positions.id, uuidToBuffer(id)),
+          officeId ? eq(positions.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      )
       .limit(1);
 
     return row ? this.toModel(row) : null;
@@ -66,6 +75,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
 
   async findEmployeesByPositionId(
     id: string,
+    officeId?: string,
   ): Promise<PositionEmployeeModel[]> {
     const today = this.calendarToday();
     const rows = await this.db
@@ -80,6 +90,9 @@ export class DrizzlePositionsRepository implements PositionsRepository {
       .where(
         and(
           eq(employeeAssignments.positionId, uuidToBuffer(id)),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
           lte(employeeAssignments.effectiveFrom, today),
           or(
             isNull(employeeAssignments.effectiveTo),
@@ -97,11 +110,19 @@ export class DrizzlePositionsRepository implements PositionsRepository {
     }));
   }
 
-  async findByCode(code: string): Promise<PositionModel | null> {
+  async findByCode(
+    code: string,
+    officeId?: string,
+  ): Promise<PositionModel | null> {
     const [row] = await this.db
       .select()
       .from(positions)
-      .where(eq(positions.code, code))
+      .where(
+        and(
+          eq(positions.code, code),
+          officeId ? eq(positions.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      )
       .limit(1);
 
     return row ? this.toModel(row) : null;
@@ -110,6 +131,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
   async create(data: CreatePositionData): Promise<PositionModel> {
     const values: typeof positions.$inferInsert = {
       id: uuidToBuffer(data.id),
+      officeId: uuidToBuffer(data.officeId),
       code: data.code,
       name: data.name,
       description: data.description ?? null,
@@ -118,7 +140,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
 
     await this.db.insert(positions).values(values);
 
-    const position = await this.findById(data.id);
+    const position = await this.findById(data.id, data.officeId);
 
     if (!position) throw new Error('No fue posible recuperar el puesto creado');
 
@@ -128,6 +150,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
   async update(
     id: string,
     data: UpdatePositionData,
+    officeId?: string,
   ): Promise<PositionModel | null> {
     const values: Partial<typeof positions.$inferInsert> = {
       updatedAt: data.updatedAt,
@@ -140,15 +163,21 @@ export class DrizzlePositionsRepository implements PositionsRepository {
     await this.db
       .update(positions)
       .set(values)
-      .where(eq(positions.id, uuidToBuffer(id)));
+      .where(
+        and(
+          eq(positions.id, uuidToBuffer(id)),
+          officeId ? eq(positions.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      );
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 
   async updateStatus(
     id: string,
     isActive: boolean,
     updatedAt: Date,
+    officeId?: string,
   ): Promise<PositionModel | null> {
     return this.db.transaction(async (transaction) => {
       const positionId = uuidToBuffer(id);
@@ -160,7 +189,14 @@ export class DrizzlePositionsRepository implements PositionsRepository {
       const [current] = await transaction
         .select()
         .from(positions)
-        .where(eq(positions.id, positionId))
+        .where(
+          and(
+            eq(positions.id, positionId),
+            officeId
+              ? eq(positions.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        )
         .limit(1);
 
       if (!current) return null;
@@ -175,6 +211,7 @@ export class DrizzlePositionsRepository implements PositionsRepository {
           .where(
             and(
               eq(employeeAssignments.positionId, positionId),
+              eq(employeeAssignments.officeId, current.officeId),
               or(
                 isNull(employeeAssignments.effectiveTo),
                 gte(employeeAssignments.effectiveTo, today),
@@ -192,12 +229,26 @@ export class DrizzlePositionsRepository implements PositionsRepository {
       await transaction
         .update(positions)
         .set({ isActive, updatedAt })
-        .where(eq(positions.id, positionId));
+        .where(
+          and(
+            eq(positions.id, positionId),
+            officeId
+              ? eq(positions.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        );
 
       const [updated] = await transaction
         .select()
         .from(positions)
-        .where(eq(positions.id, positionId))
+        .where(
+          and(
+            eq(positions.id, positionId),
+            officeId
+              ? eq(positions.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        )
         .limit(1);
 
       return updated ? this.toModel(updated) : null;

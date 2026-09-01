@@ -11,6 +11,7 @@ export interface CreateVacationAdjustmentData {
   createdBy: string;
   sessionId: string;
   createdAt: Date;
+  officeId?: string;
 }
 
 export type VacationAdjustmentMutationResult =

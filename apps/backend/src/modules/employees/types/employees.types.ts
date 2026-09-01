@@ -10,6 +10,7 @@ export interface EmployeeFilters {
   status?: EmployeeStatus;
   organizationalUnitId?: string;
   positionId?: string;
+  officeId?: string;
 }
 
 export interface CreateEmployeeData {
@@ -37,6 +38,7 @@ export interface CreateEmployeeAssignmentData {
   effectiveFrom: Date;
   effectiveTo: Date | null;
   notes: string | null;
+  officeId?: string;
 }
 
 export interface UpdateEmployeeAssignmentData {

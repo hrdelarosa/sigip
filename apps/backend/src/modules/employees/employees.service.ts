@@ -37,6 +37,7 @@ import { buildEmployeeControls } from './employee-controls';
 import { institutionalCalendarDate } from '../../common/vacation/vacation-control';
 import { CreateVacationAdjustmentDto } from './dto/create-vacation-adjustment.dto';
 import { VacationAdjustmentBalanceError } from './employees.errors';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 
 @Injectable()
 export class EmployeesService {
@@ -138,7 +139,9 @@ export class EmployeesService {
 
   async findAll(
     query: ListEmployeesQueryDto,
+    actor: AuthenticatedUserModel,
   ): Promise<PaginatedResult<EmployeeModel>> {
+    const scope = getOfficeScope(actor);
     return this.employeesRepository.findAll({
       page: query.page,
       limit: query.limit,
@@ -147,26 +150,44 @@ export class EmployeesService {
       status: query.status,
       organizationalUnitId: query.organizationalUnitId,
       positionId: query.positionId,
+      officeId: scope.canAccessAllOffices ? undefined : scope.officeId,
     });
   }
 
-  async findById(id: string): Promise<EmployeeModel> {
-    const employee = await this.employeesRepository.findById(id);
+  async findById(
+    id: string,
+    actor: AuthenticatedUserModel,
+  ): Promise<EmployeeModel> {
+    const scope = getOfficeScope(actor);
+    const employee = await this.employeesRepository.findById(
+      id,
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
 
     if (!employee) throw new EmployeeNotFoundError(id);
 
     return employee;
   }
 
-  async findDetails(id: string): Promise<{
+  async findDetails(
+    id: string,
+    actor: AuthenticatedUserModel,
+  ): Promise<{
     employee: EmployeeModel;
     assignments: EmployeeAssignmentDetailsModel[];
     controls: ReturnType<typeof buildEmployeeControls>;
   }> {
-    const employee = await this.findById(id);
+    const employee = await this.findById(id, actor);
+    const scope = getOfficeScope(actor);
     const [assignments, snapshot] = await Promise.all([
-      this.employeesRepository.findAssignmentsByEmployeeId(id),
-      this.employeeControlsRepository.findSnapshot(id),
+      this.employeesRepository.findAssignmentsByEmployeeId(
+        id,
+        scope.canAccessAllOffices ? undefined : scope.officeId,
+      ),
+      this.employeeControlsRepository.findSnapshot(
+        id,
+        scope.canAccessAllOffices ? undefined : scope.officeId,
+      ),
     ]);
     const controls = buildEmployeeControls(
       employee,
@@ -182,6 +203,7 @@ export class EmployeesService {
     dto: CreateVacationAdjustmentDto,
     actor: AuthenticatedUserModel,
   ) {
+    const scope = getOfficeScope(actor);
     const result =
       await this.employeeControlsRepository.createVacationAdjustment({
         id: generateUuidV7(),
@@ -193,6 +215,7 @@ export class EmployeesService {
         createdBy: actor.userId,
         sessionId: actor.sessionId,
         createdAt: new Date(),
+        officeId: scope.canAccessAllOffices ? undefined : scope.officeId,
       });
 
     if (result.status === 'employee-not-found') {
@@ -230,7 +253,11 @@ export class EmployeesService {
     }
   }
 
-  async update(id: string, dto: UpdateEmployeeDto) {
+  async update(
+    id: string,
+    dto: UpdateEmployeeDto,
+    actor: AuthenticatedUserModel,
+  ) {
     if (
       dto.employeeNumber === undefined &&
       dto.fullName === undefined &&
@@ -239,7 +266,8 @@ export class EmployeesService {
       throw new EmptyEmployeeUpdateError();
     }
 
-    const current = await this.findById(id);
+    const scope = getOfficeScope(actor);
+    const current = await this.findById(id, actor);
     const employeeNumber = dto.employeeNumber?.trim();
 
     if (employeeNumber && employeeNumber !== current.employeeNumber) {
@@ -249,15 +277,19 @@ export class EmployeesService {
     let updatedEmployee: EmployeeModel | null;
 
     try {
-      updatedEmployee = await this.employeesRepository.update(id, {
-        employeeNumber,
-        fullName: dto.fullName?.trim(),
-        hireDate:
-          dto.hireDate !== undefined
-            ? this.parseNullableDate(dto.hireDate)
-            : undefined,
-        updatedAt: new Date(),
-      });
+      updatedEmployee = await this.employeesRepository.update(
+        id,
+        {
+          employeeNumber,
+          fullName: dto.fullName?.trim(),
+          hireDate:
+            dto.hireDate !== undefined
+              ? this.parseNullableDate(dto.hireDate)
+              : undefined,
+          updatedAt: new Date(),
+        },
+        scope.canAccessAllOffices ? undefined : scope.officeId,
+      );
     } catch (error) {
       this.handleEmployeePersistenceError(
         error,
@@ -270,7 +302,12 @@ export class EmployeesService {
     return updatedEmployee;
   }
 
-  async updateStatus(id: string, dto: UpdateEmployeeStatusDto) {
+  async updateStatus(
+    id: string,
+    dto: UpdateEmployeeStatusDto,
+    actor: AuthenticatedUserModel,
+  ) {
+    const scope = getOfficeScope(actor);
     let updatedEmployee: EmployeeModel | null;
 
     try {
@@ -278,6 +315,7 @@ export class EmployeesService {
         id,
         dto.status,
         new Date(),
+        scope.canAccessAllOffices ? undefined : scope.officeId,
       );
     } catch (error) {
       if (error instanceof EmployeeHasCurrentOrFutureAssignmentsError) {
@@ -293,21 +331,29 @@ export class EmployeesService {
 
   async findAssignments(
     employeeId: string,
+    actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentDetailsModel[]> {
-    await this.findById(employeeId);
+    const scope = getOfficeScope(actor);
+    await this.findById(employeeId, actor);
 
-    return this.employeesRepository.findAssignmentsByEmployeeId(employeeId);
+    return this.employeesRepository.findAssignmentsByEmployeeId(
+      employeeId,
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
   }
 
   async findAssignmentsById(
     employeeId: string,
     assignmentId: string,
+    actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentDetailsModel> {
-    await this.findById(employeeId);
+    const scope = getOfficeScope(actor);
+    await this.findById(employeeId, actor);
 
     const assignment = await this.employeesRepository.findAssignmentById(
       employeeId,
       assignmentId,
+      scope.canAccessAllOffices ? undefined : scope.officeId,
     );
 
     if (!assignment) throw new EmployeeAssignmentNotFoundError(assignmentId);
@@ -318,6 +364,7 @@ export class EmployeesService {
   async createAssignment(
     employeeId: string,
     dto: CreateEmployeeAssignmentDto,
+    actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentDetailsModel> {
     const effectiveFrom = this.parseDate(dto.effectiveFrom);
     const effectiveTo = this.parseNullableDate(dto.effectiveTo);
@@ -337,6 +384,9 @@ export class EmployeesService {
         effectiveFrom,
         effectiveTo,
         notes: dto.notes ?? null,
+        officeId: getOfficeScope(actor).canAccessAllOffices
+          ? undefined
+          : getOfficeScope(actor).officeId,
       });
     } catch (error) {
       this.handleAssignmentPersistenceError(error);
@@ -349,6 +399,7 @@ export class EmployeesService {
     employeeId: string,
     assignmentId: string,
     dto: UpdateEmployeeAssignmentDto,
+    actor: AuthenticatedUserModel,
   ): Promise<EmployeeAssignmentDetailsModel> {
     if (
       dto.organizationalUnitId === undefined &&
@@ -385,6 +436,9 @@ export class EmployeesService {
           notes: dto.notes,
           updatedAt: new Date(),
         },
+        getOfficeScope(actor).canAccessAllOffices
+          ? undefined
+          : getOfficeScope(actor).officeId,
       );
     } catch (error) {
       this.handleAssignmentPersistenceError(error);

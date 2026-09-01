@@ -5,6 +5,7 @@ import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
 import {
   employeeVacationAdjustments,
+  employeeAssignments,
   employees,
   incidentOccurrences,
   incidents,
@@ -40,12 +41,19 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
     private readonly auditService: AuditService,
   ) {}
 
-  async findSnapshot(employeeId: string): Promise<EmployeeControlSnapshot> {
+  async findSnapshot(
+    employeeId: string,
+    officeId?: string,
+  ): Promise<EmployeeControlSnapshot> {
     const employeeIdBuffer = uuidToBuffer(employeeId);
     const [vacationDates, justificationDates, adjustmentRows] =
       await Promise.all([
-        this.findActiveDates(employeeIdBuffer, ORDINARY_CODES),
-        this.findActiveDates(employeeIdBuffer, [...JUSTIFICATION_CODES]),
+        this.findActiveDates(employeeIdBuffer, ORDINARY_CODES, officeId),
+        this.findActiveDates(
+          employeeIdBuffer,
+          [...JUSTIFICATION_CODES],
+          officeId,
+        ),
         this.db
           .select({
             adjustment: employeeVacationAdjustments,
@@ -53,7 +61,14 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
           })
           .from(employeeVacationAdjustments)
           .innerJoin(users, eq(employeeVacationAdjustments.createdBy, users.id))
-          .where(eq(employeeVacationAdjustments.employeeId, employeeIdBuffer))
+          .where(
+            and(
+              eq(employeeVacationAdjustments.employeeId, employeeIdBuffer),
+              officeId
+                ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeVacationAdjustments.employeeId} AND ${employeeAssignments.officeId} = ${uuidToBuffer(officeId)})`
+                : undefined,
+            ),
+          )
           .orderBy(employeeVacationAdjustments.createdAt),
       ]);
 
@@ -87,7 +102,14 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
       const [employee] = await tx
         .select({ id: employees.id, hireDate: employees.hireDate })
         .from(employees)
-        .where(eq(employees.id, employeeId))
+        .where(
+          and(
+            eq(employees.id, employeeId),
+            data.officeId
+              ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employees.id} AND ${employeeAssignments.officeId} = ${uuidToBuffer(data.officeId)})`
+              : undefined,
+          ),
+        )
         .limit(1);
 
       if (!employee) return { status: 'employee-not-found' } as const;
@@ -121,6 +143,10 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
             incidentOccurrences,
             eq(incidentOccurrences.incidentId, incidents.id),
           )
+          .innerJoin(
+            employeeAssignments,
+            eq(incidents.employeeAssignmentId, employeeAssignments.id),
+          )
           .where(
             and(
               eq(incidents.employeeId, employeeId),
@@ -128,6 +154,9 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
               eq(incidentTypes.code, code),
               gte(incidentOccurrences.startDate, startDate),
               lte(incidentOccurrences.startDate, endDate),
+              data.officeId
+                ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+                : undefined,
             ),
           ),
         tx
@@ -184,13 +213,17 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
 
     if (result.status !== 'success') return result;
 
-    const adjustment = await this.findAdjustmentById(data.id);
+    const adjustment = await this.findAdjustmentById(data.id, data.officeId);
     if (!adjustment) throw new Error('Vacation adjustment persistence error');
 
     return { status: 'success', adjustment };
   }
 
-  private async findActiveDates(employeeId: Buffer, codes: string[]) {
+  private async findActiveDates(
+    employeeId: Buffer,
+    codes: string[],
+    officeId?: string,
+  ) {
     const rows = await this.db
       .select({ code: incidentTypes.code, date: incidentOccurrences.startDate })
       .from(incidents)
@@ -199,11 +232,18 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
         incidentOccurrences,
         eq(incidentOccurrences.incidentId, incidents.id),
       )
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
       .where(
         and(
           eq(incidents.employeeId, employeeId),
           eq(incidents.status, 'REGISTERED'),
           inArray(incidentTypes.code, codes),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       );
 
@@ -212,6 +252,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
 
   private async findAdjustmentById(
     id: string,
+    officeId?: string,
   ): Promise<EmployeeVacationAdjustmentModel | null> {
     const [row] = await this.db
       .select({
@@ -220,7 +261,14 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
       })
       .from(employeeVacationAdjustments)
       .innerJoin(users, eq(employeeVacationAdjustments.createdBy, users.id))
-      .where(eq(employeeVacationAdjustments.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(employeeVacationAdjustments.id, uuidToBuffer(id)),
+          officeId
+            ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeVacationAdjustments.employeeId} AND ${employeeAssignments.officeId} = ${uuidToBuffer(officeId)})`
+            : undefined,
+        ),
+      )
       .limit(1);
 
     return row

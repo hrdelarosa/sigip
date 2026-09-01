@@ -12,6 +12,7 @@ import type {
 export function toPositionResponse(position: PositionModel): PositionResponse {
   return {
     id: position.id,
+    officeId: position.officeId,
     code: position.code,
     name: position.name,
     description: position.description ?? null,

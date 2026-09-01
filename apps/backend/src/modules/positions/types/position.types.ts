@@ -1,5 +1,6 @@
 export interface CreatePositionData {
   id: string;
+  officeId: string;
   code: string;
   name: string;
   description?: string | null;
