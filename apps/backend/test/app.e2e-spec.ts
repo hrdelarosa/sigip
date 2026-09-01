@@ -10,11 +10,15 @@ import { DRIZZLE_DATABASE } from '../src/database/database.constants';
 import type { DrizzleDatabase } from '../src/database/database.types';
 import {
   auditLogs,
+  employeeAssignments,
   employees,
   employeeVacationAdjustments,
   roles,
+  offices,
   sessions,
   users,
+  organizationalUnits,
+  positions,
 } from '../src/database/schema';
 import { uuidToBuffer } from '../src/database/utils/uuid.util';
 import { CryptoService } from '../src/common/crypto/crypto.service';
@@ -153,6 +157,11 @@ describe('Authentication flow (e2e)', () => {
       .from(roles)
       .where(eq(roles.code, 'data-entry-clerk'))
       .limit(1);
+    const [office] = await db
+      .select({ id: offices.id })
+      .from(offices)
+      .where(eq(offices.code, 'ORGRO'))
+      .limit(1);
     const userId = generateUuidV7();
     const username = `e2e-${userId.slice(-8)}`;
     const password = 'Temporary-e2e-password';
@@ -161,6 +170,7 @@ describe('Authentication flow (e2e)', () => {
     await db.insert(users).values({
       id: uuidToBuffer(userId),
       roleId: role.id,
+      officeId: office.id,
       username,
       fullName: 'Usuario E2E',
       password: await cryptoService.hashPassword(password),
@@ -274,6 +284,39 @@ describe('Authentication flow (e2e)', () => {
       })
       .expect(201);
     const employeeId = (createdEmployee.body as unknown as { id: string }).id;
+    const [office] = await db
+      .select({ id: offices.id })
+      .from(offices)
+      .where(eq(offices.code, 'ORGRO'))
+      .limit(1);
+    const [unit] = office
+      ? await db
+          .select({ id: organizationalUnits.id })
+          .from(organizationalUnits)
+          .where(eq(organizationalUnits.officeId, office.id))
+          .limit(1)
+      : [];
+    const [position] = office
+      ? await db
+          .select({ id: positions.id })
+          .from(positions)
+          .where(eq(positions.officeId, office.id))
+          .limit(1)
+      : [];
+    const assignmentId = generateUuidV7();
+    if (!office || !unit || !position) throw new Error('Faltan catálogos E2E');
+    await db.insert(employeeAssignments).values({
+      id: uuidToBuffer(assignmentId),
+      employeeId: uuidToBuffer(employeeId),
+      officeId: office.id,
+      organizationalUnitId: unit.id,
+      positionId: position.id,
+      appointmentType: 'BASE',
+      effectiveFrom: new Date('2020-01-01T00:00:00.000Z'),
+      effectiveTo: null,
+      schedule: null,
+      notes: null,
+    });
     let adjustmentId: string | undefined;
 
     try {
@@ -342,6 +385,9 @@ describe('Authentication flow (e2e)', () => {
         .where(
           eq(employeeVacationAdjustments.employeeId, uuidToBuffer(employeeId)),
         );
+      await db
+        .delete(employeeAssignments)
+        .where(eq(employeeAssignments.employeeId, uuidToBuffer(employeeId)));
       await db
         .delete(employees)
         .where(eq(employees.id, uuidToBuffer(employeeId)));
