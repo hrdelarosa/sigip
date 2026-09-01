@@ -53,7 +53,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - MySQL 8.4 mediante Docker Compose para desarrollo local
 - Esquemas y migraciones administrados con Drizzle
 - UUIDv7 almacenados como `BINARY(16)`
-- Datos de desarrollo cargados mediante un seed idempotente que se niega a ejecutarse en producción
+- Datos de desarrollo cargados mediante un seed idempotente que se niega a ejecutarse en producción; `RESET_DEVELOPMENT_ORGANIZATION=true` permite reemplazar el catálogo de empleados y borrar incidencias/documentos de desarrollo dependientes antes de importar la plantilla.
 
 ### Autenticación
 
@@ -145,6 +145,7 @@ No se creará necesariamente un módulo por cada tabla. Las tablas puente y depe
 | `roles` | `roles`, relación con usuarios mediante `users.role_id` y `role_permissions`. | Backend y frontend implementados. |
 | `permissions` | `permissions`. | Backend y frontend implementados. |
 | `users` | `users`. | Backend y frontend implementados con identidad autenticada, detalle enriquecido, permisos efectivos y resumen de sesiones. |
+| `offices` | `offices`. | Catálogo de oficinas de solo lectura implementado en backend y frontend; el seed de desarrollo carga las cuatro oficinas operativas. |
 | `organizational-units` | `organizational_units`. | Backend y frontend implementados. |
 | `positions` | `positions`. | Backend y frontend implementados. |
 | `employees` | `employees`, `employee_assignments` y `employee_vacation_adjustments`. | Backend y frontend implementados, incluido control vacacional y de justificaciones. |
