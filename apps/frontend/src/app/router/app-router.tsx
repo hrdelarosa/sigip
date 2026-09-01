@@ -1,29 +1,30 @@
-import { lazy, Suspense } from 'react'
-import { Redirect, Route, Switch } from 'wouter'
+import { lazy, Suspense } from "react";
+import { Redirect, Route, Switch } from "wouter";
 
-import { OrganizationalUnitsPage } from '@/modules/administration/organizational-units'
-import { PermissionsPage } from '@/modules/administration/permissions'
-import { PositionsPage } from '@/modules/administration/positions'
-import { RolesPage } from '@/modules/administration/roles'
-import { UsersPage } from '@/modules/administration/users'
-import { EmployeeDetailsPage, EmployeesPage } from '@/modules/employees'
-import { routes } from './routes'
-import { AuditPage } from '@/modules/audit'
+import { OrganizationalUnitsPage } from "@/modules/administration/organizational-units";
+import { PermissionsPage } from "@/modules/administration/permissions";
+import { PositionsPage } from "@/modules/administration/positions";
+import { RolesPage } from "@/modules/administration/roles";
+import { UsersPage } from "@/modules/administration/users";
+import { OfficesPage } from "@/modules/administration/offices";
+import { EmployeeDetailsPage, EmployeesPage } from "@/modules/employees";
+import { routes } from "./routes";
+import { AuditPage } from "@/modules/audit";
 import {
   CreateIncidentPage,
   IncidentDetailsPage,
   IncidentsPage,
-} from '@/modules/incidents'
-import { ReportsPage } from '@/modules/reports'
-import { LoginRoute } from './login-route'
-import { NotFoundPage } from './not-found-page'
-import { ProtectedPage } from './protected-page'
+} from "@/modules/incidents";
+import { ReportsPage } from "@/modules/reports";
+import { LoginRoute } from "./login-route";
+import { NotFoundPage } from "./not-found-page";
+import { ProtectedPage } from "./protected-page";
 
 const DashboardPage = lazy(() =>
-  import('@/modules/dashboard').then((module) => ({
+  import("@/modules/dashboard").then((module) => ({
     default: module.DashboardPage,
   })),
-)
+);
 
 export function AppRouter() {
   return (
@@ -64,6 +65,11 @@ export function AppRouter() {
           <PermissionsPage />
         </ProtectedPage>
       </Route>
+      <Route path={routes.administration.offices}>
+        <ProtectedPage permission="catalogs:read">
+          <OfficesPage />
+        </ProtectedPage>
+      </Route>
       <Route path={routes.administration.roles}>
         <ProtectedPage permission="roles:read">
           <RolesPage />
@@ -99,10 +105,10 @@ export function AppRouter() {
       <Route path={routes.incidents.create}>
         <ProtectedPage
           permissions={[
-            'incidents:create',
-            'incidents:read',
-            'employees:read',
-            'catalogs:read',
+            "incidents:create",
+            "incidents:read",
+            "employees:read",
+            "catalogs:read",
           ]}
         >
           <CreateIncidentPage />
@@ -129,5 +135,5 @@ export function AppRouter() {
         <NotFoundPage />
       </Route>
     </Switch>
-  )
+  );
 }

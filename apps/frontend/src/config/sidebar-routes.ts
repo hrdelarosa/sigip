@@ -9,83 +9,89 @@ import {
   ScrollTextIcon,
   ClipboardClockIcon,
   ChartNoAxesColumnIcon,
-} from 'lucide-react'
-import { routes } from '@/app/router/routes'
+} from "lucide-react";
+import { routes } from "@/app/router/routes";
 
 export const navigationGroups = [
   {
-    label: 'Principal',
+    label: "Principal",
     items: [
       {
-        label: 'Inicio',
+        label: "Inicio",
         href: routes.dashboard,
         icon: LayoutDashboardIcon,
-        permission: 'dashboard:read',
+        permission: "dashboard:read",
       },
       {
-        label: 'Reportes',
+        label: "Reportes",
         href: routes.reports,
         icon: ChartNoAxesColumnIcon,
-        permission: 'reports:read',
+        permission: "reports:read",
       },
       {
-        label: 'Incidencias',
+        label: "Incidencias",
         href: routes.incidents.root,
         icon: ClipboardClockIcon,
-        permission: 'incidents:read',
+        permission: "incidents:read",
       },
       {
-        label: 'Empleados',
+        label: "Empleados",
         href: routes.employees.root,
         icon: IdCardIcon,
-        permission: 'employees:read',
+        permission: "employees:read",
       },
     ],
   },
   {
-    label: 'Catálogos',
+    label: "Catálogos",
     items: [
       {
-        label: 'Unidades organizativas',
+        label: "Unidades organizativas",
         href: routes.administration.organizationalUnits,
         icon: Building2Icon,
-        permission: 'catalogs:read',
+        permission: "catalogs:read",
       },
       {
-        label: 'Puestos',
+        label: "Puestos",
         href: routes.administration.positions,
         icon: BriefcaseBusinessIcon,
-        permission: 'catalogs:read',
+        permission: "catalogs:read",
+      },
+      {
+        label: "Oficinas",
+        href: routes.administration.offices,
+        icon: Building2Icon,
+        permission: "catalogs:read",
       },
     ],
   },
   {
-    label: 'Administración',
+    label: "Administración",
     items: [
       {
-        label: 'Auditoría',
+        label: "Auditoría",
         href: routes.audit,
         icon: ScrollTextIcon,
-        permission: 'audit:read',
+        permission: "audit:read",
       },
       {
-        label: 'Usuarios',
+        label: "Usuarios",
         href: routes.administration.users,
         icon: UsersIcon,
-        permission: 'users:read',
+        permission: "users:read",
       },
       {
-        label: 'Roles',
+        label: "Roles",
         href: routes.administration.roles,
         icon: ShieldCheckIcon,
-        permission: 'roles:read',
+        permission: "roles:read",
       },
       {
-        label: 'Permisos',
+        label: "Permisos",
         href: routes.administration.permissions,
         icon: KeyRoundIcon,
-        permission: 'permissions:read',
+        permission: "permissions:read",
       },
     ],
   },
-] as const
+] as const;

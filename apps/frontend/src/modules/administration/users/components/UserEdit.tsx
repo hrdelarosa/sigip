@@ -8,6 +8,8 @@ import { useValidatedForm } from '@/hooks/useValidatedForm'
 import { useUpdateUser } from '../hooks/useUpdateUser'
 import { updateUserFormSchema } from '../schemas/user-form.schema'
 import { UserRoleField } from './UserRoleField'
+import { UserOfficeField } from './UserOfficeField'
+import { useOffices } from '../../offices/hooks/useOffices'
 
 interface Props {
   user: UserResponse
@@ -18,6 +20,7 @@ interface Props {
 
 export default function UserEdit({ user, roles, open, onOpenChange }: Props) {
   const updateMutation = useUpdateUser()
+  const officesQuery = useOffices()
   const availableRoles = roles.filter(
     (role) => role.isActive || role.id === user.roleId,
   )
@@ -26,6 +29,7 @@ export default function UserEdit({ user, roles, open, onOpenChange }: Props) {
       formSchema: updateUserFormSchema,
       defaultValues: {
         roleId: user.roleId,
+        officeId: user.officeId,
         username: user.username,
         fullName: user.fullName,
       },
@@ -33,6 +37,7 @@ export default function UserEdit({ user, roles, open, onOpenChange }: Props) {
         const input: UpdateUserRequest = {}
 
         if (data.roleId !== user.roleId) input.roleId = data.roleId
+        if (data.officeId !== user.officeId) input.officeId = data.officeId
         if (data.username !== user.username) input.username = data.username
         if (data.fullName !== user.fullName) input.fullName = data.fullName
 
@@ -63,6 +68,7 @@ export default function UserEdit({ user, roles, open, onOpenChange }: Props) {
   function handleOpenChange(nextOpen: boolean) {
     reset({
       roleId: user.roleId,
+      officeId: user.officeId,
       username: user.username,
       fullName: user.fullName,
     })
@@ -90,6 +96,14 @@ export default function UserEdit({ user, roles, open, onOpenChange }: Props) {
         }
         error={errors.roleId?.message}
         disabled={updateMutation.isPending || roles.length === 0}
+      />
+      <UserOfficeField
+        id={`user-office-${user.id}`}
+        offices={(officesQuery.data ?? []).filter((office) => office.isActive || office.id === user.officeId)}
+        value={watch('officeId')}
+        onChange={(officeId) => setValue('officeId', officeId, { shouldValidate: true })}
+        error={errors.officeId?.message}
+        disabled={updateMutation.isPending}
       />
 
       <Field data-invalid={!!errors.username}>

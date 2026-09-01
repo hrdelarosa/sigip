@@ -1,36 +1,39 @@
 export const routes = {
-  home: '/',
-  dashboard: '/dashboard',
-  reports: '/reports',
+  home: "/",
+  dashboard: "/dashboard",
+  reports: "/reports",
   administration: {
-    root: '/administration',
-    permissions: '/administration/permissions',
-    roles: '/administration/roles',
-    users: '/administration/users',
-    organizationalUnits: '/administration/organizational-units',
+    root: "/administration",
+    permissions: "/administration/permissions",
+    offices: "/administration/offices",
+    officeDetail: (officeId: string) =>
+      `/administration/offices?details=${officeId}`,
+    roles: "/administration/roles",
+    users: "/administration/users",
+    organizationalUnits: "/administration/organizational-units",
     organizationalUnitDetail: (organizationalUnitId: string) =>
       `/administration/organizational-units?details=${organizationalUnitId}`,
-    positions: '/administration/positions',
+    positions: "/administration/positions",
     positionDetail: (positionId: string) =>
       `/administration/positions?details=${positionId}`,
-    incidentTypes: '/administration/incident-types',
-    documentTypes: '/administration/document-types',
+    incidentTypes: "/administration/incident-types",
+    documentTypes: "/administration/document-types",
   },
   employees: {
-    root: '/employees',
+    root: "/employees",
     detail: (employeeId: string) => `/employees/${employeeId}`,
   },
   incidents: {
-    root: '/incidents',
-    create: '/incidents/new',
+    root: "/incidents",
+    create: "/incidents/new",
     detail: (incidentId: string) => `/incidents/${incidentId}`,
   },
   documents: {
     detail: (documentId: string) => `/documents/${documentId}`,
   },
-  audit: '/audit',
+  audit: "/audit",
   auth: {
-    login: '/login',
+    login: "/login",
   },
-  notFound: '/404',
-} as const
+  notFound: "/404",
+} as const;

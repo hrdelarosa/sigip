@@ -10,10 +10,13 @@ import { useRoles } from '../../roles/hooks/useRoles'
 import { useCreateUser } from '../hooks/useCreateUser'
 import { createUserFormSchema } from '../schemas/user-form.schema'
 import { UserRoleField } from './UserRoleField'
+import { UserOfficeField } from './UserOfficeField'
+import { useOffices } from '../../offices/hooks/useOffices'
 
 export default function UserCreate() {
   const [open, setOpen] = useState(false)
   const rolesQuery = useRoles()
+  const officesQuery = useOffices()
   const createMutation = useCreateUser()
   const activeRoles = (rolesQuery.data ?? []).filter((role) => role.isActive)
   const { register, handleSubmit, errors, reset, setValue, watch } =
@@ -21,6 +24,7 @@ export default function UserCreate() {
       formSchema: createUserFormSchema,
       defaultValues: {
         roleId: '',
+        officeId: '',
         username: '',
         fullName: '',
         password: '',
@@ -63,12 +67,17 @@ export default function UserCreate() {
           disabled={
             rolesQuery.isPending ||
             rolesQuery.isError ||
-            activeRoles.length === 0
+            activeRoles.length === 0 ||
+            officesQuery.isPending ||
+            officesQuery.isError ||
+            officesQuery.data?.every((office) => !office.isActive)
           }
           title={
-            rolesQuery.isError
-              ? 'No fue posible cargar los roles disponibles'
-              : activeRoles.length === 0 && !rolesQuery.isPending
+              rolesQuery.isError
+                ? 'No fue posible cargar los roles disponibles'
+                : officesQuery.isError
+                  ? 'No fue posible cargar las oficinas disponibles'
+                : activeRoles.length === 0 && !rolesQuery.isPending
                 ? 'No existen roles activos para asignar'
                 : undefined
           }
@@ -91,6 +100,17 @@ export default function UserCreate() {
           setValue('roleId', roleId, { shouldValidate: true })
         }
         error={errors.roleId?.message}
+        disabled={createMutation.isPending}
+      />
+
+      <UserOfficeField
+        id="user-office"
+        offices={(officesQuery.data ?? []).filter((office) => office.isActive)}
+        value={watch('officeId')}
+        onChange={(officeId) =>
+          setValue('officeId', officeId, { shouldValidate: true })
+        }
+        error={errors.officeId?.message}
         disabled={createMutation.isPending}
       />
 

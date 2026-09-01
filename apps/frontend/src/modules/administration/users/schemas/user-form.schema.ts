@@ -24,6 +24,7 @@ const passwordSchema = z
 
 export const createUserFormSchema = z.object({
   roleId: z.uuid('Seleccione un rol válido'),
+  officeId: z.uuid('Seleccione una oficina válida'),
   username: usernameSchema,
   fullName: fullNameSchema,
   password: passwordSchema,
@@ -31,6 +32,7 @@ export const createUserFormSchema = z.object({
 
 export const updateUserFormSchema = z.object({
   roleId: z.uuid('Seleccione un rol válido'),
+  officeId: z.uuid('Seleccione una oficina válida'),
   username: usernameSchema,
   fullName: fullNameSchema,
 })

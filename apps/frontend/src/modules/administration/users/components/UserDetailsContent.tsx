@@ -2,13 +2,16 @@ import type { UserDetailsResponse, UserPermissionResponse } from '@sigip/shared'
 import {
   CalendarPlusIcon,
   Clock3Icon,
+  Building2Icon,
   KeyRoundIcon,
   LogInIcon,
+  MapPinIcon,
   MonitorSmartphoneIcon,
   RefreshCwIcon,
   ShieldCheckIcon,
   UserRoundCheckIcon,
 } from 'lucide-react'
+import { useOffice } from '../../offices/hooks/useOffice'
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -53,6 +56,8 @@ export function UserDetailsContent({
 }: {
   details: UserDetailsResponse
 }) {
+  const officeQuery = useOffice(details.officeId)
+  const office = officeQuery.data
   const permissionLabel =
     details.permissions.length === 1
       ? '1 permiso efectivo'
@@ -60,6 +65,54 @@ export function UserDetailsContent({
 
   return (
     <div className="flex flex-col gap-6">
+      <section aria-labelledby="user-office-heading">
+        <SectionTitle id="user-office-heading">Oficina asignada</SectionTitle>
+        {officeQuery.isPending ? (
+          <div
+            className="h-32 animate-pulse rounded-lg bg-muted"
+            aria-label="Cargando oficina"
+            aria-busy="true"
+          />
+        ) : null}
+        {officeQuery.isError ? (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            No fue posible cargar la información de la oficina.
+          </p>
+        ) : null}
+        {officeQuery.isSuccess && office ? (
+          <Card className="relative overflow-hidden">
+            <div className="absolute inset-y-0 left-0 w-1 bg-primary" />
+            <CardContent className="flex gap-4 pl-5">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Building2Icon className="size-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-heading font-medium">{office.name}</h3>
+                    <Badge variant="outline" className="font-mono">
+                      {office.code}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 border-t pt-4">
+                <MapPinIcon
+                  className="size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <div>
+                  <p className="text-xs text-muted-foreground">Municipio</p>
+                  <p className="text-sm font-medium">
+                    {office.municipality || 'Sin municipio registrado'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+      </section>
+
       <section aria-labelledby="user-access-heading">
         <SectionTitle id="user-access-heading">Acceso asignado</SectionTitle>
         <Card className="relative overflow-hidden">
@@ -167,6 +220,65 @@ export function UserDetailsContent({
     </div>
   )
 }
+
+// function OfficeSection({
+//   officeQuery,
+// }: {
+//   officeQuery: ReturnType<typeof useOffice>
+// }) {
+//   const office = officeQuery.data
+
+//   return (
+//     <section aria-labelledby="user-office-heading">
+//       <SectionTitle id="user-office-heading">Oficina asignada</SectionTitle>
+//       {officeQuery.isPending ? (
+//         <div
+//           className="h-32 animate-pulse rounded-lg bg-muted"
+//           aria-label="Cargando oficina"
+//           aria-busy="true"
+//         />
+//       ) : null}
+//       {officeQuery.isError ? (
+//         <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+//           No fue posible cargar la información de la oficina.
+//         </p>
+//       ) : null}
+//       {officeQuery.isSuccess && office ? (
+//         <Card className="overflow-hidden">
+//           <div className="border-l-4 border-primary">
+//             <CardContent className="space-y-4 pl-4">
+//               <div className="flex items-start gap-3">
+//                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+//                   <Building2Icon className="size-5" aria-hidden="true" />
+//                 </div>
+//                 <div className="min-w-0 flex-1">
+//                   <div className="flex flex-wrap items-center gap-2">
+//                     <h3 className="font-heading font-medium">{office.name}</h3>
+//                     <Badge variant="outline" className="font-mono">
+//                       {office.code}
+//                     </Badge>
+//                   </div>
+//                 </div>
+//               </div>
+//               <div className="flex items-center gap-3 border-t pt-4">
+//                 <MapPinIcon
+//                   className="size-4 text-muted-foreground"
+//                   aria-hidden="true"
+//                 />
+//                 <div>
+//                   <p className="text-xs text-muted-foreground">Municipio</p>
+//                   <p className="text-sm font-medium">
+//                     {office.municipality || 'Sin municipio registrado'}
+//                   </p>
+//                 </div>
+//               </div>
+//             </CardContent>
+//           </div>
+//         </Card>
+//       ) : null}
+//     </section>
+//   )
+// }
 
 function PermissionsSection({
   permissions,
