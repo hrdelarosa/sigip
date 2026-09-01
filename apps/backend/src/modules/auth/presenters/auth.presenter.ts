@@ -9,6 +9,7 @@ export function toAuthenticatedUserResponse(
     id: user.userId,
     username: user.username,
     fullName: user.fullName,
+    office: user.office,
     role: user.role,
     permissions: user.permissions,
   };

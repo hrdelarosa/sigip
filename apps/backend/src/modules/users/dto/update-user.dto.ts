@@ -1,5 +1,6 @@
 import {
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -16,6 +17,12 @@ export class UpdateUserDto implements UpdateUserRequest {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsUUID()
   roleId?: string;
+
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  officeId?: string;
 
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @ApiPropertyOptional({ minLength: 3, maxLength: 50 })

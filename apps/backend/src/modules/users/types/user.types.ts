@@ -1,6 +1,7 @@
 export interface CreateUserData {
   id: string;
   roleId: string;
+  officeId: string;
   username: string;
   fullName: string;
   passwordHash: string;
@@ -8,6 +9,7 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
   roleId?: string;
+  officeId?: string;
   username?: string;
   fullName?: string;
   updatedAt?: Date;

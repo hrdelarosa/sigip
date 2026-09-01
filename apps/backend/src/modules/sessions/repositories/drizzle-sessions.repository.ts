@@ -4,6 +4,7 @@ import { and, count, desc, eq, gt, gte, isNull } from 'drizzle-orm';
 import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
 import {
+  offices,
   permissions,
   rolePermissions,
   roles,
@@ -69,12 +70,16 @@ export class DrizzleSessionsRepository implements SessionsRepository {
         userId: users.id,
         username: users.username,
         fullName: users.fullName,
+        officeId: offices.id,
+        officeCode: offices.code,
+        officeName: offices.name,
         roleId: roles.id,
         roleCode: roles.code,
         roleName: roles.name,
       })
       .from(sessions)
       .innerJoin(users, eq(users.id, sessions.userId))
+      .innerJoin(offices, eq(users.officeId, offices.id))
       .innerJoin(roles, eq(roles.id, users.roleId))
       .where(
         and(
@@ -103,6 +108,11 @@ export class DrizzleSessionsRepository implements SessionsRepository {
         username: row.username,
         fullName: row.fullName,
       },
+      office: {
+        id: bufferToUuid(row.officeId),
+        code: row.officeCode,
+        name: row.officeName,
+      },
       role: {
         id: bufferToUuid(row.roleId),
         code: row.roleCode,
@@ -117,15 +127,20 @@ export class DrizzleSessionsRepository implements SessionsRepository {
   ): Promise<AuthenticatedSessionModel | null> {
     return this.db.transaction(async (tx) => {
       const [user] = await tx
-        .select()
+        .select({
+          user: users,
+          officeCode: offices.code,
+          officeName: offices.name,
+        })
         .from(users)
+        .innerJoin(offices, eq(users.officeId, offices.id))
         .where(eq(users.id, uuidToBuffer(data.userId)))
         .for('update');
 
       if (
         !user ||
-        !user.isActive ||
-        user.password !== data.expectedPasswordHash
+        !user.user.isActive ||
+        user.user.password !== data.expectedPasswordHash
       ) {
         return null;
       }
@@ -133,14 +148,14 @@ export class DrizzleSessionsRepository implements SessionsRepository {
       const [role] = await tx
         .select()
         .from(roles)
-        .where(eq(roles.id, user.roleId))
+        .where(eq(roles.id, user.user.roleId))
         .limit(1);
 
       if (!role?.isActive) return null;
 
       await tx.insert(sessions).values({
         id: uuidToBuffer(data.id),
-        userId: user.id,
+        userId: user.user.id,
         tokenHash: data.tokenHash,
         createdAt: data.createdAt,
         lastActivityAt: data.createdAt,
@@ -153,7 +168,7 @@ export class DrizzleSessionsRepository implements SessionsRepository {
       await tx
         .update(users)
         .set({ lastLoginAt: data.createdAt, updatedAt: data.createdAt })
-        .where(eq(users.id, user.id));
+        .where(eq(users.id, user.user.id));
 
       await this.auditService.append(
         {
@@ -162,7 +177,7 @@ export class DrizzleSessionsRepository implements SessionsRepository {
           action: 'LOGIN_SUCCEEDED',
           entityType: 'AUTH',
           entityId: data.userId,
-          newValues: { username: user.username },
+          newValues: { username: user.user.username },
           ipAddress: data.ipAddress,
           userAgent: data.userAgent,
           createdAt: data.createdAt,
@@ -193,8 +208,13 @@ export class DrizzleSessionsRepository implements SessionsRepository {
         userAgent: data.userAgent,
         user: {
           id: data.userId,
-          username: user.username,
-          fullName: user.fullName,
+          username: user.user.username,
+          fullName: user.user.fullName,
+        },
+        office: {
+          id: bufferToUuid(user.user.officeId),
+          code: user.officeCode,
+          name: user.officeName,
         },
         role: {
           id: bufferToUuid(role.id),

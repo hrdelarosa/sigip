@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -21,6 +21,9 @@ import type { UserAuditContext } from './types/user.types';
 import { SessionsRepository } from '../sessions/repositories/sessions.repository';
 import { AuditRepository } from '../audit/repositories/audit.repository';
 import type { ListUsersQueryDto } from './dto/list-users-query.dto';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { getOfficeScope } from '../../common/authorization/office-scope';
+import { OfficesService } from '../offices/offices.service';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +33,7 @@ export class UsersService {
     private readonly rolesRepository: RolesRepository,
     private readonly sessionsRepository: SessionsRepository,
     private readonly auditRepository: AuditRepository,
+    private readonly officesService: OfficesService,
   ) {}
 
   private async ensureRoleIsActive(roleId: string): Promise<void> {
@@ -56,12 +60,39 @@ export class UsersService {
     throw new UserPersistenceError();
   }
 
-  async findAll(query: ListUsersQueryDto) {
-    return this.usersRepository.findAll(query);
+  private resolveTargetOfficeId(
+    actor: AuthenticatedUserModel,
+    requestedOfficeId?: string,
+  ): string {
+    const scope = getOfficeScope(actor);
+
+    if (requestedOfficeId === undefined) return scope.officeId;
+
+    if (scope.canAccessAllOffices) return requestedOfficeId;
+
+    if (requestedOfficeId !== scope.officeId) {
+      throw new ForbiddenException(
+        'No puedes administrar usuarios de otra oficina',
+      );
+    }
+
+    return scope.officeId;
   }
 
-  async findById(id: string) {
-    const user = await this.usersRepository.findById(id);
+  async findAll(query: ListUsersQueryDto, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    return this.usersRepository.findAll(
+      query,
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
+  }
+
+  async findById(id: string, actor?: AuthenticatedUserModel) {
+    const scope = actor ? getOfficeScope(actor) : undefined;
+    const user = await this.usersRepository.findById(
+      id,
+      scope && !scope.canAccessAllOffices ? scope.officeId : undefined,
+    );
 
     if (!user) throw new UserNotFoundError();
 
@@ -70,13 +101,14 @@ export class UsersService {
 
   async findDetails(
     id: string,
+    actor: AuthenticatedUserModel,
     options: {
       includeSessions: boolean;
       includeAudit: boolean;
       currentSessionId: string;
     },
   ) {
-    const user = await this.findById(id);
+    const user = await this.findById(id, actor);
     const role = await this.rolesRepository.findById(user.roleId);
 
     if (!role) throw new InvalidUserRoleError();
@@ -123,9 +155,16 @@ export class UsersService {
     };
   }
 
-  async create(dto: CreateUserDto, actor: UserAuditContext) {
+  async create(
+    dto: CreateUserDto,
+    actor: AuthenticatedUserModel,
+    auditContext: UserAuditContext,
+  ) {
     const normalizedUsername = dto.username.trim().toLowerCase();
+    const officeId = this.resolveTargetOfficeId(actor, dto.officeId);
+
     await this.ensureRoleIsActive(dto.roleId);
+    await this.officesService.ensureActive(officeId);
 
     const existingUser =
       await this.usersRepository.findByUsername(normalizedUsername);
@@ -137,24 +176,39 @@ export class UsersService {
         {
           id: generateUuidV7(),
           roleId: dto.roleId,
+          officeId,
           username: normalizedUsername,
           fullName: dto.fullName.trim(),
           passwordHash: await this.cryptoService.hashPassword(dto.password),
         },
-        actor,
+        auditContext,
       );
     } catch (error) {
       this.handlePersistenceError(error);
     }
   }
 
-  async update(id: string, dto: UpdateUserDto, actor: UserAuditContext) {
-    const user = await this.findById(id);
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    actor: AuthenticatedUserModel,
+    auditContext: UserAuditContext,
+  ) {
+    const user = await this.findById(id, actor);
+    const scope = getOfficeScope(actor);
+    const scopeOfficeId = scope.canAccessAllOffices
+      ? undefined
+      : scope.officeId;
     const normalizedUsername = dto.username?.trim().toLowerCase();
     const normalizedFullName = dto.fullName?.trim();
+    const targetOfficeId =
+      dto.officeId === undefined
+        ? undefined
+        : this.resolveTargetOfficeId(actor, dto.officeId);
 
     if (
       dto.roleId === undefined &&
+      targetOfficeId === undefined &&
       normalizedUsername === undefined &&
       normalizedFullName === undefined
     ) {
@@ -162,6 +216,8 @@ export class UsersService {
     }
 
     if (dto.roleId !== undefined) await this.ensureRoleIsActive(dto.roleId);
+    if (targetOfficeId !== undefined)
+      await this.officesService.ensureActive(targetOfficeId);
 
     if (
       normalizedUsername !== undefined &&
@@ -182,11 +238,13 @@ export class UsersService {
         id,
         {
           roleId: dto.roleId,
+          officeId: targetOfficeId,
           username: normalizedUsername,
           fullName: normalizedFullName,
           updatedAt: new Date(),
         },
-        actor,
+        auditContext,
+        scopeOfficeId,
       );
     } catch (error) {
       this.handlePersistenceError(error);
@@ -200,9 +258,11 @@ export class UsersService {
   async changeStatus(
     id: string,
     dto: ChangeUserStatusDto,
-    actor: UserAuditContext,
+    actor: AuthenticatedUserModel,
   ) {
-    const user = await this.findById(id);
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const user = await this.findById(id, actor);
 
     if (user.isActive === dto.isActive) return user;
 
@@ -212,6 +272,7 @@ export class UsersService {
       new Date(),
       actor.userId,
       actor.sessionId,
+      officeId,
     );
 
     if (!updateUser) throw new UserNotFoundError();
@@ -222,9 +283,11 @@ export class UsersService {
   async changePassword(
     id: string,
     dto: ChangeUserPasswordDto,
-    actor: UserAuditContext,
+    actor: AuthenticatedUserModel,
   ) {
-    const user = await this.usersRepository.findByIdWithPassword(id);
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const user = await this.usersRepository.findByIdWithPassword(id, officeId);
 
     if (!user) throw new UserNotFoundError();
 
@@ -245,6 +308,7 @@ export class UsersService {
         new Date(),
         actor.userId,
         actor.sessionId,
+        officeId,
       );
     } catch (error) {
       this.handlePersistenceError(error);

@@ -18,6 +18,11 @@ export interface AuthenticatedSessionModel extends SessionModel {
     username: string;
     fullName: string;
   };
+  office: {
+    id: string;
+    code: string;
+    name: string;
+  };
   role: {
     id: string;
     code: string;

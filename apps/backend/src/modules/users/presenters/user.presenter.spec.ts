@@ -12,6 +12,7 @@ describe('toUserDetailsResponse', () => {
       user: {
         id: '0198a68e-e5b2-7000-8000-000000000002',
         roleId: '0198a68e-e5b2-7000-8000-000000000003',
+        officeId: '0198a68e-e5b2-7000-8000-000000000004',
         username: 'analista',
         fullName: 'Usuario Analista',
         isActive: true,

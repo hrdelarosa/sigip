@@ -7,10 +7,12 @@ import type { ListUsersQueryDto } from '../dto/list-users-query.dto';
 export abstract class UsersRepository {
   abstract findAll(
     query: ListUsersQueryDto,
+    officeId?: string,
   ): Promise<PaginatedResult<UserModel>>;
-  abstract findById(id: string): Promise<UserModel | null>;
+  abstract findById(id: string, officeId?: string): Promise<UserModel | null>;
   abstract findByIdWithPassword(
     id: string,
+    officeId?: string,
   ): Promise<UserWithPasswordModel | null>;
   abstract findByUsername(username: string): Promise<UserModel | null>;
   abstract findByUsernameWithPassword(
@@ -24,6 +26,7 @@ export abstract class UsersRepository {
     id: string,
     data: UpdateUserData,
     actor: UserAuditContext,
+    officeId?: string,
   ): Promise<UserModel | null>;
   abstract updateStatus(
     id: string,
@@ -31,6 +34,7 @@ export abstract class UsersRepository {
     updatedAt: Date,
     actorId: string,
     actorSessionId: string,
+    officeId?: string,
   ): Promise<UserModel | null>;
   abstract updatePassword(
     id: string,
@@ -38,5 +42,6 @@ export abstract class UsersRepository {
     updatedAt: Date,
     actorId: string,
     actorSessionId: string,
+    officeId?: string,
   ): Promise<UserModel | null>;
 }

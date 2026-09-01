@@ -11,6 +11,7 @@ export function toUserResponse(user: UserModel): UserResponse {
   return {
     id: user.id,
     roleId: user.roleId,
+    officeId: user.officeId,
     username: user.username,
     fullName: user.fullName,
     isActive: user.isActive,

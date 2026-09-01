@@ -1,5 +1,6 @@
 import {
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -14,6 +15,11 @@ export class CreateUserDto implements CreateUserRequest {
   @IsUUID()
   @ApiProperty({ format: 'uuid' })
   roleId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  @ApiProperty({ format: 'uuid', required: false })
+  officeId?: string;
 
   @IsString()
   @ApiProperty({ example: 'jdoe', minLength: 3, maxLength: 50 })

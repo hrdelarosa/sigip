@@ -16,6 +16,7 @@ import type { PaginatedResult } from '../../../common/pagination/types/paginatio
 const publicUserColumns = {
   id: users.id,
   roleId: users.roleId,
+  officeId: users.officeId,
   username: users.username,
   fullName: users.fullName,
   isActive: users.isActive,
@@ -38,6 +39,7 @@ export class DrizzleUsersRepository implements UsersRepository {
     return {
       id: bufferToUuid(row.id),
       roleId: bufferToUuid(row.roleId),
+      officeId: bufferToUuid(row.officeId),
       username: row.username,
       fullName: row.fullName,
       isActive: row.isActive,
@@ -47,16 +49,23 @@ export class DrizzleUsersRepository implements UsersRepository {
     };
   }
 
-  async findAll(query: ListUsersQueryDto): Promise<PaginatedResult<UserModel>> {
+  async findAll(
+    query: ListUsersQueryDto,
+    officeId?: string,
+  ): Promise<PaginatedResult<UserModel>> {
     const offset = (query.page - 1) * query.limit;
+    const scope = officeId
+      ? eq(users.officeId, uuidToBuffer(officeId))
+      : undefined;
     const [rows, totalRows] = await Promise.all([
       this.db
         .select(publicUserColumns)
         .from(users)
+        .where(scope)
         .orderBy(desc(users.createdAt))
         .limit(query.limit)
         .offset(offset),
-      this.db.select({ total: count() }).from(users),
+      this.db.select({ total: count() }).from(users).where(scope),
     ]);
 
     return {
@@ -65,11 +74,16 @@ export class DrizzleUsersRepository implements UsersRepository {
     };
   }
 
-  async findById(id: string): Promise<UserModel | null> {
+  async findById(id: string, officeId?: string): Promise<UserModel | null> {
     const [row] = await this.db
       .select(publicUserColumns)
       .from(users)
-      .where(eq(users.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(users.id, uuidToBuffer(id)),
+          officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      )
       .limit(1);
 
     return row ? this.toModel(row) : null;
@@ -77,11 +91,17 @@ export class DrizzleUsersRepository implements UsersRepository {
 
   async findByIdWithPassword(
     id: string,
+    officeId?: string,
   ): Promise<UserWithPasswordModel | null> {
     const [row] = await this.db
       .select()
       .from(users)
-      .where(eq(users.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(users.id, uuidToBuffer(id)),
+          officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      )
       .limit(1);
 
     return row ? { ...this.toModel(row), passwordHash: row.password } : null;
@@ -116,6 +136,7 @@ export class DrizzleUsersRepository implements UsersRepository {
     const values = {
       id: uuidToBuffer(data.id),
       roleId: uuidToBuffer(data.roleId),
+      officeId: uuidToBuffer(data.officeId),
       username: data.username,
       fullName: data.fullName,
       password: data.passwordHash,
@@ -152,12 +173,15 @@ export class DrizzleUsersRepository implements UsersRepository {
     id: string,
     data: UpdateUserData,
     actor: UserAuditContext,
+    officeId?: string,
   ): Promise<UserModel | null> {
     const values: Partial<typeof users.$inferInsert> = {
       updatedAt: data.updatedAt,
     };
 
     if (data.roleId !== undefined) values.roleId = uuidToBuffer(data.roleId);
+    if (data.officeId !== undefined)
+      values.officeId = uuidToBuffer(data.officeId);
     if (data.username !== undefined) values.username = data.username;
     if (data.fullName !== undefined) values.fullName = data.fullName;
 
@@ -165,7 +189,12 @@ export class DrizzleUsersRepository implements UsersRepository {
       const [current] = await tx
         .select(publicUserColumns)
         .from(users)
-        .where(eq(users.id, uuidToBuffer(id)))
+        .where(
+          and(
+            eq(users.id, uuidToBuffer(id)),
+            officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+          ),
+        )
         .for('update');
 
       if (!current) return;
@@ -173,15 +202,22 @@ export class DrizzleUsersRepository implements UsersRepository {
       await tx
         .update(users)
         .set(values)
-        .where(eq(users.id, uuidToBuffer(id)));
+        .where(
+          and(
+            eq(users.id, uuidToBuffer(id)),
+            officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+          ),
+        );
 
       const oldValues = {
         roleId: bufferToUuid(current.roleId),
+        officeId: bufferToUuid(current.officeId),
         username: current.username,
         fullName: current.fullName,
       };
       const newValues = {
         roleId: data.roleId ?? oldValues.roleId,
+        officeId: data.officeId ?? oldValues.officeId,
         username: data.username ?? oldValues.username,
         fullName: data.fullName ?? oldValues.fullName,
       };
@@ -203,7 +239,7 @@ export class DrizzleUsersRepository implements UsersRepository {
       );
     });
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 
   async updateStatus(
@@ -212,12 +248,18 @@ export class DrizzleUsersRepository implements UsersRepository {
     updatedAt: Date,
     actorId: string,
     actorSessionId: string,
+    officeId?: string,
   ): Promise<UserModel | null> {
     await this.db.transaction(async (tx) => {
       const [current] = await tx
         .select(publicUserColumns)
         .from(users)
-        .where(eq(users.id, uuidToBuffer(id)))
+        .where(
+          and(
+            eq(users.id, uuidToBuffer(id)),
+            officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+          ),
+        )
         .for('update');
 
       if (!current || current.isActive === isActive) return;
@@ -225,7 +267,12 @@ export class DrizzleUsersRepository implements UsersRepository {
       await tx
         .update(users)
         .set({ isActive, updatedAt })
-        .where(eq(users.id, uuidToBuffer(id)));
+        .where(
+          and(
+            eq(users.id, uuidToBuffer(id)),
+            officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+          ),
+        );
 
       if (!isActive) {
         const [revoked] = await tx
@@ -277,7 +324,7 @@ export class DrizzleUsersRepository implements UsersRepository {
       );
     });
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 
   async updatePassword(
@@ -286,12 +333,18 @@ export class DrizzleUsersRepository implements UsersRepository {
     updatedAt: Date,
     actorId: string,
     actorSessionId: string,
+    officeId?: string,
   ): Promise<UserModel | null> {
     await this.db.transaction(async (tx) => {
       await tx
         .update(users)
         .set({ password: passwordHash, updatedAt })
-        .where(eq(users.id, uuidToBuffer(id)));
+        .where(
+          and(
+            eq(users.id, uuidToBuffer(id)),
+            officeId ? eq(users.officeId, uuidToBuffer(officeId)) : undefined,
+          ),
+        );
 
       const [revoked] = await tx
         .update(sessions)
@@ -340,6 +393,6 @@ export class DrizzleUsersRepository implements UsersRepository {
       }
     });
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 }

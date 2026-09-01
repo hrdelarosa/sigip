@@ -53,8 +53,11 @@ export class UsersController {
   @Get()
   @ApiOperation({ summary: 'Listar usuarios' })
   @ApiOkResponse({ type: UsersApiResponse })
-  async findAll(@Query() query: ListUsersQueryDto): Promise<UsersResponse> {
-    const result = await this.usersService.findAll(query);
+  async findAll(
+    @Query() query: ListUsersQueryDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<UsersResponse> {
+    const result = await this.usersService.findAll(query, actor);
 
     return toPaginatedResponse(
       result.items,
@@ -75,7 +78,7 @@ export class UsersController {
     @Param() params: UserIdParamDto,
     @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<UserDetailsResponse> {
-    const details = await this.usersService.findDetails(params.id, {
+    const details = await this.usersService.findDetails(params.id, actor, {
       includeSessions: actor.permissions.includes('sessions:read'),
       includeAudit: actor.permissions.includes('audit:read'),
       currentSessionId: actor.sessionId,
@@ -95,6 +98,7 @@ export class UsersController {
   ): Promise<UserResponse> {
     const user = await this.usersService.create(
       dto,
+      request.authenticatedUser,
       this.auditContext(request),
     );
 
@@ -115,6 +119,7 @@ export class UsersController {
     const user = await this.usersService.update(
       params.id,
       dto,
+      request.authenticatedUser,
       this.auditContext(request),
     );
 
@@ -135,11 +140,7 @@ export class UsersController {
     if (!actor.permissions.includes(permission)) {
       throw new ForbiddenException('Permisos insuficientes');
     }
-    const user = await this.usersService.changeStatus(
-      params.id,
-      dto,
-      this.auditContextFromUser(actor),
-    );
+    const user = await this.usersService.changeStatus(params.id, dto, actor);
 
     return toUserResponse(user);
   }
@@ -155,11 +156,7 @@ export class UsersController {
     @Body() dto: ChangeUserPasswordDto,
     @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<UserResponse> {
-    const user = await this.usersService.changePassword(
-      params.id,
-      dto,
-      this.auditContextFromUser(actor),
-    );
+    const user = await this.usersService.changePassword(params.id, dto, actor);
 
     return toUserResponse(user);
   }

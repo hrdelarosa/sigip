@@ -14,7 +14,10 @@ import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 import type { UserWithPasswordModel } from '../users/models/user.model';
 import type { LoginMetadata } from '../auth/auth.service';
-import type { SessionModel } from './models/session.model';
+import type {
+  AuthenticatedSessionModel,
+  SessionModel,
+} from './models/session.model';
 import { SessionsRepository } from './repositories/sessions.repository';
 
 @Injectable()
@@ -155,17 +158,15 @@ export class SessionsService {
     });
   }
 
-  private toAuthenticatedUser(session: {
-    id: string;
-    user: { id: string; username: string; fullName: string };
-    role: { id: string; code: string; name: string };
-    permissions: string[];
-  }): AuthenticatedUserModel {
+  private toAuthenticatedUser(
+    session: AuthenticatedSessionModel,
+  ): AuthenticatedUserModel {
     return {
-      sessionId: session.id,
       userId: session.user.id,
+      sessionId: session.id,
       username: session.user.username,
       fullName: session.user.fullName,
+      office: session.office,
       role: session.role,
       permissions: session.permissions,
     };

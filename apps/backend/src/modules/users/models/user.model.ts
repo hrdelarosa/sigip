@@ -1,6 +1,7 @@
 export interface UserModel {
   id: string;
   roleId: string;
+  officeId: string;
   username: string;
   fullName: string;
   isActive: boolean;

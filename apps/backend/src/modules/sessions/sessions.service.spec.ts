@@ -29,6 +29,7 @@ describe('SessionsService', () => {
   const user = {
     id: '0198a68e-e5b2-7000-8000-000000000001',
     roleId: '0198a68e-e5b2-7000-8000-000000000002',
+    officeId: '0198a68e-e5b2-7000-8000-000000000003',
     username: 'admin',
     fullName: 'Administrador',
     passwordHash: 'password-hash',
