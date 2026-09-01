@@ -37,8 +37,12 @@ export class DocumentsController {
   async findByIncident(
     @Param()
     params: IncidentDocumentIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<IncidentDocumentsResponse> {
-    const documents = await this.service.findByIncidentId(params.incidentId);
+    const documents = await this.service.findByIncidentId(
+      params.incidentId,
+      actor,
+    );
 
     return documents.map(toDocumentResponse);
   }
@@ -80,11 +84,15 @@ export class DocumentsController {
   async getContent(
     @Param()
     params: DocumentIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
 
     @Res()
     response: Response,
   ) {
-    const { buffer, document } = await this.service.getContent(params.id);
+    const { buffer, document } = await this.service.getContent(
+      params.id,
+      actor,
+    );
 
     response.setHeader('Content-Type', document.mimeType);
     response.setHeader('Content-Length', String(buffer.length));

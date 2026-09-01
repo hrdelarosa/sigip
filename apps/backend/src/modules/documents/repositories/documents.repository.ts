@@ -1,8 +1,14 @@
 import type { DocumentModel } from '../models/document.model';
 
 export abstract class DocumentsRepository {
-  abstract findByIncidentId(incidentId: string): Promise<DocumentModel[]>;
-  abstract findById(id: string): Promise<DocumentModel | null>;
+  abstract findByIncidentId(
+    incidentId: string,
+    officeId?: string,
+  ): Promise<DocumentModel[]>;
+  abstract findById(
+    id: string,
+    officeId?: string,
+  ): Promise<DocumentModel | null>;
   abstract create(data: {
     id: string;
     incidentId: string;
@@ -26,6 +32,7 @@ export abstract class DocumentsRepository {
     contentHash: string;
     uploadedBy: string;
     sessionId: string;
+    officeId?: string;
   }): Promise<DocumentModel>;
   abstract softDelete(
     id: string,
@@ -34,6 +41,7 @@ export abstract class DocumentsRepository {
       deletedBy: string;
       deletionReason: string;
       sessionId: string;
+      officeId?: string;
     },
   ): Promise<DocumentModel | null>;
 }

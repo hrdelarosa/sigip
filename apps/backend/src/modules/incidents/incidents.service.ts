@@ -35,6 +35,7 @@ import {
 } from './incidents.errors';
 
 import { IncidentsRepository } from './repositories/incidents.repository';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 import { DocumentsRepository } from '../documents/repositories/documents.repository';
 
 import type { IncidentOccurrenceData } from './types/incidents.types';
@@ -264,7 +265,8 @@ export class IncidentsService {
     }
   }
 
-  async findAll(query: ListIncidentsQueryDto) {
+  async findAll(query: ListIncidentsQueryDto, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
     const from = query.from ? this.parseDate(query.from) : undefined;
     const to = query.to ? this.parseDate(query.to) : undefined;
 
@@ -282,11 +284,16 @@ export class IncidentsService {
       organizationalUnitId: query.organizationalUnitId,
       from,
       to,
+      officeId: scope.canAccessAllOffices ? undefined : scope.officeId,
     });
   }
 
-  async findById(id: string) {
-    const incident = await this.repository.findById(id);
+  async findById(id: string, actor: AuthenticatedUserModel) {
+    const scope = getOfficeScope(actor);
+    const incident = await this.repository.findById(
+      id,
+      scope.canAccessAllOffices ? undefined : scope.officeId,
+    );
 
     if (!incident) throw new IncidentNotFoundError(id);
 
@@ -303,10 +310,13 @@ export class IncidentsService {
       throw new IncidentFormRequiredError();
     }
 
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
     const context = await this.repository.findCreationContext(
       dto.employeeId,
       dto.employeeAssignmentId,
       dto.incidentTypeId,
+      officeId,
     );
 
     if (!context.employee) {
@@ -434,6 +444,7 @@ export class IncidentsService {
         control: {
           incidentTypeCode: context.incidentType.code,
         },
+        officeId,
       });
     } catch (error) {
       await Promise.all(
@@ -456,7 +467,9 @@ export class IncidentsService {
       throw new EmptyIncidentUpdateError();
     }
 
-    const current = await this.findById(id);
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const current = await this.findById(id, actor);
 
     if (current.status === 'CANCELLED') {
       throw new CancelledIncidentModificationError();
@@ -467,6 +480,7 @@ export class IncidentsService {
       current.employeeId,
       current.employeeAssignmentId,
       incidentTypeId,
+      officeId,
     );
 
     if (!context.incidentType || !context.incidentType.isActive) {
@@ -481,8 +495,10 @@ export class IncidentsService {
       current.incidentType.code === 'COMISION' &&
       context.incidentType.code !== 'COMISION'
     ) {
-      const incidentDocuments =
-        await this.documentsRepository.findByIncidentId(id);
+      const incidentDocuments = await this.documentsRepository.findByIncidentId(
+        id,
+        scope.canAccessAllOffices ? undefined : scope.officeId,
+      );
       if (
         incidentDocuments.some(
           (document) => document.documentType.code === 'OFICIO_COMISION',
@@ -523,30 +539,35 @@ export class IncidentsService {
       occurrences,
     );
 
-    const result = await this.repository.update(id, {
-      expectedUpdatedAt: current.updatedAt,
-      incidentTypeId: dto.incidentTypeId,
-      issuedDate:
-        dto.issuedDate !== undefined
-          ? this.parseNullableDate(dto.issuedDate)
+    const result = await this.repository.update(
+      id,
+      {
+        expectedUpdatedAt: current.updatedAt,
+        incidentTypeId: dto.incidentTypeId,
+        issuedDate:
+          dto.issuedDate !== undefined
+            ? this.parseNullableDate(dto.issuedDate)
+            : undefined,
+        receivedAt: dto.receivedAt
+          ? this.parseDateTime(dto.receivedAt)
           : undefined,
-      receivedAt: dto.receivedAt
-        ? this.parseDateTime(dto.receivedAt)
-        : undefined,
-      referenceYear: dto.referenceYear,
-      observations:
-        dto.observations !== undefined
-          ? dto.observations?.trim() || null
-          : undefined,
-      occurrences: dto.occurrences ? occurrences : undefined,
-      updatedBy: actor.userId,
-      updatedAt: new Date(),
-      sessionId: actor.sessionId,
-      control: {
-        employeeId: current.employeeId,
-        incidentTypeCode: context.incidentType.code,
+        referenceYear: dto.referenceYear,
+        observations:
+          dto.observations !== undefined
+            ? dto.observations?.trim() || null
+            : undefined,
+        occurrences: dto.occurrences ? occurrences : undefined,
+        updatedBy: actor.userId,
+        updatedAt: new Date(),
+        sessionId: actor.sessionId,
+        control: {
+          employeeId: current.employeeId,
+          incidentTypeCode: context.incidentType.code,
+        },
+        officeId,
       },
-    });
+      officeId,
+    );
 
     if (!result) throw new IncidentNotFoundError(id);
 
@@ -558,20 +579,27 @@ export class IncidentsService {
     dto: CancelIncidentDto,
     actor: AuthenticatedUserModel,
   ) {
-    const current = await this.findById(id);
+    const scope = getOfficeScope(actor);
+    const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const current = await this.findById(id, actor);
 
     if (current.status === 'CANCELLED') {
       throw new IncidentAlreadyCancelledError();
     }
 
     const now = new Date();
-    const result = await this.repository.cancel(id, {
-      cancelledAt: now,
-      cancelledBy: actor.userId,
-      cancellationReason: dto.reason.trim(),
-      updatedAt: now,
-      sessionId: actor.sessionId,
-    });
+    const result = await this.repository.cancel(
+      id,
+      {
+        cancelledAt: now,
+        cancelledBy: actor.userId,
+        cancellationReason: dto.reason.trim(),
+        updatedAt: now,
+        sessionId: actor.sessionId,
+        officeId,
+      },
+      officeId,
+    );
 
     if (!result) throw new IncidentNotFoundError(id);
 

@@ -10,6 +10,8 @@ import type {
 import { ReportsRepository } from './repositories/reports.repository';
 import { resolveReportPeriod } from './reports.dates';
 import { toIncidentsReportResponse } from './presenters/incidents-report.presenter';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 
 @Injectable()
 export class ReportsService {
@@ -17,6 +19,7 @@ export class ReportsService {
 
   async getIncidentsReport(
     filters: GetIncidentsReportDto,
+    actor: AuthenticatedUserModel,
   ): Promise<IncidentsReportModel> {
     const period = resolveReportPeriod({
       period: filters.period,
@@ -33,6 +36,9 @@ export class ReportsService {
       incidentTypeId: filters.incidentTypeId,
       organizationalUnitId: filters.organizationalUnitId,
       includeCancelled: filters.includeCancelled ?? false,
+      officeId: getOfficeScope(actor).canAccessAllOffices
+        ? undefined
+        : actor.office.id,
     });
 
     return {

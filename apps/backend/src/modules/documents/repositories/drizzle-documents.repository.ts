@@ -5,6 +5,7 @@ import type { DrizzleDatabase } from '../../../database/database.types';
 import {
   documentTypes,
   documents,
+  employeeAssignments,
   incidents,
   incidentTypes,
 } from '../../../database/schema';
@@ -60,7 +61,7 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
     };
   }
 
-  async findByIncidentId(incidentId: string) {
+  async findByIncidentId(incidentId: string, officeId?: string) {
     const rows = await this.db
       .select({
         document: documents,
@@ -70,11 +71,19 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
       .from(documents)
 
       .innerJoin(documentTypes, eq(documents.documentTypeId, documentTypes.id))
+      .innerJoin(incidents, eq(documents.incidentId, incidents.id))
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
 
       .where(
         and(
           eq(documents.incidentId, uuidToBuffer(incidentId)),
           isNull(documents.deletedAt),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       )
 
@@ -83,7 +92,7 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
     return rows.map((row) => this.map(row));
   }
 
-  async findById(id: string) {
+  async findById(id: string, officeId?: string) {
     const [row] = await this.db
       .select({
         document: documents,
@@ -93,8 +102,20 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
       .from(documents)
 
       .innerJoin(documentTypes, eq(documents.documentTypeId, documentTypes.id))
+      .innerJoin(incidents, eq(documents.incidentId, incidents.id))
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
 
-      .where(eq(documents.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(documents.id, uuidToBuffer(id)),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
+        ),
+      )
 
       .limit(1);
 
@@ -146,6 +167,7 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
     contentHash: string;
     uploadedBy: string;
     sessionId: string;
+    officeId?: string;
   }) {
     await this.db.transaction(async (tx) => {
       const [incident] = await tx
@@ -155,7 +177,18 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
           incidentTypes,
           eq(incidents.incidentTypeId, incidentTypes.id),
         )
-        .where(eq(incidents.id, uuidToBuffer(data.incidentId)))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
+        .where(
+          and(
+            eq(incidents.id, uuidToBuffer(data.incidentId)),
+            data.officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+              : undefined,
+          ),
+        )
         .for('update');
 
       if (!incident) throw new IncidentNotAvailableForDocumentError();
@@ -239,13 +272,26 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
       deletedBy: string;
       deletionReason: string;
       sessionId: string;
+      officeId?: string;
     },
   ) {
     const deleted = await this.db.transaction(async (tx) => {
       const [current] = await tx
         .select({ deletedAt: documents.deletedAt })
         .from(documents)
-        .where(eq(documents.id, uuidToBuffer(id)))
+        .innerJoin(incidents, eq(documents.incidentId, incidents.id))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
+        .where(
+          and(
+            eq(documents.id, uuidToBuffer(id)),
+            data.officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+              : undefined,
+          ),
+        )
         .for('update');
 
       if (!current) return false;
@@ -284,6 +330,6 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
 
     if (!deleted) return null;
 
-    return this.findById(id);
+    return this.findById(id, data.officeId);
   }
 }

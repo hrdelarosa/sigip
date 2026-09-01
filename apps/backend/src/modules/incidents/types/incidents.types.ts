@@ -10,6 +10,7 @@ export interface IncidentFilters {
   organizationalUnitId?: string;
   from?: Date;
   to?: Date;
+  officeId?: string;
 }
 
 export interface IncidentOccurrenceData {
@@ -31,6 +32,7 @@ export interface CreateIncidentData {
     registeredBy: string;
   };
   occurrences: IncidentOccurrenceData[];
+  officeId?: string;
   documents: Array<{
     id: string;
     documentTypeId: string;
@@ -62,6 +64,7 @@ export interface UpdateIncidentData {
   updatedBy: string;
   updatedAt: Date;
   sessionId: string;
+  officeId?: string;
   control: {
     employeeId: string;
     incidentTypeCode: string;
@@ -74,6 +77,7 @@ export interface CancelIncidentData {
   cancellationReason: string;
   updatedAt: Date;
   sessionId: string;
+  officeId?: string;
 }
 
 export interface IncidentCreationContext {

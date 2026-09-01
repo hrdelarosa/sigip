@@ -17,6 +17,8 @@ import {
   toDashboardUpcomingReturnResponse,
 } from './presenters/dashboard.presenter';
 import { GetIncidentTrendDto } from './dto/get-incident-trend.dto';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('dashboard')
 @RequirePermissions('dashboard:read')
@@ -24,13 +26,17 @@ export class DashboardController {
   constructor(private readonly service: DashboardService) {}
 
   @Get('summary')
-  async summary(): Promise<DashboardSummaryResponse> {
-    return toDashboardSummaryResponse(await this.service.getSummary());
+  async summary(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<DashboardSummaryResponse> {
+    return toDashboardSummaryResponse(await this.service.getSummary(actor));
   }
 
   @Get('active-incidents')
-  async activeIncidents(): Promise<DashboardActiveIncidentsResponse> {
-    const items = await this.service.getActiveIncidents();
+  async activeIncidents(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<DashboardActiveIncidentsResponse> {
+    const items = await this.service.getActiveIncidents(actor);
 
     return {
       items: items.map(toDashboardActiveIncidentResponse),
@@ -39,8 +45,10 @@ export class DashboardController {
   }
 
   @Get('incidents-by-type')
-  async incidentsByType(): Promise<DashboardIncidentsByTypeResponse> {
-    const items = await this.service.getIncidentsByType();
+  async incidentsByType(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<DashboardIncidentsByTypeResponse> {
+    const items = await this.service.getIncidentsByType(actor);
 
     return {
       items: items.map(toDashboardIncidentTypeCountResponse),
@@ -51,14 +59,17 @@ export class DashboardController {
   @Get('incident-trend')
   async incidentTrend(
     @Query() query: GetIncidentTrendDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<DashboardIncidentTrendResponse> {
-    const items = await this.service.getIncidentTrend(query.period);
+    const items = await this.service.getIncidentTrend(query.period, actor);
     return { items };
   }
 
   @Get('upcoming-returns')
-  async upcomingReturns(): Promise<DashboardUpcomingReturnsResponse> {
-    const items = await this.service.getUpcomingReturns();
+  async upcomingReturns(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<DashboardUpcomingReturnsResponse> {
+    const items = await this.service.getUpcomingReturns(actor);
     return {
       items: items.map(toDashboardUpcomingReturnResponse),
       total: items.length,
@@ -66,8 +77,10 @@ export class DashboardController {
   }
 
   @Get('recent-incidents')
-  async recentIncidents(): Promise<DashboardRecentIncidentsResponse> {
-    const items = await this.service.getRecentIncidents();
+  async recentIncidents(
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<DashboardRecentIncidentsResponse> {
+    const items = await this.service.getRecentIncidents(actor);
     return {
       items: items.map(toDashboardRecentIncidentResponse),
       total: items.length,

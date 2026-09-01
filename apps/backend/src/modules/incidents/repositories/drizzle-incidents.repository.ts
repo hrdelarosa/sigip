@@ -92,6 +92,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     occurrences: CreateIncidentData['occurrences'],
     excludeIncidentId?: string,
     targetOccurrences = occurrences,
+    officeId?: string,
   ): Promise<void> {
     const period = getVacationPeriodFromCode(incidentTypeCode);
     if (!period || targetOccurrences.length === 0) return;
@@ -123,7 +124,18 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
         )
-        .where(and(...incidentConditions))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
+        .where(
+          and(
+            ...incidentConditions,
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        )
         .for('update'),
       tx
         .select({ value: sum(employeeVacationAdjustments.daysDelta) })
@@ -136,6 +148,9 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
             ),
             eq(employeeVacationAdjustments.referenceYear, year),
             eq(employeeVacationAdjustments.period, period),
+            officeId
+              ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeVacationAdjustments.employeeId} AND ${employeeAssignments.officeId} = ${uuidToBuffer(officeId)})`
+              : undefined,
           ),
         ),
     ]);
@@ -152,6 +167,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     incidentTypeCode: string,
     occurrences: CreateIncidentData['occurrences'],
     excludeIncidentId?: string,
+    officeId?: string,
   ): Promise<void> {
     if (!isJustificationCode(incidentTypeCode)) return;
 
@@ -171,7 +187,18 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         incidentOccurrences,
         eq(incidentOccurrences.incidentId, incidents.id),
       )
-      .where(and(...conditions))
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
+      .where(
+        and(
+          ...conditions,
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
+        ),
+      )
       .for('update');
     assertJustificationLimit(
       existing.map(({ date }) => date),
@@ -183,6 +210,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     employeeId: string,
     assignmentId: string,
     incidentTypeId: string,
+    officeId?: string,
   ): Promise<IncidentCreationContext> {
     const [
       employeeRows,
@@ -210,7 +238,14 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           effectiveTo: employeeAssignments.effectiveTo,
         })
         .from(employeeAssignments)
-        .where(eq(employeeAssignments.id, uuidToBuffer(assignmentId)))
+        .where(
+          and(
+            eq(employeeAssignments.id, uuidToBuffer(assignmentId)),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        )
         .limit(1),
 
       this.db
@@ -298,12 +333,17 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           data.incident.employeeId,
           data.control.incidentTypeCode,
           data.occurrences,
+          undefined,
+          undefined,
+          data.officeId,
         );
         await this.validateJustificationControl(
           tx,
           data.incident.employeeId,
           data.control.incidentTypeCode,
           data.occurrences,
+          undefined,
+          data.officeId,
         );
 
         await tx.insert(incidents).values({
@@ -395,14 +435,17 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       throw new IncidentCreateTransactionError({ cause: error });
     }
 
-    const result = await this.findById(data.incident.id);
+    const result = await this.findById(data.incident.id, data.officeId);
 
     if (!result) throw new Error('Incident persistence error');
 
     return result;
   }
 
-  async findById(id: string): Promise<IncidentDetailsModel | null> {
+  async findById(
+    id: string,
+    officeId?: string,
+  ): Promise<IncidentDetailsModel | null> {
     const [row] = await this.db
       .select({
         incident: incidents,
@@ -454,7 +497,14 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .innerJoin(users, eq(incidents.registeredBy, users.id))
-      .where(eq(incidents.id, uuidToBuffer(id)))
+      .where(
+        and(
+          eq(incidents.id, uuidToBuffer(id)),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
+        ),
+      )
       .limit(1);
 
     if (!row) return null;
@@ -580,6 +630,12 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       conditions.push(lte(incidentOccurrences.startDate, filters.to));
     }
 
+    if (filters.officeId) {
+      conditions.push(
+        eq(employeeAssignments.officeId, uuidToBuffer(filters.officeId)),
+      );
+    }
+
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const offset = (filters.page - 1) * filters.limit;
     const idRows = await this.db
@@ -621,7 +677,9 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     const items = await Promise.all(
-      idRows.map(async ({ id }) => this.findById(bufferToUuid(id))),
+      idRows.map(async ({ id }) =>
+        this.findById(bufferToUuid(id), filters.officeId),
+      ),
     );
 
     return {
@@ -635,8 +693,9 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
   async update(
     id: string,
     data: UpdateIncidentData,
+    officeId?: string,
   ): Promise<IncidentDetailsModel | null> {
-    const existing = await this.findById(id);
+    const existing = await this.findById(id, officeId);
 
     if (!existing) return null;
 
@@ -667,6 +726,8 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           data.control.incidentTypeCode,
           effectiveOccurrences,
           id,
+          undefined,
+          officeId,
         );
       } else {
         await this.validateVacationControl(
@@ -676,6 +737,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           [],
           id,
           existing.occurrences,
+          officeId,
         );
         await this.validateVacationControl(
           tx,
@@ -683,6 +745,8 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           data.control.incidentTypeCode,
           effectiveOccurrences,
           id,
+          undefined,
+          officeId,
         );
       }
       await this.validateJustificationControl(
@@ -691,6 +755,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         data.control.incidentTypeCode,
         effectiveOccurrences,
         id,
+        officeId,
       );
 
       await tx
@@ -773,14 +838,15 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
 
     if (!updated) return null;
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 
   async cancel(
     id: string,
     data: CancelIncidentData,
+    officeId?: string,
   ): Promise<IncidentDetailsModel | null> {
-    const existing = await this.findById(id);
+    const existing = await this.findById(id, officeId);
 
     if (!existing) return null;
 
@@ -833,6 +899,6 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
 
     if (!cancelled) return null;
 
-    return this.findById(id);
+    return this.findById(id, officeId);
   }
 }

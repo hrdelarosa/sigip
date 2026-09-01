@@ -6,6 +6,7 @@ export interface FindIncidentReportOptions {
   incidentTypeId?: string;
   organizationalUnitId?: string;
   includeCancelled: boolean;
+  officeId?: string;
 }
 
 export abstract class ReportsRepository {

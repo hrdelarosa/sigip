@@ -1,8 +1,18 @@
 import { ReportsService } from './reports.service';
 import { GetIncidentsReportDto } from './dto/get-incidents-report.dto';
 import type { ReportIncidentModel } from './models/incidents-report.model';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 describe('ReportsService', () => {
+  const actor: AuthenticatedUserModel = {
+    userId: 'user-id',
+    sessionId: 'session-id',
+    username: 'user',
+    fullName: 'User',
+    office: { id: 'office-id', code: 'OFFICE', name: 'Office' },
+    role: { id: 'role-id', code: 'ROLE', name: 'Role' },
+    permissions: [],
+  };
   it('builds average and percentage distributions from the same report items', async () => {
     const items: ReportIncidentModel[] = [
       buildIncident('one', 'employee-1', 'type-a', 'unit-a', 'REGISTERED'),
@@ -20,7 +30,7 @@ describe('ReportsService', () => {
       includeCancelled: true,
     });
 
-    const report = await service.getIncidentsReport(filters);
+    const report = await service.getIncidentsReport(filters, actor);
 
     expect(report.summary).toEqual({
       totalIncidents: 3,
@@ -70,7 +80,7 @@ describe('ReportsService', () => {
       includeCancelled: false,
     });
 
-    const report = await service.getIncidentsReport(filters);
+    const report = await service.getIncidentsReport(filters, actor);
 
     expect(report.summary.averageIncidentsPerEmployee).toBe(0);
     expect(report.summary.byType).toEqual([]);

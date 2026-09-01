@@ -23,7 +23,7 @@ import {
   organizationalUnits,
   positions,
 } from '../../../database/schema';
-import { bufferToUuid } from '../../../database/utils/uuid.util';
+import { bufferToUuid, uuidToBuffer } from '../../../database/utils/uuid.util';
 import type {
   DashboardActiveIncidentModel,
   DashboardIncidentTypeCountModel,
@@ -47,6 +47,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
     previousMonthStart: Date,
     weekEnd: Date,
     monthStartForEmployees: Date,
+    officeId?: string,
   ): Promise<DashboardOperationalSummaryModel> {
     const [
       activeEmployeesRow,
@@ -58,17 +59,35 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       previousMonthRow,
     ] = await Promise.all([
       this.db
-        .select({ value: count() })
+        .select({ value: countDistinct(employees.id) })
         .from(employees)
-        .where(eq(employees.status, 'ACTIVE')),
+        .leftJoin(
+          employeeAssignments,
+          eq(employees.id, employeeAssignments.employeeId),
+        )
+        .where(
+          and(
+            eq(employees.status, 'ACTIVE'),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        ),
 
       this.db
-        .select({ value: count() })
+        .select({ value: countDistinct(employees.id) })
         .from(employees)
+        .leftJoin(
+          employeeAssignments,
+          eq(employees.id, employeeAssignments.employeeId),
+        )
         .where(
           and(
             eq(employees.status, 'ACTIVE'),
             gte(employees.createdAt, monthStartForEmployees),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
 
@@ -76,6 +95,10 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(employees.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -86,6 +109,9 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             eq(incidents.status, 'REGISTERED'),
             lte(incidentOccurrences.startDate, today),
             gte(incidentOccurrences.normalizedEndDate, today),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
 
@@ -93,6 +119,10 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(incidents.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -103,6 +133,9 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             eq(incidents.status, 'REGISTERED'),
             gte(incidentOccurrences.normalizedEndDate, today),
             lte(incidentOccurrences.normalizedEndDate, weekEnd),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
 
@@ -110,6 +143,10 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(incidents.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -120,28 +157,45 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             eq(incidents.status, 'REGISTERED'),
             lte(incidentOccurrences.startDate, today),
             gte(incidentOccurrences.normalizedEndDate, today),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
 
       this.db
         .select({ value: count() })
         .from(incidents)
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
         .where(
           and(
             eq(incidents.status, 'REGISTERED'),
             gte(incidents.receivedAt, monthStart),
             lt(incidents.receivedAt, monthEnd),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
 
       this.db
         .select({ value: count() })
         .from(incidents)
+        .innerJoin(
+          employeeAssignments,
+          eq(incidents.employeeAssignmentId, employeeAssignments.id),
+        )
         .where(
           and(
             eq(incidents.status, 'REGISTERED'),
             gte(incidents.receivedAt, previousMonthStart),
             lt(incidents.receivedAt, monthStart),
+            officeId
+              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              : undefined,
           ),
         ),
     ]);
@@ -179,6 +233,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
 
   async getActiveIncidents(
     today: Date,
+    officeId?: string,
   ): Promise<DashboardActiveIncidentModel[]> {
     const rows = await this.db
       .select({
@@ -220,6 +275,9 @@ export class DrizzleDashboardRepository implements DashboardRepository {
           eq(incidents.status, 'REGISTERED'),
           lte(incidentOccurrences.startDate, today),
           gte(incidentOccurrences.normalizedEndDate, today),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       )
       .orderBy(asc(incidentOccurrences.startDate), asc(employees.fullName));
@@ -266,6 +324,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
   async getIncidentsByType(
     periodStart: Date,
     periodEnd: Date,
+    officeId?: string,
   ): Promise<DashboardIncidentTypeCountModel[]> {
     const rows = await this.db
       .select({
@@ -275,12 +334,19 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         count: countDistinct(incidents.id),
       })
       .from(incidents)
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .where(
         and(
           eq(incidents.status, 'REGISTERED'),
           gte(incidents.receivedAt, periodStart),
           lt(incidents.receivedAt, periodEnd),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       )
       .groupBy(incidentTypes.id, incidentTypes.code, incidentTypes.name)
@@ -301,16 +367,24 @@ export class DrizzleDashboardRepository implements DashboardRepository {
   async getIncidentTrend(
     periodStart: Date,
     periodEnd: Date,
+    officeId?: string,
   ): Promise<Array<{ period: string; count: number }>> {
     const period = sql<string>`DATE_FORMAT(${incidents.receivedAt}, '%Y-%m')`;
     const rows = await this.db
       .select({ period, count: countDistinct(incidents.id) })
       .from(incidents)
+      .innerJoin(
+        employeeAssignments,
+        eq(incidents.employeeAssignmentId, employeeAssignments.id),
+      )
       .where(
         and(
           eq(incidents.status, 'REGISTERED'),
           gte(incidents.receivedAt, periodStart),
           lt(incidents.receivedAt, periodEnd),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       )
       .groupBy(period)
@@ -325,6 +399,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
   async getUpcomingReturns(
     today: Date,
     weekEnd: Date,
+    officeId?: string,
   ): Promise<DashboardUpcomingReturnModel[]> {
     const rows = await this.db
       .select({
@@ -361,6 +436,9 @@ export class DrizzleDashboardRepository implements DashboardRepository {
           eq(incidents.status, 'REGISTERED'),
           gte(incidentOccurrences.normalizedEndDate, today),
           lte(incidentOccurrences.normalizedEndDate, weekEnd),
+          officeId
+            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+            : undefined,
         ),
       )
       .orderBy(
@@ -405,6 +483,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
 
   async getRecentIncidents(
     limit: number,
+    officeId?: string,
   ): Promise<DashboardRecentIncidentModel[]> {
     const rows = await this.db
       .select({
@@ -435,6 +514,11 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       .innerJoin(
         incidentOccurrences,
         eq(incidentOccurrences.incidentId, incidents.id),
+      )
+      .where(
+        officeId
+          ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+          : undefined,
       )
       .orderBy(desc(incidents.receivedAt), asc(incidentOccurrences.startDate))
       .limit(limit * 2);

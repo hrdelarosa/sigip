@@ -36,6 +36,7 @@ describe('IncidentsService', () => {
     sessionId: 'session-id',
     username: 'admin',
     fullName: 'Administrador',
+    office: { id: 'office-id', code: 'ORGRO', name: 'Oficina' },
     role: { id: 'role-id', code: 'ADMIN', name: 'Administrador' },
     permissions: [],
   };
@@ -152,6 +153,12 @@ describe('IncidentsService', () => {
       actor,
     );
 
+    expect(repository.findCreationContext).toHaveBeenCalledWith(
+      'employee-id',
+      'assignment-id',
+      'type-id',
+      'office-id',
+    );
     expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(10);
   });
 

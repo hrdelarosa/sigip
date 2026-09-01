@@ -17,12 +17,19 @@ import type {
 } from './models/dashboard.model';
 import { DashboardRepository } from './repositories/dashboard.repository';
 import { getCurrentVacationPeriod } from '../../common/vacation/vacation-control';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { getOfficeScope } from '../../common/authorization/office-scope';
 
 @Injectable()
 export class DashboardService {
   constructor(private readonly repository: DashboardRepository) {}
 
-  async getSummary(): Promise<DashboardSummaryModel> {
+  async getSummary(
+    actor: AuthenticatedUserModel,
+  ): Promise<DashboardSummaryModel> {
+    const officeId = getOfficeScope(actor).canAccessAllOffices
+      ? undefined
+      : actor.office.id;
     const today = startOfDayUtc();
     const monthStart = startOfMonthUtc();
     const monthEnd = startOfNextMonthUtc();
@@ -38,6 +45,7 @@ export class DashboardService {
       previousMonthStart,
       weekEnd,
       monthStart,
+      officeId,
     );
 
     return {
@@ -46,21 +54,33 @@ export class DashboardService {
     };
   }
 
-  async getActiveIncidents(): Promise<DashboardActiveIncidentModel[]> {
+  async getActiveIncidents(
+    actor: AuthenticatedUserModel,
+  ): Promise<DashboardActiveIncidentModel[]> {
     const today = startOfDayUtc();
 
-    return this.repository.getActiveIncidents(today);
+    return this.repository.getActiveIncidents(
+      today,
+      getOfficeScope(actor).canAccessAllOffices ? undefined : actor.office.id,
+    );
   }
 
-  async getIncidentsByType(): Promise<DashboardIncidentTypeCountModel[]> {
+  async getIncidentsByType(
+    actor: AuthenticatedUserModel,
+  ): Promise<DashboardIncidentTypeCountModel[]> {
     const yearStart = startOfYearUtc();
     const yearEnd = startOfNextYearUtc();
 
-    return this.repository.getIncidentsByType(yearStart, yearEnd);
+    return this.repository.getIncidentsByType(
+      yearStart,
+      yearEnd,
+      getOfficeScope(actor).canAccessAllOffices ? undefined : actor.office.id,
+    );
   }
 
   async getIncidentTrend(
     period: '3m' | '6m' | 'ytd' | '12m',
+    actor: AuthenticatedUserModel,
   ): Promise<DashboardIncidentTrendModel[]> {
     const currentStart = startOfMonthUtc();
     const months = period === '3m' ? 3 : period === '6m' ? 6 : 12;
@@ -77,6 +97,7 @@ export class DashboardService {
     const rows = await this.repository.getIncidentTrend(
       periodStart,
       startOfNextMonthUtc(),
+      getOfficeScope(actor).canAccessAllOffices ? undefined : actor.office.id,
     );
     const counts = new Map(rows.map((row) => [row.period, row.count]));
     const result: DashboardIncidentTrendModel[] = [];
@@ -98,12 +119,23 @@ export class DashboardService {
     return result;
   }
 
-  async getUpcomingReturns(): Promise<DashboardUpcomingReturnModel[]> {
+  async getUpcomingReturns(
+    actor: AuthenticatedUserModel,
+  ): Promise<DashboardUpcomingReturnModel[]> {
     const today = startOfDayUtc();
-    return this.repository.getUpcomingReturns(today, addDaysUtc(today, 7));
+    return this.repository.getUpcomingReturns(
+      today,
+      addDaysUtc(today, 7),
+      getOfficeScope(actor).canAccessAllOffices ? undefined : actor.office.id,
+    );
   }
 
-  async getRecentIncidents(): Promise<DashboardRecentIncidentModel[]> {
-    return this.repository.getRecentIncidents(8);
+  async getRecentIncidents(
+    actor: AuthenticatedUserModel,
+  ): Promise<DashboardRecentIncidentModel[]> {
+    return this.repository.getRecentIncidents(
+      8,
+      getOfficeScope(actor).canAccessAllOffices ? undefined : actor.office.id,
+    );
   }
 }

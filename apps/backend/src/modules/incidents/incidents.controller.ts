@@ -43,8 +43,9 @@ export class IncidentsController {
   async findAll(
     @Query()
     query: ListIncidentsQueryDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<IncidentsResponse> {
-    const result = await this.service.findAll(query);
+    const result = await this.service.findAll(query, actor);
 
     return toPaginatedResponse(
       result.items,
@@ -59,8 +60,9 @@ export class IncidentsController {
   async findById(
     @Param()
     params: IncidentIdParamDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<IncidentResponse> {
-    return toIncidentResponse(await this.service.findById(params.id));
+    return toIncidentResponse(await this.service.findById(params.id, actor));
   }
 
   @Post()

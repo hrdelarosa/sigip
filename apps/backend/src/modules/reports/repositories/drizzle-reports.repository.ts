@@ -61,6 +61,12 @@ export class DrizzleReportsRepository extends ReportsRepository {
       );
     }
 
+    if (options.officeId) {
+      conditions.push(
+        eq(employeeAssignments.officeId, uuidToBuffer(options.officeId)),
+      );
+    }
+
     const rows = await this.db
       .select({
         incidentId: incidents.id,

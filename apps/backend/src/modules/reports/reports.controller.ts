@@ -6,6 +6,8 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { GetIncidentsReportDto } from './dto/get-incidents-report.dto';
 import { ReportsPdfService } from './reports-pdf.service';
 import { ReportsService } from './reports.service';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
 @Controller('reports')
 @RequirePermissions('reports:read')
@@ -18,8 +20,9 @@ export class ReportsController {
   @Get('incidents')
   async getIncidentsReport(
     @Query() filters: GetIncidentsReportDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
   ): Promise<IncidentsReportResponse> {
-    const report = await this.reportsService.getIncidentsReport(filters);
+    const report = await this.reportsService.getIncidentsReport(filters, actor);
 
     return this.reportsService.toResponse(report);
   }
@@ -28,9 +31,10 @@ export class ReportsController {
   @RequirePermissions('reports:read', 'reports:export')
   async downloadIncidentsReport(
     @Query() filters: GetIncidentsReportDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
     @Res() response: Response,
   ): Promise<void> {
-    const report = await this.reportsService.getIncidentsReport(filters);
+    const report = await this.reportsService.getIncidentsReport(filters, actor);
     const pdf = await this.pdfService.generate(report);
     const filename = buildFilename(
       report.period.startDate,
