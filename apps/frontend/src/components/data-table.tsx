@@ -32,6 +32,7 @@ interface DataTableProps<T> {
   errorMessage?: string
   skeletonRows?: number
   renderActions?: (row: T) => ReactNode
+  tableFixed?: boolean
 }
 
 export function DataTable<T>({
@@ -46,12 +47,16 @@ export function DataTable<T>({
   errorMessage = 'No fue posible cargar la información.',
   skeletonRows = 9,
   renderActions,
+  tableFixed = false,
 }: DataTableProps<T>) {
   const colSpan = columns.length + (renderActions ? 1 : 0)
 
   return (
     <div className="overflow-hidden rounded-md border">
-      <Table aria-busy={isPending}>
+      <Table
+        aria-busy={isPending}
+        className={tableFixed ? 'table-fixed w-full' : ''}
+      >
         <TableHeader className="bg-muted">
           <TableRow>
             {columns.map((column) => (
