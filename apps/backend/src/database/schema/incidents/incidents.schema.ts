@@ -28,7 +28,7 @@ export const incidents = mysqlTable(
   {
     id: uuidBinary('id').notNull().primaryKey(),
     employeeId: uuidBinary('employee_id').notNull(),
-    employeeAssignmentId: uuidBinary('employee_assignment_id').notNull(),
+    employeeAssignmentId: uuidBinary('employee_assignment_id'),
     incidentTypeId: uuidBinary('incident_type_id').notNull(),
     issuedDate: date('issued_date', {
       mode: 'date',
