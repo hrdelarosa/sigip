@@ -50,12 +50,12 @@ export interface IncidentsReportItemResponse {
   organizationalUnit: {
     id: string
     name: string
-  }
+  } | null
 
   position: {
     id: string
     name: string
-  }
+  } | null
 
   incidentType: {
     id: string
@@ -80,7 +80,7 @@ export interface IncidentsReportTypeSummaryResponse {
 }
 
 export interface IncidentsReportOrganizationalUnitSummaryResponse {
-  organizationalUnitId: string
+  organizationalUnitId: string | null
   name: string
   count: number
   percentage: number

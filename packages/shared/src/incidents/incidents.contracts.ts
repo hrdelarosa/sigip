@@ -21,7 +21,7 @@ export interface IncidentOccurrenceResponse {
 
 export interface CreateIncidentRequest {
   employeeId: string
-  employeeAssignmentId: string
+  employeeAssignmentId?: string | null
   incidentTypeId: string
   issuedDate?: string | null
   receivedAt: string
@@ -88,10 +88,10 @@ export interface IncidentRegisteredByResponse {
 export interface IncidentResponse {
   id: string
   employeeId: string
-  employeeAssignmentId: string
+  employeeAssignmentId: string | null
   incidentTypeId: string
   employee: IncidentEmployeeResponse
-  assignment: IncidentAssignmentResponse
+  assignment: IncidentAssignmentResponse | null
   incidentType: IncidentTypeSummaryResponse
   issuedDate: string | null
   receivedAt: string
