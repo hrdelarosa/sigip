@@ -86,14 +86,16 @@ export function useIncidentContextFields(
 
   useEffect(() => {
     if (!assignmentsQuery.data) return
-    setValue('hasAssignments', assignmentsQuery.data.length > 0)
+    setValue('hasAssignments', assignmentsQuery.data.length > 0, {
+      shouldValidate: true,
+    })
   }, [assignmentsQuery.data, setValue])
 
   function selectEmployee(employee: EmployeeOption | null) {
     setSelectedEmployee(employee)
     setValue('employeeId', employee?.id ?? '', { shouldValidate: true })
+    setValue('hasAssignments', false, { shouldValidate: true })
     setValue('employeeAssignmentId', '', { shouldValidate: true })
-    setValue('hasAssignments', false)
     setValue('assignmentEffectiveFrom', '')
     setValue('assignmentEffectiveTo', null)
     setValue('incidentTypeId', '', { shouldValidate: true })
