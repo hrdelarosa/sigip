@@ -8,5 +8,7 @@ coverage/
 .DS_Store
 Thumbs.db
 apps/backend/storage/
+apps/backend/.local/
+apps/backend/src/database/seeds/template-employees.seed-data.local.ts
 docs/*.jpeg
 install.ps1

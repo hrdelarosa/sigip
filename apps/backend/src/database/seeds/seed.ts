@@ -39,10 +39,11 @@ const uuidBuffer = (): Buffer => {
 const namedUuidBuffer = (name: string): Buffer =>
   Buffer.from(name.replaceAll('-', ''), 'hex');
 
-const employeesSeed = templateEmployeesSeed.map((employee, index) => ({
-  employeeNumber: String(652192 + index),
-  fullName: `Empleado Ficticio ${String(index + 1).padStart(3, '0')}`,
+const employeesSeed = templateEmployeesSeed.map((employee) => ({
+  employeeNumber: employee.employeeNumber,
+  fullName: employee.fullName,
   hireDate: employee.hireDate,
+  officeCode: employee.officeCode,
   status: 'ACTIVE' as const,
 }));
 
@@ -354,12 +355,18 @@ const seed = async (): Promise<void> => {
     }
 
     for (const employee of employeesSeed) {
+      const employeeOfficeId = officeIds.get(employee.officeCode);
+      if (!employeeOfficeId) {
+        throw new Error(`No se encontró la oficina ${employee.officeCode}.`);
+      }
+
       await connection.execute(
-        `INSERT INTO employees (id, employee_number, full_name, hire_date, status)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), hire_date = VALUES(hire_date), status = VALUES(status)`,
+        `INSERT INTO employees (id, office_id, employee_number, full_name, hire_date, status)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), full_name = VALUES(full_name), hire_date = VALUES(hire_date), status = VALUES(status)`,
         [
           uuidBuffer(),
+          employeeOfficeId,
           employee.employeeNumber,
           employee.fullName,
           employee.hireDate,

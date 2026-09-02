@@ -43,8 +43,9 @@ const localSeedPath = resolve(
   'template-employees.seed-data.local.ts',
 );
 const loadModule = createRequire(__filename);
-const localSeedData = loadModule(localSeedPath) as SeedData;
-const seedData = existsSync(localSeedPath) ? localSeedData : exampleSeedData;
+const seedData = existsSync(localSeedPath)
+  ? (loadModule(localSeedPath) as SeedData)
+  : exampleSeedData;
 
 export const templateEmployeesSeed = seedData.templateEmployeesSeed;
 export const templateUnitCode = seedData.templateUnitCode;
