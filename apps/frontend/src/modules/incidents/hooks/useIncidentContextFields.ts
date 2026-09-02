@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useDeferredValue, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import {
   type Control,
   useFormState,
@@ -84,10 +84,18 @@ export function useIncidentContextFields(
     label: type.name,
   }))
 
+  useEffect(() => {
+    if (!assignmentsQuery.data) return
+    setValue('hasAssignments', assignmentsQuery.data.length > 0)
+  }, [assignmentsQuery.data, setValue])
+
   function selectEmployee(employee: EmployeeOption | null) {
     setSelectedEmployee(employee)
     setValue('employeeId', employee?.id ?? '', { shouldValidate: true })
     setValue('employeeAssignmentId', '', { shouldValidate: true })
+    setValue('hasAssignments', false)
+    setValue('assignmentEffectiveFrom', '')
+    setValue('assignmentEffectiveTo', null)
     setValue('incidentTypeId', '', { shouldValidate: true })
   }
 

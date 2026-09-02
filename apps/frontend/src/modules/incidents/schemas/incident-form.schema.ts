@@ -18,11 +18,15 @@ const occurrenceSchema = z.object({
 export const incidentFormSchema = z
   .object({
     employeeId: z.string().uuid('Seleccione un empleado'),
-    employeeAssignmentId: z.string().uuid('Seleccione una asignación'),
+    employeeAssignmentId: z.union([
+      z.string().uuid('Seleccione una asignación'),
+      z.literal(''),
+    ]),
+    hasAssignments: z.boolean().optional(),
     incidentTypeId: z.string().uuid('Seleccione un tipo de incidencia'),
     incidentTypeCode: z.string(),
     temporalMode: z.enum(INCIDENT_TEMPORAL_MODES),
-    assignmentEffectiveFrom: calendarDate,
+    assignmentEffectiveFrom: z.union([calendarDate, z.literal('')]),
     assignmentEffectiveTo: z.string().nullable(),
     issuedDate: z.string().nullable(),
     receivedAt: z
@@ -45,6 +49,14 @@ export const incidentFormSchema = z
   })
   .superRefine((values, context) => {
     const occurrences = values.occurrences
+
+    if (values.hasAssignments && !values.employeeAssignmentId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['employeeAssignmentId'],
+        message: 'Seleccione una asignación',
+      })
+    }
 
     if (
       isOrdinaryVacation(values.incidentTypeCode) &&
@@ -97,9 +109,10 @@ export const incidentFormSchema = z
       }
 
       if (
-        occurrence.start < values.assignmentEffectiveFrom ||
+        values.assignmentEffectiveFrom &&
+        (occurrence.start < values.assignmentEffectiveFrom ||
         (values.assignmentEffectiveTo &&
-          occurrence.end > values.assignmentEffectiveTo)
+          occurrence.end > values.assignmentEffectiveTo))
       ) {
         context.addIssue({
           code: 'custom',

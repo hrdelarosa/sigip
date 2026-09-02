@@ -14,6 +14,7 @@ export function getIncidentFormDefaultValues(
     return {
       employeeId: '',
       employeeAssignmentId: '',
+      hasAssignments: false,
       incidentTypeId: '',
       incidentTypeCode: '',
       temporalMode: 'SINGLE_DATE',
@@ -31,12 +32,13 @@ export function getIncidentFormDefaultValues(
 
   return {
     employeeId: incident.employeeId,
-    employeeAssignmentId: incident.employeeAssignmentId,
+    employeeAssignmentId: incident.employeeAssignmentId ?? '',
+    hasAssignments: incident.assignment !== null,
     incidentTypeId: incident.incidentTypeId,
     incidentTypeCode: incident.incidentType.code,
     temporalMode: incident.incidentType.temporalMode,
-    assignmentEffectiveFrom: incident.assignment.effectiveFrom,
-    assignmentEffectiveTo: incident.assignment.effectiveTo,
+    assignmentEffectiveFrom: incident.assignment?.effectiveFrom ?? '',
+    assignmentEffectiveTo: incident.assignment?.effectiveTo ?? null,
     issuedDate: incident.issuedDate,
     receivedAt: format(new Date(incident.receivedAt), "yyyy-MM-dd'T'HH:mm"),
     referenceYear: incident.referenceYear ? String(incident.referenceYear) : '',
@@ -55,7 +57,7 @@ export function toIncidentCreateRequest(
 ): CreateIncidentInput {
   return {
     employeeId: values.employeeId,
-    employeeAssignmentId: values.employeeAssignmentId,
+    employeeAssignmentId: values.employeeAssignmentId || undefined,
     incidentTypeId: values.incidentTypeId,
     issuedDate: values.issuedDate || null,
     receivedAt: new Date(values.receivedAt).toISOString(),

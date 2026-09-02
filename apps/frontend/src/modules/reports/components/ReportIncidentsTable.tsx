@@ -70,8 +70,8 @@ function ReportIncidentRow({ item }: { item: IncidentsReportItemResponse }) {
         </span>
       </TableCell>
       <TableCell className="hidden md:table-cell">
-        <span className="block truncate" title={item.organizationalUnit.name}>
-          {item.organizationalUnit.name}
+        <span className="block truncate" title={item.organizationalUnit?.name ?? 'No asignado'}>
+          {item.organizationalUnit?.name ?? 'No asignado'}
         </span>
       </TableCell>
       <TableCell>

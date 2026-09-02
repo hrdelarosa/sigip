@@ -57,27 +57,32 @@ export function IncidentDetailsInformation({
                 {incident.employee.employeeNumber}
               </DetailField>
               <DetailField label="Adscripción">
-                {incident.assignment.organizationalUnit.name}
+                {incident.assignment?.organizationalUnit.name ?? 'No asignado'}
               </DetailField>
               <DetailField label="Puesto">
-                {incident.assignment.position.name}
+                {incident.assignment?.position.name ?? 'No asignado'}
               </DetailField>
               <DetailField label="Nombramiento">
-                {incident.assignment.appointmentType === 'BASE'
-                  ? 'Base'
-                  : 'Confianza'}
+                {incident.assignment
+                  ? incident.assignment.appointmentType === 'BASE'
+                    ? 'Base'
+                    : 'Confianza'
+                  : 'No asignado'}
               </DetailField>
               <DetailField label="Horario">
-                {incident.assignment.schedule ?? 'No indicado'}
+                {incident.assignment?.schedule ?? 'No asignado'}
               </DetailField>
               <DetailField
                 label="Vigencia de la asignación"
                 className="sm:col-span-2"
               >
-                {formatCalendarDate(incident.assignment.effectiveFrom)}
-                {incident.assignment.effectiveTo
-                  ? ` al ${formatCalendarDate(incident.assignment.effectiveTo)}`
-                  : ' en adelante'}
+                {incident.assignment
+                  ? `${formatCalendarDate(incident.assignment.effectiveFrom)}${
+                      incident.assignment.effectiveTo
+                        ? ` al ${formatCalendarDate(incident.assignment.effectiveTo)}`
+                        : ' en adelante'
+                    }`
+                  : 'No asignado'}
               </DetailField>
             </dl>
           </CardContent>

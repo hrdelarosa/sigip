@@ -155,7 +155,9 @@ export function IncidentEmployeeFields({
                   ? 'Seleccione primero un empleado'
                   : context.assignmentsQuery.isPending
                     ? 'Cargando asignaciones...'
-                    : 'Seleccione una asignación'
+                    : context.assignmentItems.length === 0
+                      ? 'Sin asignación disponible'
+                      : 'Seleccione una asignación'
               }
               error={context.errors.employeeAssignmentId?.message}
               inputRef={field.ref}

@@ -24,6 +24,35 @@ const baseValues = {
 }
 
 describe('incidentFormSchema', () => {
+  it('accepts an empty assignment when the employee has none', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      employeeAssignmentId: '',
+      hasAssignments: false,
+      assignmentEffectiveFrom: '',
+      assignmentEffectiveTo: null,
+      occurrences: [{ startDate: '2026-07-14', endDate: null }],
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('requires selecting an assignment when the employee has assignments', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      employeeAssignmentId: '',
+      hasAssignments: true,
+      occurrences: [{ startDate: '2026-07-14', endDate: null }],
+    })
+
+    expect(result.success).toBe(false)
+    expect(
+      result.error?.issues.some(
+        (issue) => issue.path.join('.') === 'employeeAssignmentId',
+      ),
+    ).toBe(true)
+  })
+
   it('accepts separate vacation days', () => {
     const result = incidentFormSchema.safeParse({
       ...baseValues,
