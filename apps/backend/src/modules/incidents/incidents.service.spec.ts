@@ -11,6 +11,7 @@ import {
   IncidentVacationOutsidePeriodError,
   IncidentVacationNotEligibleError,
   IncidentVacationPeriodNotAvailableError,
+  InvalidIncidentAssignmentError,
 } from './incidents.errors';
 import { IncidentsService } from './incidents.service';
 import type { IncidentDetailsModel } from './models/incident.model';
@@ -63,6 +64,7 @@ describe('IncidentsService', () => {
   it('rejects overlapping occurrence periods', async () => {
     repository.findCreationContext.mockResolvedValue({
       employee: { id: 'employee-id', status: 'ACTIVE' },
+      hasApplicableAssignment: true,
       assignment: {
         id: 'assignment-id',
         employeeId: 'employee-id',
@@ -157,6 +159,8 @@ describe('IncidentsService', () => {
       'employee-id',
       'assignment-id',
       'type-id',
+      new Date('2026-08-01T00:00:00.000Z'),
+      new Date('2026-08-10T00:00:00.000Z'),
       'office-id',
     );
     expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(10);
@@ -275,6 +279,7 @@ describe('IncidentsService', () => {
     repository.findById.mockResolvedValue(buildIncident());
     repository.findCreationContext.mockResolvedValue({
       employee: { id: 'employee-id', status: 'ACTIVE' },
+      hasApplicableAssignment: true,
       assignment: {
         id: 'assignment-id',
         employeeId: 'employee-id',
@@ -357,6 +362,51 @@ describe('IncidentsService', () => {
 
     expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
   });
+
+  it('creates an incident without assignment when none applies', async () => {
+    repository.findCreationContext.mockResolvedValue({
+      ...buildCreationContext('PERMISO'),
+      assignment: null,
+      hasApplicableAssignment: false,
+    });
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue({
+      ...buildIncident(),
+      employeeAssignmentId: null,
+      assignment: null,
+    });
+
+    await service.create(
+      { ...buildCreateDto(), employeeAssignmentId: undefined },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    const createData = repository.create.mock.calls[0]?.[0];
+    expect(createData?.incident.employeeAssignmentId).toBeNull();
+  });
+
+  it('requires an assignment when one applies to the incident dates', async () => {
+    repository.findCreationContext.mockResolvedValue({
+      ...buildCreationContext('PERMISO'),
+      assignment: null,
+      hasApplicableAssignment: true,
+    });
+
+    await expect(
+      service.create(
+        { ...buildCreateDto(), employeeAssignmentId: undefined },
+        buildFile('formato.pdf', 100),
+        actor,
+      ),
+    ).rejects.toBeInstanceOf(InvalidIncidentAssignmentError);
+
+    expect(repository.create).not.toHaveBeenCalled();
+  });
 });
 
 function buildCreateDto() {
@@ -385,6 +435,7 @@ function buildCreationContext(code: string) {
       status: 'ACTIVE',
       hireDate: new Date('2020-01-01T00:00:00.000Z'),
     },
+    hasApplicableAssignment: true,
     assignment: {
       id: 'assignment-id',
       employeeId: 'employee-id',

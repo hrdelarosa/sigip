@@ -7,6 +7,7 @@ import {
   eq,
   gte,
   inArray,
+  isNull,
   like,
   lte,
   ne,
@@ -208,50 +209,70 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
 
   async findCreationContext(
     employeeId: string,
-    assignmentId: string,
+    assignmentId: string | null | undefined,
     incidentTypeId: string,
+    occurrenceFrom: Date,
+    occurrenceTo: Date,
     officeId?: string,
   ): Promise<IncidentCreationContext> {
     const [
       employeeRows,
       assignmentRows,
       incidentTypeRows,
+      applicableAssignmentRows,
       formTypeRows,
       commissionTypeRows,
     ] = await Promise.all([
       this.db
         .select({
           id: employees.id,
+          officeId: employees.officeId,
           status: employees.status,
           hireDate: employees.hireDate,
         })
         .from(employees)
-        .where(eq(employees.id, uuidToBuffer(employeeId)))
-        .limit(1),
-
-      this.db
-        .select({
-          id: employeeAssignments.id,
-          employeeId: employeeAssignments.employeeId,
-          appointmentType: employeeAssignments.appointmentType,
-          effectiveFrom: employeeAssignments.effectiveFrom,
-          effectiveTo: employeeAssignments.effectiveTo,
-        })
-        .from(employeeAssignments)
         .where(
           and(
-            eq(employeeAssignments.id, uuidToBuffer(assignmentId)),
+            eq(employees.id, uuidToBuffer(employeeId)),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         )
         .limit(1),
 
+      assignmentId
+        ? this.db
+            .select({
+              id: employeeAssignments.id,
+              employeeId: employeeAssignments.employeeId,
+              appointmentType: employeeAssignments.appointmentType,
+              effectiveFrom: employeeAssignments.effectiveFrom,
+              effectiveTo: employeeAssignments.effectiveTo,
+            })
+            .from(employeeAssignments)
+            .where(eq(employeeAssignments.id, uuidToBuffer(assignmentId)))
+            .limit(1)
+        : Promise.resolve([]),
+
       this.db
         .select()
         .from(incidentTypes)
         .where(eq(incidentTypes.id, uuidToBuffer(incidentTypeId)))
+        .limit(1),
+      this.db
+        .select({ id: employeeAssignments.id })
+        .from(employeeAssignments)
+        .where(
+          and(
+            eq(employeeAssignments.employeeId, uuidToBuffer(employeeId)),
+            lte(employeeAssignments.effectiveFrom, occurrenceFrom),
+            or(
+              isNull(employeeAssignments.effectiveTo),
+              gte(employeeAssignments.effectiveTo, occurrenceTo),
+            ),
+          ),
+        )
         .limit(1),
 
       this.db
@@ -288,10 +309,12 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       employee: employee
         ? {
             id: bufferToUuid(employee.id),
+            officeId: bufferToUuid(employee.officeId),
             status: employee.status,
             hireDate: employee.hireDate,
           }
         : null,
+      hasApplicableAssignment: applicableAssignmentRows.length > 0,
 
       assignment: assignment
         ? {
@@ -349,9 +372,9 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         await tx.insert(incidents).values({
           id: uuidToBuffer(data.incident.id),
           employeeId: uuidToBuffer(data.incident.employeeId),
-          employeeAssignmentId: uuidToBuffer(
-            data.incident.employeeAssignmentId,
-          ),
+          employeeAssignmentId: data.incident.employeeAssignmentId
+            ? uuidToBuffer(data.incident.employeeAssignmentId)
+            : null,
           incidentTypeId: uuidToBuffer(data.incident.incidentTypeId),
           issuedDate: data.incident.issuedDate,
           receivedAt: data.incident.receivedAt,
@@ -486,23 +509,21 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
         eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
-      .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
+      .leftJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .innerJoin(users, eq(incidents.registeredBy, users.id))
       .where(
         and(
           eq(incidents.id, uuidToBuffer(id)),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
       .limit(1);
@@ -518,7 +539,9 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     return {
       id: bufferToUuid(row.incident.id),
       employeeId: bufferToUuid(row.incident.employeeId),
-      employeeAssignmentId: bufferToUuid(row.incident.employeeAssignmentId),
+      employeeAssignmentId: row.incident.employeeAssignmentId
+        ? bufferToUuid(row.incident.employeeAssignmentId)
+        : null,
       incidentTypeId: bufferToUuid(row.incident.incidentTypeId),
       issuedDate: row.incident.issuedDate,
       receivedAt: row.incident.receivedAt,
@@ -541,23 +564,26 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         employeeNumber: row.employee.employeeNumber,
         fullName: row.employee.fullName,
       },
-      assignment: {
-        id: bufferToUuid(row.assignment.id),
-        appointmentType: row.assignment.appointmentType,
-        schedule: row.assignment.schedule,
-        effectiveFrom: row.assignment.effectiveFrom,
-        effectiveTo: row.assignment.effectiveTo,
-        organizationalUnit: {
-          id: bufferToUuid(row.organizationalUnit.id),
-          code: row.organizationalUnit.code,
-          name: row.organizationalUnit.name,
-        },
-        position: {
-          id: bufferToUuid(row.position.id),
-          code: row.position.code,
-          name: row.position.name,
-        },
-      },
+      assignment:
+        row.assignment && row.organizationalUnit && row.position
+          ? {
+              id: bufferToUuid(row.assignment.id),
+              appointmentType: row.assignment.appointmentType,
+              schedule: row.assignment.schedule,
+              effectiveFrom: row.assignment.effectiveFrom,
+              effectiveTo: row.assignment.effectiveTo,
+              organizationalUnit: {
+                id: bufferToUuid(row.organizationalUnit.id),
+                code: row.organizationalUnit.code,
+                name: row.organizationalUnit.name,
+              },
+              position: {
+                id: bufferToUuid(row.position.id),
+                code: row.position.code,
+                name: row.position.name,
+              },
+            }
+          : null,
       incidentType: {
         id: bufferToUuid(row.incidentType.id),
         code: row.incidentType.code,
@@ -631,9 +657,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     }
 
     if (filters.officeId) {
-      conditions.push(
-        eq(employeeAssignments.officeId, uuidToBuffer(filters.officeId)),
-      );
+      conditions.push(eq(employees.officeId, uuidToBuffer(filters.officeId)));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -645,12 +669,12 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
-      .innerJoin(
+      .leftJoin(
         incidentOccurrences,
         eq(incidentOccurrences.incidentId, incidents.id),
       )

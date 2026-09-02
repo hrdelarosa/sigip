@@ -23,7 +23,7 @@ export interface CreateIncidentData {
   incident: {
     id: string;
     employeeId: string;
-    employeeAssignmentId: string;
+    employeeAssignmentId: string | null;
     incidentTypeId: string;
     issuedDate: Date | null;
     receivedAt: Date;
@@ -83,9 +83,11 @@ export interface CancelIncidentData {
 export interface IncidentCreationContext {
   employee: {
     id: string;
+    officeId: string;
     status: string;
     hireDate: Date | null;
   } | null;
+  hasApplicableAssignment: boolean;
   assignment: {
     id: string;
     employeeId: string;

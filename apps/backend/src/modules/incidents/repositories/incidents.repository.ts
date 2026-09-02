@@ -18,8 +18,10 @@ export abstract class IncidentsRepository {
   ): Promise<IncidentDetailsModel | null>;
   abstract findCreationContext(
     employeeId: string,
-    assignmentId: string,
+    assignmentId: string | null | undefined,
     incidentTypeId: string,
+    occurrenceFrom: Date,
+    occurrenceTo: Date,
     officeId?: string,
   ): Promise<IncidentCreationContext>;
   abstract create(data: CreateIncidentData): Promise<IncidentDetailsModel>;

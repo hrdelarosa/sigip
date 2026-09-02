@@ -62,9 +62,7 @@ export class DrizzleReportsRepository extends ReportsRepository {
     }
 
     if (options.officeId) {
-      conditions.push(
-        eq(employeeAssignments.officeId, uuidToBuffer(options.officeId)),
-      );
+      conditions.push(eq(employees.officeId, uuidToBuffer(options.officeId)));
     }
 
     const rows = await this.db
@@ -89,15 +87,15 @@ export class DrizzleReportsRepository extends ReportsRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
         eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
-      .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
+      .leftJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .innerJoin(
         incidentOccurrences,
@@ -126,14 +124,20 @@ export class DrizzleReportsRepository extends ReportsRepository {
             employeeNumber: row.employeeNumber,
             fullName: row.employeeName,
           },
-          organizationalUnit: {
-            id: bufferToUuid(row.organizationalUnitId),
-            name: row.organizationalUnitName,
-          },
-          position: {
-            id: bufferToUuid(row.positionId),
-            name: row.positionName,
-          },
+          organizationalUnit:
+            row.organizationalUnitId && row.organizationalUnitName
+              ? {
+                  id: bufferToUuid(row.organizationalUnitId),
+                  name: row.organizationalUnitName,
+                }
+              : null,
+          position:
+            row.positionId && row.positionName
+              ? {
+                  id: bufferToUuid(row.positionId),
+                  name: row.positionName,
+                }
+              : null,
           incidentType: {
             id: bufferToUuid(row.incidentTypeId),
             code: row.incidentTypeCode,

@@ -312,10 +312,25 @@ export class IncidentsService {
 
     const scope = getOfficeScope(actor);
     const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
+    const occurrences = this.normalizeOccurrences(dto.occurrences);
+    const occurrenceFrom = new Date(
+      Math.min(
+        ...occurrences.map((occurrence) => occurrence.startDate.getTime()),
+      ),
+    );
+    const occurrenceTo = new Date(
+      Math.max(
+        ...occurrences.map((occurrence) =>
+          (occurrence.endDate ?? occurrence.startDate).getTime(),
+        ),
+      ),
+    );
     const context = await this.repository.findCreationContext(
       dto.employeeId,
       dto.employeeAssignmentId,
       dto.incidentTypeId,
+      occurrenceFrom,
+      occurrenceTo,
       officeId,
     );
 
@@ -327,11 +342,20 @@ export class IncidentsService {
       throw new InactiveIncidentEmployeeError();
     }
 
-    if (!context.assignment) {
+    const { hasApplicableAssignment } = context;
+
+    if (hasApplicableAssignment && !context.assignment) {
       throw new InvalidIncidentAssignmentError();
     }
 
-    if (context.assignment.employeeId !== dto.employeeId) {
+    if (
+      context.assignment &&
+      context.assignment.employeeId !== dto.employeeId
+    ) {
+      throw new InvalidIncidentAssignmentError();
+    }
+
+    if (!hasApplicableAssignment && dto.employeeAssignmentId) {
       throw new InvalidIncidentAssignmentError();
     }
 
@@ -351,12 +375,12 @@ export class IncidentsService {
       throw new CommissionDocumentTypeMissingError();
     }
 
-    this.validateAppointmentScope(
-      context.incidentType.appointmentScope,
-      context.assignment.appointmentType,
-    );
-
-    const occurrences = this.normalizeOccurrences(dto.occurrences);
+    if (context.assignment) {
+      this.validateAppointmentScope(
+        context.incidentType.appointmentScope,
+        context.assignment.appointmentType,
+      );
+    }
 
     this.validateOrdinaryVacationTemporalMode(
       context.incidentType.code,
@@ -370,11 +394,13 @@ export class IncidentsService {
       occurrences,
     );
 
-    this.validateAssignmentCoverage(
-      context.assignment.effectiveFrom,
-      context.assignment.effectiveTo,
-      occurrences,
-    );
+    if (context.assignment) {
+      this.validateAssignmentCoverage(
+        context.assignment.effectiveFrom,
+        context.assignment.effectiveTo,
+        occurrences,
+      );
+    }
 
     const incidentId = generateUuidV7();
     const storedPaths: string[] = [];
@@ -427,7 +453,7 @@ export class IncidentsService {
         incident: {
           id: incidentId,
           employeeId: dto.employeeId,
-          employeeAssignmentId: dto.employeeAssignmentId,
+          employeeAssignmentId: dto.employeeAssignmentId ?? null,
           incidentTypeId: dto.incidentTypeId,
           issuedDate: this.parseNullableDate(dto.issuedDate),
           receivedAt: this.parseDateTime(dto.receivedAt),
@@ -476,10 +502,31 @@ export class IncidentsService {
     }
 
     const incidentTypeId = dto.incidentTypeId ?? current.incidentTypeId;
+    const occurrences = dto.occurrences
+      ? this.normalizeOccurrences(dto.occurrences)
+      : current.occurrences.map((occurrence) => ({
+          id: occurrence.id,
+          startDate: occurrence.startDate,
+          endDate: occurrence.endDate,
+        }));
+    const occurrenceFrom = new Date(
+      Math.min(
+        ...occurrences.map((occurrence) => occurrence.startDate.getTime()),
+      ),
+    );
+    const occurrenceTo = new Date(
+      Math.max(
+        ...occurrences.map((occurrence) =>
+          (occurrence.endDate ?? occurrence.startDate).getTime(),
+        ),
+      ),
+    );
     const context = await this.repository.findCreationContext(
       current.employeeId,
       current.employeeAssignmentId,
       incidentTypeId,
+      occurrenceFrom,
+      occurrenceTo,
       officeId,
     );
 
@@ -487,7 +534,9 @@ export class IncidentsService {
       throw new IncidentTypeNotAvailableError();
     }
 
-    if (!context.assignment) {
+    const { hasApplicableAssignment } = context;
+
+    if (hasApplicableAssignment && !context.assignment) {
       throw new InvalidIncidentAssignmentError();
     }
 
@@ -508,18 +557,12 @@ export class IncidentsService {
       }
     }
 
-    this.validateAppointmentScope(
-      context.incidentType.appointmentScope,
-      context.assignment.appointmentType,
-    );
-
-    const occurrences = dto.occurrences
-      ? this.normalizeOccurrences(dto.occurrences)
-      : current.occurrences.map((occurrence) => ({
-          id: occurrence.id,
-          startDate: occurrence.startDate,
-          endDate: occurrence.endDate,
-        }));
+    if (context.assignment) {
+      this.validateAppointmentScope(
+        context.incidentType.appointmentScope,
+        context.assignment.appointmentType,
+      );
+    }
 
     this.validateOrdinaryVacationTemporalMode(
       context.incidentType.code,
@@ -533,11 +576,13 @@ export class IncidentsService {
       occurrences,
     );
 
-    this.validateAssignmentCoverage(
-      context.assignment.effectiveFrom,
-      context.assignment.effectiveTo,
-      occurrences,
-    );
+    if (context.assignment) {
+      this.validateAssignmentCoverage(
+        context.assignment.effectiveFrom,
+        context.assignment.effectiveTo,
+        occurrences,
+      );
+    }
 
     const result = await this.repository.update(
       id,

@@ -22,11 +22,11 @@ export interface ReportIncidentModel {
   organizationalUnit: {
     id: string;
     name: string;
-  };
+  } | null;
   position: {
     id: string;
     name: string;
-  };
+  } | null;
   incidentType: {
     id: string;
     code: string;
@@ -60,7 +60,7 @@ export interface IncidentsReportModel {
       percentage: number;
     }>;
     byOrganizationalUnit: Array<{
-      organizationalUnitId: string;
+      organizationalUnitId: string | null;
       name: string;
       count: number;
       percentage: number;

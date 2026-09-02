@@ -119,16 +119,17 @@ export class ReportsService {
 function buildUnitSummary(items: ReportIncidentModel[]) {
   const byUnit = new Map<
     string,
-    { organizationalUnitId: string; name: string; count: number }
+    { organizationalUnitId: string | null; name: string; count: number }
   >();
 
   for (const item of items) {
-    const current = byUnit.get(item.organizationalUnit.id);
+    const id = item.organizationalUnit?.id ?? '';
+    const current = byUnit.get(id);
     if (current) current.count++;
     else {
-      byUnit.set(item.organizationalUnit.id, {
-        organizationalUnitId: item.organizationalUnit.id,
-        name: item.organizationalUnit.name,
+      byUnit.set(id, {
+        organizationalUnitId: item.organizationalUnit?.id ?? null,
+        name: item.organizationalUnit?.name ?? 'No asignado',
         count: 1,
       });
     }

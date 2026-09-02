@@ -20,8 +20,9 @@ export class CreateIncidentDto implements CreateIncidentRequest {
   @IsUUID()
   employeeId!: string;
 
+  @IsOptional()
   @IsUUID()
-  employeeAssignmentId!: string;
+  employeeAssignmentId?: string | null;
 
   @IsUUID()
   incidentTypeId!: string;

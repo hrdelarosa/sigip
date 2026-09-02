@@ -86,6 +86,37 @@ describe('ReportsService', () => {
     expect(report.summary.byType).toEqual([]);
     expect(report.summary.byOrganizationalUnit).toEqual([]);
   });
+
+  it('groups incidents without an assignment under No asignado', async () => {
+    const incident = buildIncident(
+      'one',
+      'employee-1',
+      'type-a',
+      'unit-a',
+      'REGISTERED',
+    );
+    incident.organizationalUnit = null;
+    incident.position = null;
+    const repository = {
+      findIncidents: jest.fn().mockResolvedValue([incident]),
+    };
+    const service = new ReportsService(repository);
+    const filters = Object.assign(new GetIncidentsReportDto(), {
+      period: 'YEAR',
+      year: 2026,
+    });
+
+    const report = await service.getIncidentsReport(filters, actor);
+
+    expect(report.summary.byOrganizationalUnit).toEqual([
+      {
+        organizationalUnitId: null,
+        name: 'No asignado',
+        count: 1,
+        percentage: 100,
+      },
+    ]);
+  });
 });
 
 function buildIncident(

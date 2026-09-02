@@ -61,15 +61,11 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       this.db
         .select({ value: countDistinct(employees.id) })
         .from(employees)
-        .leftJoin(
-          employeeAssignments,
-          eq(employees.id, employeeAssignments.employeeId),
-        )
         .where(
           and(
             eq(employees.status, 'ACTIVE'),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -77,16 +73,12 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       this.db
         .select({ value: countDistinct(employees.id) })
         .from(employees)
-        .leftJoin(
-          employeeAssignments,
-          eq(employees.id, employeeAssignments.employeeId),
-        )
         .where(
           and(
             eq(employees.status, 'ACTIVE'),
             gte(employees.createdAt, monthStartForEmployees),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -95,10 +87,6 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(employees.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -110,7 +98,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             lte(incidentOccurrences.startDate, today),
             gte(incidentOccurrences.normalizedEndDate, today),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -119,10 +107,6 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(incidents.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -134,7 +118,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             gte(incidentOccurrences.normalizedEndDate, today),
             lte(incidentOccurrences.normalizedEndDate, weekEnd),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -143,10 +127,6 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         .select({ value: countDistinct(incidents.id) })
         .from(incidents)
         .innerJoin(employees, eq(incidents.employeeId, employees.id))
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
         .innerJoin(
           incidentOccurrences,
           eq(incidentOccurrences.incidentId, incidents.id),
@@ -158,7 +138,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
             lte(incidentOccurrences.startDate, today),
             gte(incidentOccurrences.normalizedEndDate, today),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -166,17 +146,14 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       this.db
         .select({ value: count() })
         .from(incidents)
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
+        .innerJoin(employees, eq(incidents.employeeId, employees.id))
         .where(
           and(
             eq(incidents.status, 'REGISTERED'),
             gte(incidents.receivedAt, monthStart),
             lt(incidents.receivedAt, monthEnd),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -184,17 +161,14 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       this.db
         .select({ value: count() })
         .from(incidents)
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
+        .innerJoin(employees, eq(incidents.employeeId, employees.id))
         .where(
           and(
             eq(incidents.status, 'REGISTERED'),
             gte(incidents.receivedAt, previousMonthStart),
             lt(incidents.receivedAt, monthStart),
             officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
+              ? eq(employees.officeId, uuidToBuffer(officeId))
               : undefined,
           ),
         ),
@@ -255,15 +229,15 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
         eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
-      .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
+      .leftJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .innerJoin(
         incidentOccurrences,
@@ -275,9 +249,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
           eq(incidents.status, 'REGISTERED'),
           lte(incidentOccurrences.startDate, today),
           gte(incidentOccurrences.normalizedEndDate, today),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
       .orderBy(asc(incidentOccurrences.startDate), asc(employees.fullName));
@@ -297,12 +269,14 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         employeeNumber: row.employeeNumber,
         employeeName: row.employeeName,
         organizationalUnit: {
-          id: bufferToUuid(row.organizationalUnitId),
-          name: row.organizationalUnitName,
+          id: row.organizationalUnitId
+            ? bufferToUuid(row.organizationalUnitId)
+            : '',
+          name: row.organizationalUnitName ?? 'No asignado',
         },
         position: {
-          id: bufferToUuid(row.positionId),
-          name: row.positionName,
+          id: row.positionId ? bufferToUuid(row.positionId) : '',
+          name: row.positionName ?? 'No asignado',
         },
         incidentType: {
           id: bufferToUuid(row.incidentTypeId),
@@ -334,19 +308,14 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         count: countDistinct(incidents.id),
       })
       .from(incidents)
-      .innerJoin(
-        employeeAssignments,
-        eq(incidents.employeeAssignmentId, employeeAssignments.id),
-      )
+      .innerJoin(employees, eq(incidents.employeeId, employees.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .where(
         and(
           eq(incidents.status, 'REGISTERED'),
           gte(incidents.receivedAt, periodStart),
           lt(incidents.receivedAt, periodEnd),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
       .groupBy(incidentTypes.id, incidentTypes.code, incidentTypes.name)
@@ -373,18 +342,13 @@ export class DrizzleDashboardRepository implements DashboardRepository {
     const rows = await this.db
       .select({ period, count: countDistinct(incidents.id) })
       .from(incidents)
-      .innerJoin(
-        employeeAssignments,
-        eq(incidents.employeeAssignmentId, employeeAssignments.id),
-      )
+      .innerJoin(employees, eq(incidents.employeeId, employees.id))
       .where(
         and(
           eq(incidents.status, 'REGISTERED'),
           gte(incidents.receivedAt, periodStart),
           lt(incidents.receivedAt, periodEnd),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
       .groupBy(period)
@@ -417,11 +381,11 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
         eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
@@ -436,9 +400,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
           eq(incidents.status, 'REGISTERED'),
           gte(incidentOccurrences.normalizedEndDate, today),
           lte(incidentOccurrences.normalizedEndDate, weekEnd),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
       .orderBy(
@@ -462,8 +424,10 @@ export class DrizzleDashboardRepository implements DashboardRepository {
               name: row.employeeName,
             },
             organizationalUnit: {
-              id: bufferToUuid(row.organizationalUnitId),
-              name: row.organizationalUnitName,
+              id: row.organizationalUnitId
+                ? bufferToUuid(row.organizationalUnitId)
+                : '',
+              name: row.organizationalUnitName ?? 'No asignado',
             },
             incidentType: {
               id: bufferToUuid(row.incidentTypeId),
@@ -502,11 +466,11 @@ export class DrizzleDashboardRepository implements DashboardRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
-      .innerJoin(
+      .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
         eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
@@ -516,9 +480,7 @@ export class DrizzleDashboardRepository implements DashboardRepository {
         eq(incidentOccurrences.incidentId, incidents.id),
       )
       .where(
-        officeId
-          ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-          : undefined,
+        officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
       )
       .orderBy(desc(incidents.receivedAt), asc(incidentOccurrences.startDate))
       .limit(limit * 2);
@@ -538,8 +500,10 @@ export class DrizzleDashboardRepository implements DashboardRepository {
               name: row.employeeName,
             },
             organizationalUnit: {
-              id: bufferToUuid(row.organizationalUnitId),
-              name: row.organizationalUnitName,
+              id: row.organizationalUnitId
+                ? bufferToUuid(row.organizationalUnitId)
+                : '',
+              name: row.organizationalUnitName ?? 'No asignado',
             },
             incidentType: {
               id: bufferToUuid(row.incidentTypeId),

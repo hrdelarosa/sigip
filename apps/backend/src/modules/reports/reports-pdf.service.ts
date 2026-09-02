@@ -269,10 +269,10 @@ export class ReportsPdfService {
     if (filters.organizationalUnitId) {
       const item = report.items.find(
         (candidate) =>
-          candidate.organizationalUnit.id === filters.organizationalUnitId,
+          candidate.organizationalUnit?.id === filters.organizationalUnitId,
       );
       labels.push(
-        `Unidad organizacional: ${item?.organizationalUnit.name ?? 'Aplicado'}`,
+        `Unidad organizacional: ${item?.organizationalUnit?.name ?? 'Aplicado'}`,
       );
     }
     if (filters.includeCancelled) labels.push('Incluye canceladas: Sí');
@@ -358,8 +358,8 @@ export class ReportsPdfService {
       { text: String(index + 1), align: 'center' as const },
       { text: item.employee.employeeNumber },
       { text: item.employee.fullName },
-      { text: item.organizationalUnit.name },
-      { text: item.position.name },
+      { text: item.organizationalUnit?.name ?? 'No asignado' },
+      { text: item.position?.name ?? 'No asignado' },
       { text: item.incidentType.name },
       { text: formatOccurrences(item.occurrences) },
       {

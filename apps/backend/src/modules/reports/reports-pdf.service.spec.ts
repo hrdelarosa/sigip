@@ -122,6 +122,26 @@ describe('ReportsPdfService', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   });
 
+  it('renders missing assignment details as No asignado', async () => {
+    const assignmentlessReport: IncidentsReportModel = {
+      ...report,
+      items: [
+        {
+          ...report.items[0],
+          organizationalUnit: null,
+          position: null,
+        },
+      ],
+    };
+
+    const pdf = await service.generate(assignmentlessReport);
+    const text = extractTextOps(pdf.toString('latin1'))
+      .map((operation) => operation.text)
+      .join(' ');
+
+    expect(text.match(/No asignado/g)).toHaveLength(2);
+  });
+
   it('uses the institutional portrait letter format', async () => {
     const pdf = await service.generate(report);
 

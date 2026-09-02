@@ -5,7 +5,7 @@ import type { DrizzleDatabase } from '../../../database/database.types';
 import {
   documentTypes,
   documents,
-  employeeAssignments,
+  employees,
   incidents,
   incidentTypes,
 } from '../../../database/schema';
@@ -72,18 +72,13 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
 
       .innerJoin(documentTypes, eq(documents.documentTypeId, documentTypes.id))
       .innerJoin(incidents, eq(documents.incidentId, incidents.id))
-      .innerJoin(
-        employeeAssignments,
-        eq(incidents.employeeAssignmentId, employeeAssignments.id),
-      )
+      .innerJoin(employees, eq(incidents.employeeId, employees.id))
 
       .where(
         and(
           eq(documents.incidentId, uuidToBuffer(incidentId)),
           isNull(documents.deletedAt),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
 
@@ -103,17 +98,12 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
 
       .innerJoin(documentTypes, eq(documents.documentTypeId, documentTypes.id))
       .innerJoin(incidents, eq(documents.incidentId, incidents.id))
-      .innerJoin(
-        employeeAssignments,
-        eq(incidents.employeeAssignmentId, employeeAssignments.id),
-      )
+      .innerJoin(employees, eq(incidents.employeeId, employees.id))
 
       .where(
         and(
           eq(documents.id, uuidToBuffer(id)),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       )
 
@@ -177,15 +167,12 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
           incidentTypes,
           eq(incidents.incidentTypeId, incidentTypes.id),
         )
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
+        .innerJoin(employees, eq(incidents.employeeId, employees.id))
         .where(
           and(
             eq(incidents.id, uuidToBuffer(data.incidentId)),
             data.officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+              ? eq(employees.officeId, uuidToBuffer(data.officeId))
               : undefined,
           ),
         )
@@ -280,15 +267,12 @@ export class DrizzleDocumentsRepository implements DocumentsRepository {
         .select({ deletedAt: documents.deletedAt })
         .from(documents)
         .innerJoin(incidents, eq(documents.incidentId, incidents.id))
-        .innerJoin(
-          employeeAssignments,
-          eq(incidents.employeeAssignmentId, employeeAssignments.id),
-        )
+        .innerJoin(employees, eq(incidents.employeeId, employees.id))
         .where(
           and(
             eq(documents.id, uuidToBuffer(id)),
             data.officeId
-              ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+              ? eq(employees.officeId, uuidToBuffer(data.officeId))
               : undefined,
           ),
         )

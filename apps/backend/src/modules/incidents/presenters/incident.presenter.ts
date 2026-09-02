@@ -14,15 +14,17 @@ export function toIncidentResponse(
     employeeAssignmentId: model.employeeAssignmentId,
     incidentTypeId: model.incidentTypeId,
     employee: model.employee,
-    assignment: {
-      id: model.assignment.id,
-      appointmentType: model.assignment.appointmentType,
-      schedule: model.assignment.schedule,
-      effectiveFrom: formatDate(model.assignment.effectiveFrom)!,
-      effectiveTo: formatDate(model.assignment.effectiveTo),
-      organizationalUnit: model.assignment.organizationalUnit,
-      position: model.assignment.position,
-    },
+    assignment: model.assignment
+      ? {
+          id: model.assignment.id,
+          appointmentType: model.assignment.appointmentType,
+          schedule: model.assignment.schedule,
+          effectiveFrom: formatDate(model.assignment.effectiveFrom)!,
+          effectiveTo: formatDate(model.assignment.effectiveTo),
+          organizationalUnit: model.assignment.organizationalUnit,
+          position: model.assignment.position,
+        }
+      : null,
     incidentType: model.incidentType,
     issuedDate: formatDate(model.issuedDate),
     receivedAt: model.receivedAt.toISOString(),

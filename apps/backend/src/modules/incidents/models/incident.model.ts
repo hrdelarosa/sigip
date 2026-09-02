@@ -4,7 +4,7 @@ import type { IncidentOccurrenceModel } from './incident-occurrence.model';
 export interface IncidentModel {
   id: string;
   employeeId: string;
-  employeeAssignmentId: string;
+  employeeAssignmentId: string | null;
   incidentTypeId: string;
   issuedDate: Date | null;
   receivedAt: Date;
@@ -42,7 +42,7 @@ export interface IncidentDetailsModel extends IncidentModel {
       code: string;
       name: string;
     };
-  };
+  } | null;
   incidentType: {
     id: string;
     code: string;
