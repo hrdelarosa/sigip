@@ -12,6 +12,7 @@ import type { buildEmployeeControls } from '../employee-controls';
 export function toEmployeeResponse(employee: EmployeeModel): EmployeeResponse {
   return {
     id: employee.id,
+    officeId: employee.officeId,
     employeeNumber: employee.employeeNumber,
     fullName: employee.fullName,
     hireDate: employee.hireDate

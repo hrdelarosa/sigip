@@ -2,6 +2,7 @@ import type { EmployeeStatus } from '@sigip/shared';
 
 export interface EmployeeModel {
   id: string;
+  officeId: string;
   employeeNumber: string;
   fullName: string;
   hireDate: Date | null;

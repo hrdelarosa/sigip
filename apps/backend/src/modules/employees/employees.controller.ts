@@ -124,8 +124,11 @@ export class EmployeesController {
   @ApiOperation({ summary: 'Crear un empleado' })
   @ApiCreatedResponse({ type: EmployeeApiResponse })
   @ApiBadRequestResponse({ description: 'Datos de entrada inválidos' })
-  async create(@Body() dto: CreateEmployeeDto): Promise<EmployeeResponse> {
-    const employee = await this.employeesService.create(dto);
+  async create(
+    @Body() dto: CreateEmployeeDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ): Promise<EmployeeResponse> {
+    const employee = await this.employeesService.create(dto, actor);
 
     return toEmployeeResponse(employee);
   }

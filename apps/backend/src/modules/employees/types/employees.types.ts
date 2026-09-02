@@ -15,6 +15,7 @@ export interface EmployeeFilters {
 
 export interface CreateEmployeeData {
   id: string;
+  officeId: string;
   employeeNumber: string;
   fullName: string;
   hireDate: Date | null;

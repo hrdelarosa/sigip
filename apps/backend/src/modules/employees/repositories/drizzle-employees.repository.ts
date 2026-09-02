@@ -51,6 +51,8 @@ type EmployeeAssignmentDetailsRow = {
   position: Pick<typeof positions.$inferSelect, 'id' | 'code' | 'name'>;
 };
 
+type EmployeeRowWithOffice = typeof employees.$inferSelect;
+
 @Injectable()
 export class DrizzleEmployeesRepository implements EmployeesRepository {
   constructor(
@@ -58,9 +60,10 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     private readonly db: DrizzleDatabase,
   ) {}
 
-  private toEmployeeModel(row: typeof employees.$inferSelect): EmployeeModel {
+  private toEmployeeModel(row: EmployeeRowWithOffice): EmployeeModel {
     return {
       id: bufferToUuid(row.id),
+      officeId: bufferToUuid(row.officeId),
       employeeNumber: row.employeeNumber,
       fullName: row.fullName,
       hireDate: row.hireDate,
@@ -155,7 +158,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       conditions.push(eq(employees.status, status));
     }
 
-    if (organizationalUnitId || positionId || officeId) {
+    if (officeId) {
+      conditions.push(eq(employees.officeId, uuidToBuffer(officeId)));
+    }
+
+    if (organizationalUnitId || positionId) {
       const today = this.calendarToday();
 
       const assignmentConditions: SQL[] = [
@@ -189,12 +196,6 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         );
       }
 
-      if (officeId) {
-        assignmentConditions.push(
-          eq(employeeAssignments.officeId, uuidToBuffer(officeId)),
-        );
-      }
-
       conditions.push(
         exists(
           this.db
@@ -211,10 +212,20 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       conditions.length > 0 ? and(...conditions) : undefined;
 
     const orderBy = this.getOrderBy(sort as EmployeeSort | undefined);
+    const employeeColumns = {
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      fullName: employees.fullName,
+      hireDate: employees.hireDate,
+      status: employees.status,
+      createdAt: employees.createdAt,
+      updatedAt: employees.updatedAt,
+      officeId: employees.officeId,
+    };
 
     const [rows, totalResult] = await Promise.all([
       this.db
-        .select()
+        .select(employeeColumns)
         .from(employees)
         .where(whereCondition)
         .orderBy(...orderBy)
@@ -237,23 +248,25 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
   }
 
   async findById(id: string, officeId?: string): Promise<EmployeeModel | null> {
-    const assignmentScope = officeId
-      ? exists(
-          this.db
-            .select({ id: employeeAssignments.id })
-            .from(employeeAssignments)
-            .where(
-              and(
-                eq(employeeAssignments.employeeId, employees.id),
-                eq(employeeAssignments.officeId, uuidToBuffer(officeId)),
-              ),
-            ),
-        )
-      : undefined;
+    const employeeColumns = {
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      fullName: employees.fullName,
+      hireDate: employees.hireDate,
+      status: employees.status,
+      createdAt: employees.createdAt,
+      updatedAt: employees.updatedAt,
+      officeId: employees.officeId,
+    };
     const [row] = await this.db
-      .select()
+      .select(employeeColumns)
       .from(employees)
-      .where(and(eq(employees.id, uuidToBuffer(id)), assignmentScope))
+      .where(
+        and(
+          eq(employees.id, uuidToBuffer(id)),
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
+        ),
+      )
       .limit(1);
 
     return row ? this.toEmployeeModel(row) : null;
@@ -274,6 +287,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
   async create(data: CreateEmployeeData): Promise<EmployeeModel> {
     const values = {
       id: uuidToBuffer(data.id),
+      officeId: uuidToBuffer(data.officeId),
       employeeNumber: data.employeeNumber,
       fullName: data.fullName,
       hireDate: data.hireDate,
@@ -312,19 +326,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       .where(
         and(
           eq(employees.id, uuidToBuffer(id)),
-          officeId
-            ? exists(
-                this.db
-                  .select({ id: employeeAssignments.id })
-                  .from(employeeAssignments)
-                  .where(
-                    and(
-                      eq(employeeAssignments.employeeId, employees.id),
-                      eq(employeeAssignments.officeId, uuidToBuffer(officeId)),
-                    ),
-                  ),
-              )
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       );
 
@@ -340,17 +342,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     return this.db.transaction(async (transaction) => {
       const employeeId = uuidToBuffer(id);
       const employeeScope = officeId
-        ? exists(
-            transaction
-              .select({ id: employeeAssignments.id })
-              .from(employeeAssignments)
-              .where(
-                and(
-                  eq(employeeAssignments.employeeId, employees.id),
-                  eq(employeeAssignments.officeId, uuidToBuffer(officeId)),
-                ),
-              ),
-          )
+        ? eq(employees.officeId, uuidToBuffer(officeId))
         : undefined;
 
       await transaction.execute(

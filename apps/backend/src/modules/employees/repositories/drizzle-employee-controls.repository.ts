@@ -5,7 +5,6 @@ import { DRIZZLE_DATABASE } from '../../../database/database.constants';
 import type { DrizzleDatabase } from '../../../database/database.types';
 import {
   employeeVacationAdjustments,
-  employeeAssignments,
   employees,
   incidentOccurrences,
   incidents,
@@ -65,7 +64,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
             and(
               eq(employeeVacationAdjustments.employeeId, employeeIdBuffer),
               officeId
-                ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeVacationAdjustments.employeeId} AND ${employeeAssignments.officeId} = ${uuidToBuffer(officeId)})`
+                ? sql`EXISTS (SELECT 1 FROM ${employees} WHERE ${employees.id} = ${employeeVacationAdjustments.employeeId} AND ${employees.officeId} = ${uuidToBuffer(officeId)})`
                 : undefined,
             ),
           )
@@ -106,7 +105,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
           and(
             eq(employees.id, employeeId),
             data.officeId
-              ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employees.id} AND ${employeeAssignments.officeId} = ${uuidToBuffer(data.officeId)})`
+              ? eq(employees.officeId, uuidToBuffer(data.officeId))
               : undefined,
           ),
         )
@@ -143,10 +142,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
             incidentOccurrences,
             eq(incidentOccurrences.incidentId, incidents.id),
           )
-          .innerJoin(
-            employeeAssignments,
-            eq(incidents.employeeAssignmentId, employeeAssignments.id),
-          )
+          .innerJoin(employees, eq(incidents.employeeId, employees.id))
           .where(
             and(
               eq(incidents.employeeId, employeeId),
@@ -155,7 +151,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
               gte(incidentOccurrences.startDate, startDate),
               lte(incidentOccurrences.startDate, endDate),
               data.officeId
-                ? eq(employeeAssignments.officeId, uuidToBuffer(data.officeId))
+                ? eq(employees.officeId, uuidToBuffer(data.officeId))
                 : undefined,
             ),
           ),
@@ -227,23 +223,18 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
     const rows = await this.db
       .select({ code: incidentTypes.code, date: incidentOccurrences.startDate })
       .from(incidents)
+      .innerJoin(employees, eq(incidents.employeeId, employees.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
       .innerJoin(
         incidentOccurrences,
         eq(incidentOccurrences.incidentId, incidents.id),
-      )
-      .innerJoin(
-        employeeAssignments,
-        eq(incidents.employeeAssignmentId, employeeAssignments.id),
       )
       .where(
         and(
           eq(incidents.employeeId, employeeId),
           eq(incidents.status, 'REGISTERED'),
           inArray(incidentTypes.code, codes),
-          officeId
-            ? eq(employeeAssignments.officeId, uuidToBuffer(officeId))
-            : undefined,
+          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
         ),
       );
 
@@ -265,7 +256,7 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
         and(
           eq(employeeVacationAdjustments.id, uuidToBuffer(id)),
           officeId
-            ? sql`EXISTS (SELECT 1 FROM ${employeeAssignments} WHERE ${employeeAssignments.employeeId} = ${employeeVacationAdjustments.employeeId} AND ${employeeAssignments.officeId} = ${uuidToBuffer(officeId)})`
+            ? sql`EXISTS (SELECT 1 FROM ${employees} WHERE ${employees.id} = ${employeeVacationAdjustments.employeeId} AND ${employees.officeId} = ${uuidToBuffer(officeId)})`
             : undefined,
         ),
       )

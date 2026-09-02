@@ -234,7 +234,10 @@ export class EmployeesService {
     return result.adjustment;
   }
 
-  async create(dto: CreateEmployeeDto): Promise<EmployeeModel> {
+  async create(
+    dto: CreateEmployeeDto,
+    actor: AuthenticatedUserModel,
+  ): Promise<EmployeeModel> {
     const employeeNumber = dto.employeeNumber.trim();
     const fullName = dto.fullName.trim();
 
@@ -243,6 +246,7 @@ export class EmployeesService {
     try {
       return await this.employeesRepository.create({
         id: generateUuidV7(),
+        officeId: getOfficeScope(actor).officeId,
         employeeNumber,
         fullName,
         hireDate: this.parseNullableDate(dto.hireDate),

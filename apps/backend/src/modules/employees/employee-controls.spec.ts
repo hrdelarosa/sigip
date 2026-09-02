@@ -5,6 +5,7 @@ import { buildEmployeeControls } from './employee-controls';
 describe('buildEmployeeControls', () => {
   const employee: EmployeeModel = {
     id: 'employee-id',
+    officeId: 'office-id',
     employeeNumber: '001',
     fullName: 'Persona de prueba',
     hireDate: new Date('2026-01-15T00:00:00.000Z'),
