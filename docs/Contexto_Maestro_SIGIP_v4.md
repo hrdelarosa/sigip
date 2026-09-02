@@ -541,19 +541,20 @@ La infraestructura de Audit ya está incorporada. Toda operación sensible nueva
 ## 13. Reglas transaccionales relevantes
 
 1. Crear una incidencia junto con todas sus ocurrencias.
-2. Verificar que la asignación pertenece al empleado.
-3. Verificar que la asignación está vigente durante la incidencia.
-4. Validar modalidad temporal y nombramiento.
-5. Impedir periodos incompatibles o superpuestos.
-6. Exigir documentos cuando el tipo de incidencia lo requiera.
-7. Cancelar incidencias sin borrarlas.
-8. Revocar sesiones activas al desactivar un usuario.
-9. Cambiar el rol actualizando únicamente `users.role_id`.
-10. Auditar el rol anterior y el nuevo.
-11. Impedir asignar roles inactivos.
-12. Impedir desactivar roles con usuarios asignados.
-13. Extender expiración por inactividad sin superar la expiración absoluta.
-14. Guardar auditoría en la misma transacción cuando sea posible.
+2. Derivar autorización, aislamiento y reportes desde la oficina obligatoria del empleado.
+3. Exigir una asignación si existe una aplicable a todas las fechas de la incidencia; permitir su ausencia solo cuando no exista.
+4. Verificar que la asignación indicada pertenece al empleado y está vigente durante la incidencia.
+5. Validar modalidad temporal y, cuando exista asignación, nombramiento.
+6. Impedir periodos incompatibles o superpuestos.
+7. Exigir documentos cuando el tipo de incidencia lo requiera.
+8. Cancelar incidencias sin borrarlas.
+9. Revocar sesiones activas al desactivar un usuario.
+10. Cambiar el rol actualizando únicamente `users.role_id`.
+11. Auditar el rol anterior y el nuevo.
+12. Impedir asignar roles inactivos.
+13. Impedir desactivar roles con usuarios asignados.
+14. Extender expiración por inactividad sin superar la expiración absoluta.
+15. Guardar auditoría en la misma transacción cuando sea posible.
 
 ## 14. Auditoría
 

@@ -154,11 +154,12 @@ Una sesión es válida solo si el usuario continúa activo, `revoked_at IS NULL`
 
 #### `employees`
 
-Mantiene la identidad estable del trabajador. Su contexto laboral variable vive en `employee_assignments`.
+Mantiene la identidad estable del trabajador y su oficina institucional. El contexto laboral variable vive en `employee_assignments`.
 
 | Columna | Tipo | Nulo | Restricciones / propósito |
 | --- | --- | --- | --- |
 | `id` | `BINARY(16)` | No | PK UUIDv7 generado por la aplicación |
+| `office_id` | `BINARY(16)` | No | FK a `offices.id`; determina aislamiento y autorización por oficina |
 | `employee_number` | `VARCHAR(50)` | No | Número institucional único |
 | `full_name` | `VARCHAR(200)` | No | Nombre completo |
 | `hire_date` | `DATE` | Sí | Fecha de ingreso, si se conoce |
@@ -252,7 +253,7 @@ Una fila representa una incidencia y un único concepto institucional. Dos conce
 | --- | --- | --- | --- |
 | `id` | `BINARY(16)` | No | PK UUIDv7 generado por la aplicación |
 | `employee_id` | `BINARY(16)` | No | FK a `employees.id` |
-| `employee_assignment_id` | `BINARY(16)` | No | FK a `employee_assignments.id` |
+| `employee_assignment_id` | `BINARY(16)` | Sí | FK a `employee_assignments.id`; nulo solo si no existe una asignación aplicable |
 | `incident_type_id` | `BINARY(16)` | No | FK a `incident_types.id` |
 | `format_date` | `DATE` | Sí | Fecha consignada en el formato |
 | `received_at` | `DATETIME(6)` | No | Recepción por Recursos Humanos |
@@ -268,10 +269,10 @@ Una fila representa una incidencia y un único concepto institucional. Dos conce
 
 Integridad recomendada:
 
-- FK compuesta (`employee_assignment_id`, `employee_id`) hacia (`employee_assignments.id`, `employee_assignments.employee_id`) para impedir asignaciones de otro trabajador;
+- FK compuesta (`employee_assignment_id`, `employee_id`) hacia (`employee_assignments.id`, `employee_assignments.employee_id`) para impedir asignaciones de otro trabajador cuando se informa una asignación;
 - una incidencia `CANCELLED` debe tener `cancelled_at`, `cancelled_by` y `cancellation_reason`;
 - una incidencia `REGISTERED` no debe tener datos de cancelación;
-- la asignación debe estar vigente en las fechas de la incidencia;
+- si existe una asignación aplicable a todas las fechas de la incidencia, debe informarse y estar vigente; solo se admite `NULL` cuando no existe tal asignación;
 - quincena, mes, año y duración se derivan de `incident_occurrences`; no se duplican aquí.
 
 #### `incident_occurrences`
@@ -381,10 +382,11 @@ Los campos de actor directo, como `registered_by`, se reservan para hechos del d
 | usuario - sesión | 1:N | `RESTRICT`; revocar sesiones, no borrar usuario |
 | sesión - auditoría | 1:N | `RESTRICT`; conservar la sesión mientras exista auditoría asociada |
 | empleado - asignación | 1:N | `RESTRICT` |
+| oficina - empleado | 1:N obligatorio | `RESTRICT` |
 | unidad - asignación | 1:N | `RESTRICT`; desactivar catálogo |
 | puesto - asignación | 1:N | `RESTRICT`; desactivar catálogo |
 | empleado - incidencia | 1:N | `RESTRICT` |
-| asignación - incidencia | 1:N | `RESTRICT` |
+| asignación - incidencia | 1:N opcional desde incidencia | `RESTRICT` |
 | tipo - incidencia | 1:N | `RESTRICT`; desactivar catálogo |
 | incidencia - ocurrencia | 1:N obligatorio | `CASCADE` solo durante una creación fallida; en operación normal no borrar |
 | incidencia - documento | 1:N | `RESTRICT`; usar baja lógica |
@@ -400,6 +402,7 @@ Además de PK, FK y restricciones únicas:
 users                  UNIQUE (username)
 users                  INDEX (role_id, is_active)
 employees              UNIQUE (employee_number)
+employees              INDEX (office_id)
 roles                  UNIQUE (code)
 permissions            UNIQUE (code)
 organizational_units   UNIQUE (code), INDEX (parent_id)
@@ -443,8 +446,8 @@ Los índices definitivos deben validarse con consultas reales y `EXPLAIN`; no co
 Estas reglas no quedan resueltas únicamente con llaves foráneas y deben implementarse dentro de casos de uso transaccionales:
 
 1. Crear una incidencia junto con todas sus ocurrencias; nunca dejar una incidencia sin ocurrencias.
-2. Comprobar que la asignación pertenece al empleado y está vigente para todas las fechas capturadas.
-3. Validar la modalidad temporal y el nombramiento contra el tipo de incidencia.
+2. Exigir una asignación cuando exista una aplicable a todas las fechas; comprobar que pertenece al empleado y está vigente.
+3. Validar la modalidad temporal y, cuando exista asignación, el nombramiento contra el tipo de incidencia.
 4. Impedir asignaciones laborales y ocurrencias incompatibles o superpuestas.
 5. Exigir el documento correspondiente cuando `requires_document` sea verdadero.
 6. Cancelar sin borrar, guardando usuario, fecha y motivo en la misma transacción.
