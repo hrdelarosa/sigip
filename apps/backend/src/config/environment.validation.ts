@@ -15,10 +15,20 @@ export const environmentValidationSchema = Joi.object({
     .integer()
     .min(Joi.ref('SESSION_IDLE_MINUTES'))
     .default(600),
+
   FRONTEND_ORIGIN: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .required(),
   TRUST_PROXY_HOPS: Joi.number().integer().min(0).default(0),
-  STORAGE_ROOT: Joi.string().min(1).default('storage'),
+
+  S3_ENDPOINT: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .required(),
+  S3_REGION: Joi.string().min(1).required(),
+  S3_ACCESS_KEY_ID: Joi.string().min(1).required(),
+  S3_SECRET_ACCESS_KEY: Joi.string().min(1).required(),
+  S3_BUCKET: Joi.string().min(1).required(),
+  S3_FORCE_PATH_STYLE: Joi.boolean().default(true),
+
   ALLOW_DEVELOPMENT_SEED: Joi.boolean().default(false),
 });
