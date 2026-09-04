@@ -33,7 +33,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
   private toModel(row: OrganizationalUnitRow): OrganizationalUnitsModel {
     return {
       id: bufferToUuid(row.id),
-      officeId: bufferToUuid(row.officeId),
       parentId: row.parentId ? bufferToUuid(row.parentId) : null,
       code: row.code,
       name: row.name,
@@ -111,15 +110,10 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
     return result;
   }
 
-  async findAll(officeId?: string): Promise<OrganizationalUnitsModel[]> {
+  async findAll(): Promise<OrganizationalUnitsModel[]> {
     const rows = await this.db
       .select()
       .from(organizationalUnits)
-      .where(
-        officeId
-          ? eq(organizationalUnits.officeId, uuidToBuffer(officeId))
-          : undefined,
-      )
       .orderBy(
         asc(organizationalUnits.sortOrder),
         asc(organizationalUnits.name),
@@ -129,41 +123,21 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
     return this.orderAsHierarchy(rows);
   }
 
-  async findById(
-    id: string,
-    officeId?: string,
-  ): Promise<OrganizationalUnitsModel | null> {
+  async findById(id: string): Promise<OrganizationalUnitsModel | null> {
     const [row] = await this.db
       .select()
       .from(organizationalUnits)
-      .where(
-        and(
-          eq(organizationalUnits.id, uuidToBuffer(id)),
-          officeId
-            ? eq(organizationalUnits.officeId, uuidToBuffer(officeId))
-            : undefined,
-        ),
-      )
+      .where(eq(organizationalUnits.id, uuidToBuffer(id)))
       .limit(1);
 
     return row ? this.toModel(row) : null;
   }
 
-  async findByCode(
-    code: string,
-    officeId?: string,
-  ): Promise<OrganizationalUnitsModel | null> {
+  async findByCode(code: string): Promise<OrganizationalUnitsModel | null> {
     const [row] = await this.db
       .select()
       .from(organizationalUnits)
-      .where(
-        and(
-          eq(organizationalUnits.code, code),
-          officeId
-            ? eq(organizationalUnits.officeId, uuidToBuffer(officeId))
-            : undefined,
-        ),
-      )
+      .where(eq(organizationalUnits.code, code))
       .limit(1);
 
     return row ? this.toModel(row) : null;
@@ -181,12 +155,7 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
         const [parent] = await transaction
           .select()
           .from(organizationalUnits)
-          .where(
-            and(
-              eq(organizationalUnits.id, uuidToBuffer(data.parentId)),
-              eq(organizationalUnits.officeId, uuidToBuffer(data.officeId)),
-            ),
-          )
+          .where(eq(organizationalUnits.id, uuidToBuffer(data.parentId)))
           .limit(1);
 
         if (!parent?.isActive) throw new InvalidOrganizationalUnitParentError();
@@ -194,7 +163,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
 
       await transaction.insert(organizationalUnits).values({
         id: uuidToBuffer(data.id),
-        officeId: uuidToBuffer(data.officeId),
         parentId: data.parentId ? uuidToBuffer(data.parentId) : null,
         code: data.code,
         name: data.name,
@@ -222,7 +190,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
   async update(
     id: string,
     data: UpdateOrganizationalUnitData,
-    officeId?: string,
   ): Promise<OrganizationalUnitsModel | null> {
     return this.db.transaction(async (transaction) => {
       await transaction.execute(
@@ -230,11 +197,7 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
       );
 
       const rows = await transaction.select().from(organizationalUnits);
-      const current = rows.find(
-        (row) =>
-          bufferToUuid(row.id) === id &&
-          (!officeId || bufferToUuid(row.officeId) === officeId),
-      );
+      const current = rows.find((row) => bufferToUuid(row.id) === id);
 
       if (!current) return null;
 
@@ -244,9 +207,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
         );
 
         if (!parent?.isActive) throw new InvalidOrganizationalUnitParentError();
-        if (!parent || !parent.officeId.equals(current.officeId)) {
-          throw new InvalidOrganizationalUnitParentError();
-        }
         if (this.createsCycle(rows, id, data.parentId)) {
           throw new OrganizationalUnitHierarchyCycleError();
         }
@@ -282,7 +242,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
     id: string,
     isActive: boolean,
     updatedAt: Date,
-    officeId?: string,
   ): Promise<OrganizationalUnitsModel | null> {
     return this.db.transaction(async (transaction) => {
       await transaction.execute(
@@ -290,11 +249,7 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
       );
 
       const rows = await transaction.select().from(organizationalUnits);
-      const current = rows.find(
-        (row) =>
-          bufferToUuid(row.id) === id &&
-          (!officeId || bufferToUuid(row.officeId) === officeId),
-      );
+      const current = rows.find((row) => bufferToUuid(row.id) === id);
 
       if (!current) return null;
       if (current.isActive === isActive) return this.toModel(current);
@@ -321,7 +276,6 @@ export class DrizzleOrganizationalUnitsRepository implements OrganizationalUnits
           .where(
             and(
               eq(employeeAssignments.organizationalUnitId, current.id),
-              eq(employeeAssignments.officeId, current.officeId),
               or(
                 isNull(employeeAssignments.effectiveTo),
                 gte(employeeAssignments.effectiveTo, today),
