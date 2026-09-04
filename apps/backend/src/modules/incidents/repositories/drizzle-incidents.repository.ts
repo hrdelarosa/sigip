@@ -565,18 +565,20 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
         fullName: row.employee.fullName,
       },
       assignment:
-        row.assignment && row.organizationalUnit && row.position
+        row.assignment && row.position
           ? {
               id: bufferToUuid(row.assignment.id),
               appointmentType: row.assignment.appointmentType,
               schedule: row.assignment.schedule,
               effectiveFrom: row.assignment.effectiveFrom,
               effectiveTo: row.assignment.effectiveTo,
-              organizationalUnit: {
-                id: bufferToUuid(row.organizationalUnit.id),
-                code: row.organizationalUnit.code,
-                name: row.organizationalUnit.name,
-              },
+              organizationalUnit: row.organizationalUnit
+                ? {
+                    id: bufferToUuid(row.organizationalUnit.id),
+                    code: row.organizationalUnit.code,
+                    name: row.organizationalUnit.name,
+                  }
+                : null,
               position: {
                 id: bufferToUuid(row.position.id),
                 code: row.position.code,
