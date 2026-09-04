@@ -6,7 +6,6 @@ export function toOrganizationalUnitsResponse(
 ): OrganizationalUnitResponse {
   return {
     id: organizationalUnit.id,
-    officeId: organizationalUnit.officeId,
     parentId: organizationalUnit.parentId,
     code: organizationalUnit.code,
     name: organizationalUnit.name,

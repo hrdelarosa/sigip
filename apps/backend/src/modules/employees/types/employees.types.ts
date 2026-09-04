@@ -32,7 +32,7 @@ export interface UpdateEmployeeData {
 export interface CreateEmployeeAssignmentData {
   id: string;
   employeeId: string;
-  organizationalUnitId: string;
+  organizationalUnitId: string | null;
   positionId: string;
   appointmentType: AppointmentType;
   schedule: string | null;
@@ -43,7 +43,7 @@ export interface CreateEmployeeAssignmentData {
 }
 
 export interface UpdateEmployeeAssignmentData {
-  organizationalUnitId?: string;
+  organizationalUnitId?: string | null;
   positionId?: string;
   appointmentType?: AppointmentType;
   schedule?: string | null;

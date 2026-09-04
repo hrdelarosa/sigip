@@ -53,7 +53,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - MySQL 8.4 mediante Docker Compose para desarrollo local
 - Esquemas y migraciones administrados con Drizzle
 - UUIDv7 almacenados como `BINARY(16)`
-- Datos de desarrollo cargados mediante un seed idempotente que se niega a ejecutarse en producción; `RESET_DEVELOPMENT_ORGANIZATION=true` permite reemplazar el catálogo de empleados y borrar incidencias/documentos de desarrollo dependientes antes de importar la plantilla.
+- Datos de desarrollo cargados mediante un seed idempotente que se niega a ejecutarse en producción; `RESET_DEVELOPMENT_ORGANIZATION=true` permite reemplazar el catálogo de empleados y borrar incidencias/documentos de desarrollo dependientes antes de importar la plantilla. Los datos personales de la plantilla se mantienen exclusivamente en `template-employees.seed-data.local.ts`, archivo ignorado por Git; el repositorio conserva sólo un ejemplo ficticio.
 
 ### Autenticación
 
@@ -67,7 +67,7 @@ Una incidencia puede corresponder a una fecha única, varias fechas independient
 - El monorepo usa pnpm y separa `frontend`, `backend` y contratos compartidos.
 - MySQL, Drizzle, migraciones, esquemas y seed de desarrollo ya están configurados.
 - La persistencia administrativa utiliza repositorios concretos de Drizzle; ya no se considera vigente la etapa de repositorios en memoria.
-- Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones.
+- Backend y frontend están implementados para roles, permisos, usuarios, unidades organizacionales, puestos y empleados con asignaciones. Una asignación conserva puesto, nombramiento, horario y vigencia; su unidad organizacional es opcional para personal sin adscripción, pero el puesto permanece obligatorio.
 - La protección de rutas del frontend restaura la sesión con `GET /api/auth/me`, maneja carga/error/expiración y aplica permisos de consulta.
 - El backend contiene módulos funcionales de `auth`, `sessions`, `audit`, `incident-types`, `incidents`, `documents`, `dashboard` y `reports`. El frontend integra el flujo de incidencias con listado, filtros, alta, detalle, edición, cancelación y descarga privada. Las vacaciones ordinarias permiten capturar fechas individuales o generar días desde un rango, incluyendo fines de semana de manera opcional. El saldo histórico se calcula por empleado, año y periodo desde incidencias activas y ajustes append-only auditados; la cancelación libera los días. También se controla un máximo mensual combinado de tres justificaciones de entrada/salida. Las incidencias `COMISION` admiten un único oficio PDF opcional de hasta 5 MB durante el alta o desde el expediente. El panel de inicio (`dashboard`) ofrece resumen operativo, personal ausente hoy por incidencia, incidencias por tipo y el periodo vacacional vigente. Los reportes de incidencias de personal se generan por quincena (primera 1-15 o segunda 16-fin de mes), mes, año o periodo personalizado, con filtros por tipo y unidad, vista previa enriquecida y descarga en PDF. Siguen pendientes la administración de `document-types` y otros anexos opcionales.
 - La tabla `sessions` persiste únicamente el hash SHA-256 del token opaco y soporta expiración inactiva/absoluta y revocación.

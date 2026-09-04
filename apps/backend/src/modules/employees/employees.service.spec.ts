@@ -9,6 +9,7 @@ describe('EmployeesService controls', () => {
   const employeesRepository = {
     findById: jest.fn(),
     findAssignmentsByEmployeeId: jest.fn(),
+    createAssignment: jest.fn(),
   };
   const controlsRepository = {
     findSnapshot: jest.fn(),
@@ -95,5 +96,45 @@ describe('EmployeesService controls', () => {
         actor,
       ),
     ).rejects.toBeInstanceOf(VacationAdjustmentBalanceError);
+  });
+
+  it('creates an assignment without an organizational unit', async () => {
+    employeesRepository.createAssignment.mockResolvedValue({
+      status: 'success',
+      assignment: {
+        id: 'assignment-id',
+        employeeId: 'employee-id',
+        organizationalUnitId: null,
+        positionId: 'position-id',
+        organizationalUnit: null,
+        position: { id: 'position-id', code: 'P1', name: 'Puesto' },
+        appointmentType: 'BASE',
+        schedule: '09:00-17:00',
+        effectiveFrom: new Date('2026-08-01T00:00:00.000Z'),
+        effectiveTo: null,
+        notes: null,
+        createdAt: new Date('2026-08-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-08-01T00:00:00.000Z'),
+      },
+    });
+
+    await service.createAssignment(
+      'employee-id',
+      {
+        positionId: 'position-id',
+        appointmentType: 'BASE',
+        schedule: '09:00-17:00',
+        effectiveFrom: '2026-08-01',
+      },
+      actor,
+    );
+
+    expect(employeesRepository.createAssignment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: 'employee-id',
+        organizationalUnitId: null,
+        positionId: 'position-id',
+      }),
+    );
   });
 });

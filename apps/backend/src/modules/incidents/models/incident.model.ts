@@ -36,7 +36,7 @@ export interface IncidentDetailsModel extends IncidentModel {
       id: string;
       code: string;
       name: string;
-    };
+    } | null;
     position: {
       id: string;
       code: string;

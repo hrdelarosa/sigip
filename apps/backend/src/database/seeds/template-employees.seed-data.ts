@@ -10,19 +10,19 @@ interface TemplateEmployeeRow {
   schedule: string;
   hireDate: string;
   officeCode: string;
-  area: string;
+  area?: string;
 }
 
 interface TemplateCatalogItem {
-  officeCode: string;
   code: string;
   name: string;
+  description: string;
 }
 
 interface TemplateAssignment {
   employeeNumber: string;
   officeCode: string;
-  unitCode: string;
+  unitCode?: string;
   positionCode: string;
   appointmentType: 'BASE' | 'CONFIANZA';
   schedule: string;
@@ -43,7 +43,7 @@ const localSeedPath = resolve(
   'template-employees.seed-data.local.ts',
 );
 const loadModule = createRequire(__filename);
-const seedData = existsSync(localSeedPath)
+const seedData: SeedData = existsSync(localSeedPath)
   ? (loadModule(localSeedPath) as SeedData)
   : exampleSeedData;
 

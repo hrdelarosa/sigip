@@ -9,10 +9,6 @@ import {
   permissionsSeed,
   rolesSeed,
 } from './access-control.seed-data';
-import {
-  organizationalUnitsSeed,
-  positionsSeed,
-} from './organization.seed-data';
 import { incidentTypesSeed } from './incident-types.seed-data';
 import { officesSeed } from './offices.seed-data';
 import {
@@ -25,11 +21,6 @@ import {
 interface IdentifierRow extends RowDataPacket {
   id: Buffer;
   code: string;
-}
-
-interface OrganizationalUnitIdentifierRow extends IdentifierRow {
-  officeId: Buffer;
-  officeCode: string;
 }
 
 const uuidBuffer = (): Buffer => {
@@ -82,13 +73,23 @@ const seed = async (): Promise<void> => {
     await connection.beginTransaction();
 
     if (process.env.RESET_DEVELOPMENT_ORGANIZATION === 'true') {
+      await connection.execute('DELETE FROM audit_logs');
+      await connection.execute('DELETE FROM sessions');
       await connection.execute('DELETE FROM documents');
       await connection.execute('DELETE FROM incident_occurrences');
       await connection.execute('DELETE FROM incidents');
+      await connection.execute('DELETE FROM document_types');
+      await connection.execute('DELETE FROM incident_types');
       await connection.execute('DELETE FROM employee_vacation_adjustments');
       await connection.execute('DELETE FROM employee_assignments');
       await connection.execute('DELETE FROM employees');
+      await connection.execute('DELETE FROM role_permissions');
+      await connection.execute('DELETE FROM users');
+      await connection.execute('DELETE FROM roles');
+      await connection.execute('DELETE FROM permissions');
+      await connection.execute('DELETE FROM organizational_units');
       await connection.execute('DELETE FROM positions');
+      await connection.execute('DELETE FROM offices');
     }
 
     for (const permission of permissionsSeed) {
@@ -219,43 +220,20 @@ const seed = async (): Promise<void> => {
     if (!orgroId) throw new Error('No se encontró la oficina ORGRO.');
 
     for (const unit of templateOrganizationalUnitsSeed) {
-      const officeId = officeIds.get(unit.officeCode);
-      if (!officeId) {
-        throw new Error(`No se encontró la oficina ${unit.officeCode}.`);
-      }
-
       await connection.execute(
-        `INSERT INTO organizational_units (id, office_id, parent_id, code, name, description, is_active, sort_order)
-         VALUES (?, ?, NULL, ?, ?, ?, true, ?)
-         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)`,
-        [
-          uuidBuffer(),
-          officeId,
-          unit.code,
-          unit.name,
-          `Área importada de la plantilla de personal: ${unit.name}.`,
-          100,
-        ],
+        `INSERT INTO organizational_units (id, parent_id, code, name, description, is_active, sort_order)
+         VALUES (?, NULL, ?, ?, ?, true, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)`,
+        [uuidBuffer(), unit.code, unit.name, unit.description, 100],
       );
     }
 
     for (const position of templatePositionsSeed) {
-      const officeId = officeIds.get(position.officeCode);
-      if (!officeId) {
-        throw new Error(`No se encontró la oficina ${position.officeCode}.`);
-      }
-
       await connection.execute(
-        `INSERT INTO positions (id, office_id, code, name, description, is_active)
-         VALUES (?, ?, ?, ?, ?, true)
-         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
-        [
-          uuidBuffer(),
-          officeId,
-          position.code,
-          position.name,
-          `Puesto de ${position.name}.`,
-        ],
+        `INSERT INTO positions (id, code, name, description, is_active)
+         VALUES (?, ?, ?, ?, true)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
+        [uuidBuffer(), position.code, position.name, position.description],
       );
     }
 
@@ -286,39 +264,6 @@ const seed = async (): Promise<void> => {
         passwordHash,
       ],
     );
-
-    for (const unit of organizationalUnitsSeed) {
-      await connection.execute(
-        `
-          INSERT INTO organizational_units (id, office_id, parent_id, code, name, description, is_active, sort_order)
-          VALUES (?, ?, NULL, ?, ?, ?, true, ?)
-          ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active), sort_order = VALUES(sort_order)
-        `,
-        [
-          uuidBuffer(),
-          orgroId,
-          unit[0],
-          unit[1],
-          `Área operativa de ${unit[1]}.`,
-          0,
-        ],
-      );
-    }
-
-    for (const position of positionsSeed) {
-      await connection.execute(
-        `INSERT INTO positions (id, office_id, code, name, description, is_active)
-         VALUES (?, ?, ?, ?, ?, true)
-         ON DUPLICATE KEY UPDATE office_id = VALUES(office_id), name = VALUES(name), description = VALUES(description), is_active = VALUES(is_active)`,
-        [
-          uuidBuffer(),
-          orgroId,
-          position[0],
-          position[1],
-          `Puesto de ${position[1]}.`,
-        ],
-      );
-    }
 
     for (const incidentType of incidentTypesSeed) {
       await connection.execute(
@@ -375,13 +320,8 @@ const seed = async (): Promise<void> => {
       );
     }
 
-    const [unitRows] = await connection.query<
-      OrganizationalUnitIdentifierRow[]
-    >(
-      `SELECT organizational_units.id, organizational_units.code,
-              organizational_units.office_id AS officeId, offices.code AS officeCode
-       FROM organizational_units
-       INNER JOIN offices ON offices.id = organizational_units.office_id`,
+    const [unitRows] = await connection.query<IdentifierRow[]>(
+      'SELECT id, code FROM organizational_units',
     );
     const [positionRows] = await connection.query<IdentifierRow[]>(
       'SELECT id, code FROM positions',
@@ -389,25 +329,23 @@ const seed = async (): Promise<void> => {
     const [employeeRows] = await connection.query<IdentifierRow[]>(
       'SELECT id, employee_number AS code FROM employees',
     );
-    const unitIds = new Map(
-      unitRows.map(({ code, id, officeId, officeCode }) => [
-        `${officeCode}:${code}`,
-        {
-          id,
-          officeId,
-        },
-      ]),
-    );
+    const unitIds = new Map(unitRows.map(({ code, id }) => [code, id]));
     const positionIds = new Map(positionRows.map(({ code, id }) => [code, id]));
     const employeeIds = new Map(employeeRows.map(({ code, id }) => [code, id]));
 
     for (const [index, assignment] of templateAssignmentsSeed.entries()) {
       const employeeId = employeeIds.get(assignment.employeeNumber);
-      const unitId = unitIds.get(
-        `${assignment.officeCode}:${assignment.unitCode}`,
-      );
+      const unitId = assignment.unitCode
+        ? unitIds.get(assignment.unitCode)
+        : undefined;
       const positionId = positionIds.get(assignment.positionCode);
-      if (!employeeId || !unitId || !positionId)
+      const officeId = officeIds.get(assignment.officeCode);
+      if (
+        !employeeId ||
+        !positionId ||
+        !officeId ||
+        (assignment.unitCode && !unitId)
+      )
         throw new Error(
           `Referencias inválidas en la asignación ${assignment.employeeNumber}`,
         );
@@ -423,8 +361,8 @@ const seed = async (): Promise<void> => {
             `00000000-0000-7000-8000-${String(index + 1).padStart(12, '0')}`,
           ),
           employeeId,
-          unitId.officeId,
-          unitId.id,
+          officeId,
+          unitId ?? null,
           positionId,
           assignment.appointmentType,
           assignment.schedule,

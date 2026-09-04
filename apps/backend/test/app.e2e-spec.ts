@@ -289,20 +289,14 @@ describe('Authentication flow (e2e)', () => {
       .from(offices)
       .where(eq(offices.code, 'ORGRO'))
       .limit(1);
-    const [unit] = office
-      ? await db
-          .select({ id: organizationalUnits.id })
-          .from(organizationalUnits)
-          .where(eq(organizationalUnits.officeId, office.id))
-          .limit(1)
-      : [];
-    const [position] = office
-      ? await db
-          .select({ id: positions.id })
-          .from(positions)
-          .where(eq(positions.officeId, office.id))
-          .limit(1)
-      : [];
+    const [unit] = await db
+      .select({ id: organizationalUnits.id })
+      .from(organizationalUnits)
+      .limit(1);
+    const [position] = await db
+      .select({ id: positions.id })
+      .from(positions)
+      .limit(1);
     const assignmentId = generateUuidV7();
     if (!office || !unit || !position) throw new Error('Faltan catálogos E2E');
     await db.insert(employeeAssignments).values({

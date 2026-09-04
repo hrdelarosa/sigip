@@ -71,7 +71,7 @@ export function useIncidentContextFields(
   )
   const assignmentItems = (assignmentsQuery.data ?? []).map((assignment) => ({
     value: assignment.id,
-    label: `${assignment.position.name} · ${assignment.organizationalUnit.name}`,
+    label: `${assignment.position.name} · ${assignment.organizationalUnit?.name ?? 'Sin unidad asignada'}`,
   }))
   const eligibleTypes = (typesQuery.data?.items ?? []).filter(
     (type) =>

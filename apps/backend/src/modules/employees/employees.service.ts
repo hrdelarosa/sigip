@@ -381,7 +381,7 @@ export class EmployeesService {
       result = await this.employeesRepository.createAssignment({
         id: generateUuidV7(),
         employeeId,
-        organizationalUnitId: dto.organizationalUnitId,
+        organizationalUnitId: dto.organizationalUnitId ?? null,
         positionId: dto.positionId,
         appointmentType: dto.appointmentType,
         schedule: dto.schedule ?? null,

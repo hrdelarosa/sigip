@@ -48,10 +48,17 @@ export function EmployeeAssignmentFields({
   register,
   errors,
 }: Props) {
-  const unitItems = units.map((unit) => ({
-    value: unit.id,
-    label: `${unit.name}${!unit.isActive ? ' (inactiva)' : ''}`,
-  }))
+  const noOrganizationalUnitValue = '__none__'
+  const unitItems = [
+    {
+      value: noOrganizationalUnitValue,
+      label: 'Sin unidad asignada',
+    },
+    ...units.map((unit) => ({
+      value: unit.id,
+      label: `${unit.name}${!unit.isActive ? ' (inactiva)' : ''}`,
+    })),
+  ]
   const positionItems = positions.map((position) => ({
     value: position.id,
     label: `${position.name}${!position.isActive ? ' (inactivo)' : ''}`,
@@ -72,8 +79,10 @@ export function EmployeeAssignmentFields({
             </FieldLabel>
             <Select
               items={unitItems}
-              value={field.value}
-              onValueChange={field.onChange}
+              value={field.value || noOrganizationalUnitValue}
+              onValueChange={(value) =>
+                field.onChange(value === noOrganizationalUnitValue ? '' : value)
+              }
               disabled={isPending}
             >
               <SelectTrigger
@@ -86,9 +95,12 @@ export function EmployeeAssignmentFields({
                     : undefined
                 }
               >
-                <SelectValue placeholder="Selecciona una unidad" />
+              <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={noOrganizationalUnitValue}>
+                  Sin unidad asignada
+                </SelectItem>
                 {units.map((unit) => (
                   <SelectItem key={unit.id} value={unit.id}>
                     {unit.name}

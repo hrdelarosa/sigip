@@ -1,5 +1,5 @@
 import { ArrowLeft, Pencil, Power, PowerOff } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'wouter'
 
 import { routes } from '@/app/router/routes'
@@ -32,6 +32,10 @@ import { EmployeeVacationControl } from '../components/EmployeeVacationControl'
 import { EmployeeJustificationControl } from '../components/EmployeeJustificationControl'
 
 export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 })
+  }, [employeeId])
+
   const employeeQuery = useEmployee(employeeId)
   const [editOpen, setEditOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)

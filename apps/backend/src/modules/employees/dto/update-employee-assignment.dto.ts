@@ -13,9 +13,12 @@ import type { AppointmentType } from '../../../database/schema/organization/empl
 import { trimNullableString, trimString } from './employee-dto.transforms';
 
 export class UpdateEmployeeAssignmentDto implements UpdateEmployeeAssignmentRequest {
-  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @ValidateIf(
+    (_object: unknown, value: unknown) => value !== undefined && value !== null,
+  )
+  @Transform(trimNullableString)
   @IsUUID()
-  organizationalUnitId?: string;
+  organizationalUnitId?: string | null;
 
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsUUID()

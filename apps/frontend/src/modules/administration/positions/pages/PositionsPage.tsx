@@ -15,32 +15,39 @@ const columns: DataTableColumn<Position>[] = [
   {
     key: 'code',
     header: 'Código',
-    cellClassName: 'font-medium',
+    headerClassName: 'w-[280px]',
+    cellClassName: 'font-medium whitespace-nowrap',
     skeletonClassName: 'w-32',
     render: (position) => position.code,
   },
   {
     key: 'name',
     header: 'Nombre',
+    headerClassName: 'w-[280px]',
+    cellClassName: 'whitespace-normal break-words',
     skeletonClassName: 'w-40',
     render: (position) => position.name,
   },
   {
     key: 'description',
     header: 'Descripción',
-    cellClassName: 'max-w-md whitespace-normal',
+    cellClassName: 'whitespace-normal break-words',
     skeletonClassName: 'w-full max-w-72',
     render: (position) => position.description || 'Sin descripción',
   },
   {
     key: 'status',
     header: 'Estado',
+    headerClassName: 'w-[90px]',
+    cellClassName: 'whitespace-nowrap',
     skeletonClassName: 'w-16',
     render: (position) => <StatusBadge isActive={position.isActive} />,
   },
   {
     key: 'updatedAt',
     header: 'Actualizado en',
+    headerClassName: 'w-[135px]',
+    cellClassName: 'whitespace-nowrap',
     skeletonClassName: 'w-28',
     render: (position) => formatDate(position.updatedAt),
   },
@@ -73,12 +80,13 @@ export function PositionsPage() {
         emptyMessage="No hay puestos registrados."
         errorMessage="No fue posible cargar los puestos."
         skeletonRows={9}
-         renderActions={(position) => (
-           <PositionActions
-             position={position}
-             onDetails={(id) => void setDetailsId(id)}
-           />
-         )}
+        tableFixed
+        renderActions={(position) => (
+          <PositionActions
+            position={position}
+            onDetails={(id) => void setDetailsId(id)}
+          />
+        )}
       />
 
       {detailsId ? (

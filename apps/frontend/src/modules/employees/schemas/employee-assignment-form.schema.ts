@@ -25,7 +25,11 @@ const nullableText = (maximum: number, message: string) =>
 
 export const employeeAssignmentFormSchema = z
   .object({
-    organizationalUnitId: z.string().uuid('Selecciona una unidad válida'),
+    organizationalUnitId: z
+      .string()
+      .uuid('Selecciona una unidad válida')
+      .or(z.literal(''))
+      .transform((value) => value || null),
     positionId: z.string().uuid('Selecciona un puesto válido'),
     appointmentType: z.enum(['BASE', 'CONFIANZA']),
     schedule: nullableText(150, 'El horario no puede superar los 150 caracteres'),

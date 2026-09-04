@@ -106,10 +106,11 @@ export class AssignmentCatalogApiResponse {
 export class EmployeeAssignmentApiResponse {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ format: 'uuid' }) employeeId!: string;
-  @ApiProperty({ format: 'uuid' }) organizationalUnitId!: string;
+  @ApiProperty({ format: 'uuid', nullable: true }) organizationalUnitId!:
+    string | null;
   @ApiProperty({ format: 'uuid' }) positionId!: string;
-  @ApiProperty({ type: AssignmentCatalogApiResponse })
-  organizationalUnit!: AssignmentCatalogApiResponse;
+  @ApiProperty({ type: AssignmentCatalogApiResponse, nullable: true })
+  organizationalUnit!: AssignmentCatalogApiResponse | null;
   @ApiProperty({ type: AssignmentCatalogApiResponse })
   position!: AssignmentCatalogApiResponse;
   @ApiProperty({ enum: ['BASE', 'CONFIANZA'] }) appointmentType!: string;

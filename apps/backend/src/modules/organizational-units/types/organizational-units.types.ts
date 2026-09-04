@@ -1,6 +1,5 @@
 export interface CreateOrganizationalUnitData {
   id: string;
-  officeId: string;
   parentId: string | null;
   code: string;
   name: string;

@@ -2,7 +2,7 @@ import type { AppointmentType } from '../../../database/schema/organization/empl
 export interface EmployeeAssignmentModel {
   id: string;
   employeeId: string;
-  organizationalUnitId: string;
+  organizationalUnitId: string | null;
   positionId: string;
   appointmentType: AppointmentType;
   schedule: string | null;
@@ -20,6 +20,6 @@ export interface EmployeeAssignmentCatalogSummaryModel {
 }
 
 export interface EmployeeAssignmentDetailsModel extends EmployeeAssignmentModel {
-  organizationalUnit: EmployeeAssignmentCatalogSummaryModel;
+  organizationalUnit: EmployeeAssignmentCatalogSummaryModel | null;
   position: EmployeeAssignmentCatalogSummaryModel;
 }
