@@ -2,7 +2,6 @@ import { EmployeeStatus } from '@sigip/shared';
 
 export interface PositionModel {
   id: string;
-  officeId: string;
   code: string;
   name: string;
   description: string | null;
