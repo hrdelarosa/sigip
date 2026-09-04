@@ -21,7 +21,7 @@ export default function EmployeeAssignmentEdit({ assignment, open, onOpenChange 
   const positionsQuery = usePositions()
   const updateMutation = useUpdateEmployeeAssignment()
   const defaults = {
-    organizationalUnitId: assignment.organizationalUnitId,
+    organizationalUnitId: assignment.organizationalUnitId ?? '',
     positionId: assignment.positionId,
     appointmentType: assignment.appointmentType,
     schedule: assignment.schedule ?? '',
@@ -64,7 +64,10 @@ export default function EmployeeAssignmentEdit({ assignment, open, onOpenChange 
   const units: AssignmentOption[] = (unitsQuery.data ?? [])
     .filter((unit) => unit.isActive || unit.id === assignment.organizationalUnitId)
     .map(({ id, code, name, isActive }) => ({ id, code, name, isActive }))
-  if (!units.some((unit) => unit.id === assignment.organizationalUnitId)) {
+  if (
+    assignment.organizationalUnit &&
+    !units.some((unit) => unit.id === assignment.organizationalUnitId)
+  ) {
     units.push({ ...assignment.organizationalUnit, isActive: false })
   }
   const positions: AssignmentOption[] = (positionsQuery.data ?? [])
@@ -84,7 +87,7 @@ export default function EmployeeAssignmentEdit({ assignment, open, onOpenChange 
     <FormDialog
       mode="edit"
       module="asignación"
-      description="Actualice el puesto, la unidad o la vigencia de la asignación."
+      description="Actualice el puesto, la unidad opcional o la vigencia de la asignación."
       open={open}
       onOpenChange={handleOpenChange}
       onSubmit={handleSubmit}

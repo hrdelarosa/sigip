@@ -99,15 +99,19 @@ export default function EmployeeCurrentAssignment({
 
           <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
             <DetailField label="Unidad organizacional">
-              <Link
-                href={routes.administration.organizationalUnitDetail(
-                  assignment.organizationalUnit.id,
-                )}
-                className="inline-flex items-center gap-2 underline-offset-4 hover:underline"
-              >
-                <Building2 aria-hidden="true" className="size-4 text-muted-foreground" />
-                {assignment.organizationalUnit.name}
-              </Link>
+              {assignment.organizationalUnit ? (
+                <Link
+                  href={routes.administration.organizationalUnitDetail(
+                    assignment.organizationalUnit.id,
+                  )}
+                  className="inline-flex items-center gap-2 underline-offset-4 hover:underline"
+                >
+                  <Building2 aria-hidden="true" className="size-4 text-muted-foreground" />
+                  {assignment.organizationalUnit.name}
+                </Link>
+              ) : (
+                'Sin unidad asignada'
+              )}
             </DetailField>
             <DetailField label="Nombramiento">
               {assignment.appointmentType === 'BASE' ? 'Base' : 'Confianza'}

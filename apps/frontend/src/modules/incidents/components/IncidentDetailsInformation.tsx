@@ -57,7 +57,7 @@ export function IncidentDetailsInformation({
                 {incident.employee.employeeNumber}
               </DetailField>
               <DetailField label="Adscripción">
-                {incident.assignment?.organizationalUnit.name ?? 'No asignado'}
+                {incident.assignment?.organizationalUnit?.name ?? 'No asignado'}
               </DetailField>
               <DetailField label="Puesto">
                 {incident.assignment?.position.name ?? 'No asignado'}

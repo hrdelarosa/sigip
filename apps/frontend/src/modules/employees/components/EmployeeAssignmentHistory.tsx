@@ -76,15 +76,19 @@ export function EmployeeAssignmentHistory({
                 </div>
                 <ItemDescription>
                   {assignment.position.code} ·{' '}
-                  <Link
-                    href={routes.administration.organizationalUnitDetail(
-                      assignment.organizationalUnit.id,
-                    )}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {assignment.organizationalUnit.code} ·{' '}
-                    {assignment.organizationalUnit.name}
-                  </Link>
+                  {assignment.organizationalUnit ? (
+                    <Link
+                      href={routes.administration.organizationalUnitDetail(
+                        assignment.organizationalUnit.id,
+                      )}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {assignment.organizationalUnit.code} ·{' '}
+                      {assignment.organizationalUnit.name}
+                    </Link>
+                  ) : (
+                    'Sin unidad asignada'
+                  )}
                 </ItemDescription>
                 <p className="text-xs text-muted-foreground">
                   {formatCalendarDate(assignment.effectiveFrom)} –{' '}

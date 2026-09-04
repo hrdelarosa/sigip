@@ -64,7 +64,7 @@ export default function EmployeeAssignmentCreate({ employeeId }: { employeeId: s
   return (
     <FormDialog
       module="asignación"
-      description="Registra la unidad, el puesto y la vigencia de la asignación."
+      description="Registra el puesto y la vigencia de la asignación. La unidad es opcional."
       trigger={
         <Button size="sm">
           <Plus />
