@@ -5,7 +5,7 @@ type TemplateEmployeeRow = {
   schedule: string;
   hireDate: string;
   officeCode: string;
-  area: string;
+  area?: string;
 };
 
 const exampleRows: readonly TemplateEmployeeRow[] = [
@@ -28,35 +28,29 @@ const slug = (value: string): string =>
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-const positionCodes = new Map(
-  [...new Set(exampleRows.map((row) => slug(row.position)))].map(
-    (position, index) => [position, `P${String(index + 1).padStart(2, '0')}`],
-  ),
-);
-
 export const templateEmployeesSeed = exampleRows;
 
-export const templateUnitCode = (officeCode: string, area: string): string =>
-  `${officeCode}-${slug(area || 'SIN-AREA')}`.slice(0, 50);
+export const templateUnitCode = (_officeCode: string, area: string): string =>
+  slug(area);
 
 export const templatePositionCode = (
-  officeCode: string,
-  position: string,
-): string => `${officeCode}-${positionCodes.get(slug(position))}`;
+  _officeCode: string,
+  _position: string,
+): string => 'AGENTE-MIGRACION-B';
 
 export const templateOrganizationalUnitsSeed = [
   {
-    officeCode: 'ORGRO',
     code: templateUnitCode('ORGRO', 'CONTROL MIGRATORIO'),
     name: 'Control Migratorio',
+    description: 'Unidad responsable del control migratorio.',
   },
 ];
 
 export const templatePositionsSeed = [
   {
-    officeCode: 'ORGRO',
-    code: templatePositionCode('ORGRO', exampleRows[0].position),
+    code: 'AGENTE-MIGRACION-B',
     name: exampleRows[0].position,
+    description: 'Puesto de Agente Federal de Migración B.',
   },
 ];
 
@@ -66,7 +60,7 @@ export const templateAssignmentsSeed = [
     officeCode: 'ORGRO',
     unitCode: templateUnitCode('ORGRO', 'CONTROL MIGRATORIO'),
     positionCode: templatePositionCode('ORGRO', exampleRows[0].position),
-    appointmentType: 'BASE' as const,
+    appointmentType: 'CONFIANZA' as const,
     schedule: '09:00-17:00',
     effectiveFrom: '2026-01-01',
   },
