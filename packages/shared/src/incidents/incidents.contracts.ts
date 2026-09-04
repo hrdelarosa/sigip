@@ -67,7 +67,7 @@ export interface IncidentAssignmentResponse {
   schedule: string | null
   effectiveFrom: string
   effectiveTo: string | null
-  organizationalUnit: IncidentOrganizationalUnitResponse
+  organizationalUnit: IncidentOrganizationalUnitResponse | null
   position: IncidentPositionResponse
 }
 

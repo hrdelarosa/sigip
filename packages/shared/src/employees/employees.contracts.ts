@@ -50,9 +50,9 @@ export interface EmployeeAssignmentPositionResponse {
 export interface EmployeeAssignmentResponse {
   id: string;
   employeeId: string;
-  organizationalUnitId: string;
+  organizationalUnitId: string | null;
   positionId: string;
-  organizationalUnit: EmployeeAssignmentOrganizationalUnitResponse;
+  organizationalUnit: EmployeeAssignmentOrganizationalUnitResponse | null;
   position: EmployeeAssignmentPositionResponse;
   appointmentType: AppointmentType;
   schedule: string | null;
@@ -136,7 +136,7 @@ export interface EmployeeJustificationControlResponse {
 }
 
 export interface CreateEmployeeAssignmentRequest {
-  organizationalUnitId: string;
+  organizationalUnitId?: string | null;
   positionId: string;
   appointmentType: AppointmentType;
   schedule?: string | null;
@@ -146,7 +146,7 @@ export interface CreateEmployeeAssignmentRequest {
 }
 
 export interface UpdateEmployeeAssignmentRequest {
-  organizationalUnitId?: string;
+  organizationalUnitId?: string | null;
   positionId?: string;
   appointmentType?: AppointmentType;
   schedule?: string | null;
