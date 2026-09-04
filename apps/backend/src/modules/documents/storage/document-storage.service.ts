@@ -1,19 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import type { UploadedMemoryFile } from '../../../common/types/uploaded-memory-file.type';
 
 @Injectable()
 export class DocumentStorageService {
-  private readonly root: string;
+  private readonly client: S3Client;
+  private readonly bucket: string;
 
   constructor(config: ConfigService) {
-    this.root = resolve(
-      process.cwd(),
-      config.getOrThrow<string>('STORAGE_ROOT'),
-    );
+    this.bucket = config.getOrThrow<string>('storage.bucket');
+    this.client = new S3Client({
+      endpoint: config.getOrThrow<string>('storage.endpoint'),
+      region: config.getOrThrow<string>('storage.region'),
+      forcePathStyle: config.get<boolean>('storage.forcePathStyle') ?? true,
+      credentials: {
+        accessKeyId: config.getOrThrow<string>('storage.accessKeyId'),
+        secretAccessKey: config.getOrThrow<string>('storage.secretAccessKey'),
+      },
+    });
   }
 
   async storeIncidentDocument(
@@ -22,46 +33,42 @@ export class DocumentStorageService {
     file: UploadedMemoryFile,
   ) {
     const storedName = `${documentId}.pdf`;
-
-    const relativePath = `incidents/${incidentId}/${storedName}`;
-
-    const absolutePath = resolve(this.root, relativePath);
-
-    await mkdir(dirname(absolutePath), {
-      recursive: true,
-    });
-
-    await writeFile(absolutePath, file.buffer);
-
+    const storagePath = `incidents/${incidentId}/${storedName}`;
     const contentHash = createHash('sha256').update(file.buffer).digest('hex');
 
-    return {
-      storedName,
-      storagePath: relativePath.replaceAll('\\', '/'),
-      contentHash,
-    };
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: storagePath,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    return { storedName, storagePath, contentHash };
   }
 
   async remove(storagePath: string): Promise<void> {
-    const absolutePath = this.resolveStoragePath(storagePath);
-
-    await rm(absolutePath, {
-      force: true,
-    });
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: storagePath,
+      }),
+    );
   }
 
   async read(storagePath: string): Promise<Buffer> {
-    return readFile(this.resolveStoragePath(storagePath));
-  }
+    const result = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: storagePath,
+      }),
+    );
 
-  private resolveStoragePath(storagePath: string): string {
-    const absolutePath = resolve(this.root, storagePath);
-    const relativePath = relative(this.root, absolutePath);
-
-    if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
-      throw new Error('La ruta del documento está fuera del almacenamiento');
+    if (!result.Body) {
+      throw new Error('El documento no tiene contenido en el almacenamiento');
     }
 
-    return absolutePath;
+    return Buffer.from(await result.Body.transformToByteArray());
   }
 }
