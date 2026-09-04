@@ -13,8 +13,10 @@ import type { AppointmentType } from '../../../database/schema/organization/empl
 import { trimNullableString, trimString } from './employee-dto.transforms';
 
 export class CreateEmployeeAssignmentDto implements CreateEmployeeAssignmentRequest {
+  @IsOptional()
+  @Transform(trimNullableString)
   @IsUUID()
-  organizationalUnitId!: string;
+  organizationalUnitId?: string | null;
 
   @IsUUID()
   positionId!: string;

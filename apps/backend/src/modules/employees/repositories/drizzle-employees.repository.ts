@@ -47,7 +47,7 @@ type EmployeeAssignmentDetailsRow = {
   organizationalUnit: Pick<
     typeof organizationalUnits.$inferSelect,
     'id' | 'code' | 'name'
-  >;
+  > | null;
   position: Pick<typeof positions.$inferSelect, 'id' | 'code' | 'name'>;
 };
 
@@ -80,7 +80,9 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       id: bufferToUuid(row.id),
       employeeId: bufferToUuid(row.employeeId),
 
-      organizationalUnitId: bufferToUuid(row.organizationalUnitId),
+      organizationalUnitId: row.organizationalUnitId
+        ? bufferToUuid(row.organizationalUnitId)
+        : null,
 
       positionId: bufferToUuid(row.positionId),
 
@@ -100,11 +102,13 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
   ): EmployeeAssignmentDetailsModel {
     return {
       ...this.toAssignmentModel(row.assignment),
-      organizationalUnit: {
-        id: bufferToUuid(row.organizationalUnit.id),
-        code: row.organizationalUnit.code,
-        name: row.organizationalUnit.name,
-      },
+      organizationalUnit: row.organizationalUnit
+        ? {
+            id: bufferToUuid(row.organizationalUnit.id),
+            code: row.organizationalUnit.code,
+            name: row.organizationalUnit.name,
+          }
+        : null,
       position: {
         id: bufferToUuid(row.position.id),
         code: row.position.code,
@@ -413,20 +417,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         },
       })
       .from(employeeAssignments)
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
-        and(
-          eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
-          eq(employeeAssignments.officeId, organizationalUnits.officeId),
-        ),
+        eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
-      .innerJoin(
-        positions,
-        and(
-          eq(employeeAssignments.positionId, positions.id),
-          eq(employeeAssignments.officeId, positions.officeId),
-        ),
-      )
+      .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .where(
         and(
           eq(employeeAssignments.employeeId, uuidToBuffer(employeeId)),
@@ -463,20 +458,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         },
       })
       .from(employeeAssignments)
-      .innerJoin(
+      .leftJoin(
         organizationalUnits,
-        and(
-          eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
-          eq(employeeAssignments.officeId, organizationalUnits.officeId),
-        ),
+        eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
       )
-      .innerJoin(
-        positions,
-        and(
-          eq(employeeAssignments.positionId, positions.id),
-          eq(employeeAssignments.officeId, positions.officeId),
-        ),
-      )
+      .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
       .where(
         and(
           eq(employeeAssignments.id, uuidToBuffer(assignmentId)),
@@ -496,52 +482,55 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
   ): Promise<EmployeeAssignmentMutationResult> {
     return this.db.transaction(async (transaction) => {
       const employeeId = uuidToBuffer(data.employeeId);
-      const organizationalUnitId = uuidToBuffer(data.organizationalUnitId);
+      const organizationalUnitId = data.organizationalUnitId
+        ? uuidToBuffer(data.organizationalUnitId)
+        : null;
       const positionId = uuidToBuffer(data.positionId);
 
       await transaction.execute(
         sql`SELECT ${employees.id} FROM ${employees} WHERE ${employees.id} = ${employeeId} FOR UPDATE`,
       );
       const [employee] = await transaction
-        .select({ id: employees.id, status: employees.status })
+        .select({
+          id: employees.id,
+          status: employees.status,
+          officeId: employees.officeId,
+        })
         .from(employees)
         .where(eq(employees.id, employeeId))
         .limit(1);
       if (!employee) return { status: 'employee-not-found' };
       if (employee.status !== 'ACTIVE') return { status: 'employee-inactive' };
-
-      await transaction.execute(
-        sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} WHERE ${organizationalUnits.id} = ${organizationalUnitId} FOR UPDATE`,
-      );
-      const [organizationalUnit] = await transaction
-        .select({
-          isActive: organizationalUnits.isActive,
-          officeId: organizationalUnits.officeId,
-        })
-        .from(organizationalUnits)
-        .where(eq(organizationalUnits.id, organizationalUnitId))
-        .limit(1);
-      if (!organizationalUnit?.isActive) {
-        return { status: 'organizational-unit-not-available' };
-      }
       if (
         data.officeId &&
-        !organizationalUnit.officeId.equals(uuidToBuffer(data.officeId))
+        !employee.officeId.equals(uuidToBuffer(data.officeId))
       ) {
-        return { status: 'organizational-unit-not-available' };
+        return { status: 'employee-not-found' };
       }
 
       await transaction.execute(
         sql`SELECT ${positions.id} FROM ${positions} WHERE ${positions.id} = ${positionId} FOR UPDATE`,
       );
       const [position] = await transaction
-        .select({ isActive: positions.isActive, officeId: positions.officeId })
+        .select({ isActive: positions.isActive })
         .from(positions)
         .where(eq(positions.id, positionId))
         .limit(1);
       if (!position?.isActive) return { status: 'position-not-available' };
-      if (!position.officeId.equals(organizationalUnit.officeId)) {
-        return { status: 'position-not-available' };
+      if (organizationalUnitId) {
+        await transaction.execute(
+          sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} WHERE ${organizationalUnits.id} = ${organizationalUnitId} FOR UPDATE`,
+        );
+        const [organizationalUnit] = await transaction
+          .select({
+            isActive: organizationalUnits.isActive,
+          })
+          .from(organizationalUnits)
+          .where(eq(organizationalUnits.id, organizationalUnitId))
+          .limit(1);
+        if (!organizationalUnit?.isActive) {
+          return { status: 'organizational-unit-not-available' };
+        }
       }
 
       const assignments = await this.lockEmployeeAssignments(
@@ -558,7 +547,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       await transaction.insert(employeeAssignments).values({
         id: uuidToBuffer(data.id),
         employeeId,
-        officeId: organizationalUnit.officeId,
+        officeId: employee.officeId,
         organizationalUnitId,
         positionId,
         appointmentType: data.appointmentType,
@@ -583,23 +572,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
           },
         })
         .from(employeeAssignments)
-        .innerJoin(
+        .leftJoin(
           organizationalUnits,
-          and(
-            eq(
-              employeeAssignments.organizationalUnitId,
-              organizationalUnits.id,
-            ),
-            eq(employeeAssignments.officeId, organizationalUnits.officeId),
-          ),
+          eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
         )
-        .innerJoin(
-          positions,
-          and(
-            eq(employeeAssignments.positionId, positions.id),
-            eq(employeeAssignments.officeId, positions.officeId),
-          ),
-        )
+        .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
         .where(eq(employeeAssignments.id, uuidToBuffer(data.id)))
         .limit(1);
       if (!created)
@@ -647,9 +624,12 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         .limit(1);
       if (!currentSnapshot) return { status: 'assignment-not-found' };
 
-      const organizationalUnitId = data.organizationalUnitId
-        ? uuidToBuffer(data.organizationalUnitId)
-        : currentSnapshot.organizationalUnitId;
+      const organizationalUnitId =
+        data.organizationalUnitId === undefined
+          ? currentSnapshot.organizationalUnitId
+          : data.organizationalUnitId
+            ? uuidToBuffer(data.organizationalUnitId)
+            : null;
       const positionId = data.positionId
         ? uuidToBuffer(data.positionId)
         : currentSnapshot.positionId;
@@ -666,24 +646,25 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         return { status: 'employee-inactive' };
       }
 
-      const organizationalUnitChanged =
-        !currentSnapshot.organizationalUnitId.equals(organizationalUnitId);
-      if (isCurrentOrFuture || organizationalUnitChanged) {
+      const organizationalUnitChanged = currentSnapshot.organizationalUnitId
+        ? !organizationalUnitId ||
+          !currentSnapshot.organizationalUnitId.equals(organizationalUnitId)
+        : organizationalUnitId !== null;
+      if (
+        (isCurrentOrFuture || organizationalUnitChanged) &&
+        organizationalUnitId
+      ) {
         await transaction.execute(
           sql`SELECT ${organizationalUnits.id} FROM ${organizationalUnits} WHERE ${organizationalUnits.id} = ${organizationalUnitId} FOR UPDATE`,
         );
         const [organizationalUnit] = await transaction
           .select({
             isActive: organizationalUnits.isActive,
-            officeId: organizationalUnits.officeId,
           })
           .from(organizationalUnits)
           .where(eq(organizationalUnits.id, organizationalUnitId))
           .limit(1);
         if (!organizationalUnit?.isActive) {
-          return { status: 'organizational-unit-not-available' };
-        }
-        if (!organizationalUnit.officeId.equals(currentSnapshot.officeId)) {
           return { status: 'organizational-unit-not-available' };
         }
       }
@@ -696,15 +677,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
         const [position] = await transaction
           .select({
             isActive: positions.isActive,
-            officeId: positions.officeId,
           })
           .from(positions)
           .where(eq(positions.id, positionId))
           .limit(1);
         if (!position?.isActive) return { status: 'position-not-available' };
-        if (!position.officeId.equals(currentSnapshot.officeId)) {
-          return { status: 'position-not-available' };
-        }
       }
 
       const assignments = await this.lockEmployeeAssignments(
@@ -770,23 +747,11 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
           },
         })
         .from(employeeAssignments)
-        .innerJoin(
+        .leftJoin(
           organizationalUnits,
-          and(
-            eq(
-              employeeAssignments.organizationalUnitId,
-              organizationalUnits.id,
-            ),
-            eq(employeeAssignments.officeId, organizationalUnits.officeId),
-          ),
+          eq(employeeAssignments.organizationalUnitId, organizationalUnits.id),
         )
-        .innerJoin(
-          positions,
-          and(
-            eq(employeeAssignments.positionId, positions.id),
-            eq(employeeAssignments.officeId, positions.officeId),
-          ),
-        )
+        .innerJoin(positions, eq(employeeAssignments.positionId, positions.id))
         .where(eq(employeeAssignments.id, assignmentIdBuffer))
         .limit(1);
       if (!updated) return { status: 'assignment-not-found' };
