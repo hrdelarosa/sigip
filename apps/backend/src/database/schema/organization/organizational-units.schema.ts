@@ -13,13 +13,11 @@ import {
   updatedAtColumn,
 } from '../columns/timestamps.columns';
 import { uuidBinary } from '../columns/uuid.column';
-import { offices } from './offices.schema';
 
 export const organizationalUnits = mysqlTable(
   'organizational_units',
   {
     id: uuidBinary('id').notNull().primaryKey(),
-    officeId: uuidBinary('office_id').notNull(),
     parentId: uuidBinary('parent_id'),
     code: varchar('code', { length: 50 }).notNull(),
     name: varchar('name', { length: 150 }).notNull(),
@@ -31,30 +29,15 @@ export const organizationalUnits = mysqlTable(
   },
   (table) => [
     uniqueIndex('organizational_units_code_unique').on(table.code),
-    uniqueIndex('organizational_units_id_office_unique').on(
-      table.id,
-      table.officeId,
-    ),
-    index('organizational_units_parent_office_index').on(
-      table.parentId,
-      table.officeId,
-    ),
-    index('organizational_units_office_active_sort_index').on(
-      table.officeId,
+    index('organizational_units_parent_index').on(table.parentId),
+    index('organizational_units_active_sort_index').on(
       table.isActive,
       table.sortOrder,
     ),
     foreignKey({
-      name: 'organizational_units_office_id_fk',
-      columns: [table.officeId],
-      foreignColumns: [offices.id],
-    })
-      .onUpdate('restrict')
-      .onDelete('restrict'),
-    foreignKey({
-      name: 'organizational_units_parent_office_fk',
-      columns: [table.parentId, table.officeId],
-      foreignColumns: [table.id, table.officeId],
+      name: 'organizational_units_parent_id_fk',
+      columns: [table.parentId],
+      foreignColumns: [table.id],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),

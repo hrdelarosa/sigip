@@ -33,7 +33,7 @@ export const employeeAssignments = mysqlTable(
     id: uuidBinary('id').notNull().primaryKey(),
     employeeId: uuidBinary('employee_id').notNull(),
     officeId: uuidBinary('office_id').notNull(),
-    organizationalUnitId: uuidBinary('organizational_unit_id').notNull(),
+    organizationalUnitId: uuidBinary('organizational_unit_id'),
     positionId: uuidBinary('position_id').notNull(),
     appointmentType: varchar('appointment_type', {
       length: 30,
@@ -98,16 +98,16 @@ export const employeeAssignments = mysqlTable(
       .onUpdate('restrict')
       .onDelete('restrict'),
     foreignKey({
-      name: 'employee_assignments_unit_office_fk',
-      columns: [table.organizationalUnitId, table.officeId],
-      foreignColumns: [organizationalUnits.id, organizationalUnits.officeId],
+      name: 'employee_assignments_unit_id_fk',
+      columns: [table.organizationalUnitId],
+      foreignColumns: [organizationalUnits.id],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),
     foreignKey({
-      name: 'employee_assignments_position_office_fk',
-      columns: [table.positionId, table.officeId],
-      foreignColumns: [positions.id, positions.officeId],
+      name: 'employee_assignments_position_id_fk',
+      columns: [table.positionId],
+      foreignColumns: [positions.id],
     })
       .onUpdate('restrict')
       .onDelete('restrict'),

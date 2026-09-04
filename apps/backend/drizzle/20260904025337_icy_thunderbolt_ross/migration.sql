@@ -1,0 +1,1 @@
+ALTER TABLE `employee_assignments` MODIFY COLUMN `organizational_unit_id` binary(16);
