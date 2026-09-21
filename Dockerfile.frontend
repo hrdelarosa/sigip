@@ -9,7 +9,13 @@ WORKDIR /app
 
 COPY . .
 
-RUN pnpm install --frozen-lockfile
+# Mayor tolerancia a la conexión de red institucional
+RUN pnpm config set fetch-retries 10 \
+ && pnpm config set fetch-retry-factor 2 \
+ && pnpm config set fetch-retry-mintimeout 10000 \
+ && pnpm config set fetch-retry-maxtimeout 120000 \
+ && pnpm config set fetch-timeout 600000 \
+ && pnpm install --frozen-lockfile
 
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
