@@ -11,11 +11,16 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 @Injectable()
 export class OriginGuard implements CanActivate {
-  private readonly frontendOrigin: string;
+  private readonly frontendOrigins: Set<string>;
 
   constructor(configService: ConfigService) {
-    this.frontendOrigin = configService.getOrThrow<string>(
-      'auth.frontendOrigin',
+    const origins = configService.getOrThrow<string>('auth.frontendOrigin');
+
+    this.frontendOrigins = new Set(
+      origins
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
     );
   }
 
@@ -28,7 +33,7 @@ export class OriginGuard implements CanActivate {
     if (!origin) throw new ForbiddenException('Origen requerido');
 
     const apiOrigin = `${request.protocol}://${request.get('host')}`;
-    if (origin !== this.frontendOrigin && origin !== apiOrigin) {
+    if (!this.frontendOrigins.has(origin) && origin !== apiOrigin) {
       throw new ForbiddenException('Origen no permitido');
     }
 
