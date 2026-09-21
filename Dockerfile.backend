@@ -16,16 +16,12 @@ WORKDIR /app
 # ================================
 FROM base AS build
 
-# Copiamos el monorepo completo
 COPY . .
 
-# Instalamos todas las dependencias del workspace
 RUN pnpm install --frozen-lockfile
 
-# Compilamos primero el paquete compartido
 RUN pnpm --filter @sigip/shared build
 
-# Compilamos el backend
 RUN pnpm --filter backend build
 
 
@@ -35,15 +31,12 @@ RUN pnpm --filter backend build
 FROM base AS production
 
 ENV NODE_ENV=production
-ENV STORAGE_ROOT=/app/storage
 
 COPY --from=build /app /app
 
-RUN mkdir -p /app/storage && chown -R node:node /app
+RUN chown -R node:node /app
 
 USER node
-
-VOLUME ["/app/storage"]
 
 EXPOSE 3000
 
