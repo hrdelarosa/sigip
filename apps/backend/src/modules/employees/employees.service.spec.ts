@@ -71,7 +71,7 @@ describe('EmployeesService controls', () => {
       'employee-id',
       'office-id',
     );
-    expect(result.controls.vacationControl.currentPeriod).toBe('SECOND');
+    expect(result.controls.vacationControl.currentPeriod).toBe('FIRST');
     expect(result.controls.justificationControl.months[0]).toMatchObject({
       month: '2026-08',
       used: 0,

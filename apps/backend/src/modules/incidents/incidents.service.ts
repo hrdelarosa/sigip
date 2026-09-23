@@ -44,6 +44,7 @@ import {
   getVacationPeriodFromCode,
   getVacationPeriodDates,
   getCurrentVacationPeriod,
+  getVacationPeriodYear,
   institutionalCalendarDate,
   isDateInVacationPeriod,
   isVacationDateEligible,
@@ -201,10 +202,14 @@ export class IncidentsService {
     if (!hireDate) throw new IncidentVacationHireDateRequiredError();
 
     const years = new Set(
-      occurrences.map((occurrence) => occurrence.startDate.getUTCFullYear()),
+      occurrences.map((occurrence) =>
+        getVacationPeriodYear(occurrence.startDate, period),
+      ),
     );
     const currentPeriod = getCurrentVacationPeriod(institutionalCalendarDate());
-    const selectedYear = occurrences[0]?.startDate.getUTCFullYear();
+    const selectedYear = occurrences[0]
+      ? getVacationPeriodYear(occurrences[0].startDate, period)
+      : undefined;
     if (
       years.size !== 1 ||
       occurrences.some(
@@ -219,7 +224,7 @@ export class IncidentsService {
       );
     }
 
-    const year = occurrences[0].startDate.getUTCFullYear();
+    const year = getVacationPeriodYear(occurrences[0].startDate, period);
     const { startDate } = getVacationPeriodDates(year, period);
     if (institutionalCalendarDate() < startDate) {
       throw new IncidentVacationPeriodNotAvailableError(year, period);

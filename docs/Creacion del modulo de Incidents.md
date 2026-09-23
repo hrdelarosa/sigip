@@ -8030,13 +8030,14 @@ porque son datos derivados.
 
 ---
 
-# 82. Regla histórica de vacaciones
+# 82. Regla institucional de vacaciones
 
-El control acumulado está implementado con las siguientes decisiones provisionales:
+El control acumulado está implementado con las siguientes decisiones:
 
 ```text
-primer periodo: enero-junio;
-segundo periodo: julio-diciembre;
+primer periodo: 1 de abril-30 de septiembre;
+segundo periodo: 1 de octubre-31 de marzo del año siguiente;
+el año de referencia es el año de inicio del periodo;
 10 días por periodo sin acumulación;
 elegibilidad después de seis meses desde la fecha de ingreso;
 incidencias canceladas devuelven días;
@@ -8239,4 +8240,4 @@ Con este bloque implementado tendrás funcionalmente:
 ✓ Integración frontend
 ```
 
-Después de esto, queda sustituir el calendario provisional por las fechas institucionales definitivas, además de los anexos adicionales y la administración de tipos documentales.
+Después de esto, quedan los anexos adicionales y la administración de tipos documentales.

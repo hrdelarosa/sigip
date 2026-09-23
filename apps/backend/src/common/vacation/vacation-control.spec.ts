@@ -3,6 +3,8 @@ import {
   getCurrentVacationPeriod,
   getVacationPeriodDates,
   getVacationPeriodFromCode,
+  getVacationPeriodYear,
+  isDateInVacationPeriod,
   isVacationDateEligible,
 } from './vacation-control';
 
@@ -17,15 +19,22 @@ describe('vacation control calendar', () => {
     expect(getVacationPeriodFromCode('VACACIONES_ESTIMULOS')).toBeNull();
   });
 
-  it('uses the provisional institutional period boundaries', () => {
+  it('uses the definitive institutional period boundaries', () => {
     expect(getVacationPeriodDates(2026, 'FIRST')).toEqual({
-      startDate: new Date('2026-01-01T00:00:00.000Z'),
-      endDate: new Date('2026-06-30T00:00:00.000Z'),
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-09-30T00:00:00.000Z'),
     });
     expect(getVacationPeriodDates(2026, 'SECOND')).toEqual({
-      startDate: new Date('2026-07-01T00:00:00.000Z'),
-      endDate: new Date('2026-12-31T00:00:00.000Z'),
+      startDate: new Date('2026-10-01T00:00:00.000Z'),
+      endDate: new Date('2027-03-31T00:00:00.000Z'),
     });
+  });
+
+  it('assigns January through March to the second period started the previous year', () => {
+    const date = new Date('2027-02-15T00:00:00.000Z');
+
+    expect(getVacationPeriodYear(date, 'SECOND')).toBe(2026);
+    expect(isDateInVacationPeriod(date, 'SECOND')).toBe(true);
   });
 
   it('clamps six calendar months for month-end hires', () => {
@@ -50,10 +59,13 @@ describe('vacation control calendar', () => {
 
   it('reports the current period and inclusive calendar days remaining', () => {
     expect(
-      getCurrentVacationPeriod(new Date('2026-06-30T00:00:00.000Z')),
+      getCurrentVacationPeriod(new Date('2026-09-30T00:00:00.000Z')),
     ).toMatchObject({ period: 'FIRST', daysRemaining: 1 });
     expect(
-      getCurrentVacationPeriod(new Date('2026-07-01T00:00:00.000Z')),
-    ).toMatchObject({ period: 'SECOND', daysRemaining: 184 });
+      getCurrentVacationPeriod(new Date('2026-10-01T00:00:00.000Z')),
+    ).toMatchObject({ year: 2026, period: 'SECOND', daysRemaining: 182 });
+    expect(
+      getCurrentVacationPeriod(new Date('2027-01-15T00:00:00.000Z')),
+    ).toMatchObject({ year: 2026, period: 'SECOND', daysRemaining: 76 });
   });
 });

@@ -12,6 +12,7 @@ import {
   getCurrentVacationPeriod,
   getVacationPeriodDates,
   getVacationPeriodFromCode,
+  getVacationPeriodYear,
 } from '../../common/vacation/vacation-control';
 import type { EmployeeControlSnapshot } from './models/employee-control.model';
 import type { EmployeeModel } from './models/employee.model';
@@ -104,9 +105,14 @@ export function buildEmployeeControls(
     ? addSixCalendarMonths(employee.hireDate)
     : null;
   const years = new Set<number>([currentVacationPeriod.year]);
-  snapshot.vacationDates.forEach((item) =>
-    years.add(item.date.getUTCFullYear()),
-  );
+  snapshot.vacationDates.forEach((item) => {
+    const period = getVacationPeriodFromCode(item.code);
+    years.add(
+      period
+        ? getVacationPeriodYear(item.date, period)
+        : item.date.getUTCFullYear(),
+    );
+  });
   snapshot.adjustments.forEach((item) => years.add(item.year));
 
   const vacationControl: EmployeeVacationControlResponse = {

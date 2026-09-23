@@ -66,10 +66,10 @@ describe('DashboardService', () => {
       ...summary,
       currentVacationPeriod: {
         year: 2026,
-        period: 'SECOND',
-        startDate: new Date('2026-07-01T00:00:00.000Z'),
-        endDate: new Date('2026-12-31T00:00:00.000Z'),
-        daysRemaining: 138,
+        period: 'FIRST',
+        startDate: new Date('2026-04-01T00:00:00.000Z'),
+        endDate: new Date('2026-09-30T00:00:00.000Z'),
+        daysRemaining: 46,
       },
     });
 

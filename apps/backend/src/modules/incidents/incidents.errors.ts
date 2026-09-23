@@ -81,12 +81,12 @@ export class IncidentVacationOutsidePeriodError extends BadRequestException {
     ) {
       const selectedLabel =
         selectedPeriod === 'FIRST'
-          ? 'primer periodo (enero a junio)'
-          : 'segundo periodo (julio a diciembre)';
+          ? 'primer periodo (abril a septiembre)'
+          : 'segundo periodo (octubre a marzo del año siguiente)';
       const currentLabel =
         currentPeriod === 'FIRST'
-          ? 'primer periodo (enero a junio)'
-          : 'segundo periodo (julio a diciembre)';
+          ? 'primer periodo (abril a septiembre)'
+          : 'segundo periodo (octubre a marzo del año siguiente)';
       super(
         `No es posible registrar vacaciones del ${selectedLabel} de ${selectedYear}, porque actualmente nos encontramos en el ${currentLabel} de ${currentYear}.`,
       );
@@ -106,7 +106,9 @@ export class IncidentVacationNotEligibleError extends ConflictException {
 export class IncidentVacationPeriodNotAvailableError extends ConflictException {
   constructor(year: number, period: 'FIRST' | 'SECOND') {
     const periodLabel =
-      period === 'FIRST' ? 'enero a junio' : 'julio a diciembre';
+      period === 'FIRST'
+        ? 'abril a septiembre'
+        : 'octubre a marzo del año siguiente';
     super(
       `El periodo vacacional de ${periodLabel} de ${year} aún no está disponible. Seleccione el periodo vacacional vigente.`,
     );

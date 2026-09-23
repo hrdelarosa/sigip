@@ -59,6 +59,7 @@ import {
   ORDINARY_VACATION_CODES,
   getVacationPeriodDates,
   getVacationPeriodFromCode,
+  getVacationPeriodYear,
   isJustificationCode,
 } from '../../../common/vacation/vacation-control';
 import {
@@ -98,7 +99,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     const period = getVacationPeriodFromCode(incidentTypeCode);
     if (!period || targetOccurrences.length === 0) return;
 
-    const year = targetOccurrences[0].startDate.getUTCFullYear();
+    const year = getVacationPeriodYear(targetOccurrences[0].startDate, period);
     const { startDate, endDate } = getVacationPeriodDates(year, period);
     const incidentConditions = [
       eq(incidents.employeeId, uuidToBuffer(employeeId)),

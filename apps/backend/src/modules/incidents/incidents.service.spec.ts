@@ -134,6 +134,7 @@ describe('IncidentsService', () => {
   );
 
   it('accepts exactly 10 days for an ordinary vacation period', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T12:00:00.000Z'));
     repository.findCreationContext.mockResolvedValue(
       buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
     );
@@ -148,7 +149,7 @@ describe('IncidentsService', () => {
       {
         ...buildCreateDto(),
         occurrences: Array.from({ length: 10 }, (_, index) => ({
-          startDate: `2026-08-${String(index + 1).padStart(2, '0')}`,
+          startDate: `2026-10-${String(index + 1).padStart(2, '0')}`,
         })),
       },
       buildFile('formato.pdf', 100),
@@ -159,11 +160,35 @@ describe('IncidentsService', () => {
       'employee-id',
       'assignment-id',
       'type-id',
-      new Date('2026-08-01T00:00:00.000Z'),
-      new Date('2026-08-10T00:00:00.000Z'),
+      new Date('2026-10-01T00:00:00.000Z'),
+      new Date('2026-10-10T00:00:00.000Z'),
       'office-id',
     );
     expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(10);
+  });
+
+  it('accepts second-period dates on both sides of the year boundary', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-01-15T12:00:00.000Z'));
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
+    );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      {
+        ...buildCreateDto(),
+        occurrences: [{ startDate: '2026-12-20' }, { startDate: '2027-01-10' }],
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(2);
   });
 
   it('does not apply the ordinary limit to vacation incentives', async () => {
@@ -221,7 +246,7 @@ describe('IncidentsService', () => {
       service.create(
         {
           ...buildCreateDto(),
-          occurrences: [{ startDate: '2026-08-10' }],
+          occurrences: [{ startDate: '2026-10-10' }],
         },
         buildFile('formato.pdf', 100),
         actor,
@@ -232,12 +257,13 @@ describe('IncidentsService', () => {
   });
 
   it('rejects vacation before six months of institutional seniority', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T12:00:00.000Z'));
     repository.findCreationContext.mockResolvedValue({
       ...buildMultipleDateCreationContext('VACACIONES_SEGUNDO_PERIODO'),
       employee: {
         id: 'employee-id',
         status: 'ACTIVE',
-        hireDate: new Date('2026-04-01T00:00:00.000Z'),
+        hireDate: new Date('2026-05-01T00:00:00.000Z'),
       },
     });
 
@@ -245,7 +271,7 @@ describe('IncidentsService', () => {
       service.create(
         {
           ...buildCreateDto(),
-          occurrences: [{ startDate: '2026-08-10' }],
+          occurrences: [{ startDate: '2026-10-10' }],
         },
         buildFile('formato.pdf', 100),
         actor,
@@ -265,7 +291,7 @@ describe('IncidentsService', () => {
       service.create(
         {
           ...buildCreateDto(),
-          occurrences: [{ startDate: '2026-07-10' }],
+          occurrences: [{ startDate: '2026-10-10' }],
         },
         buildFile('formato.pdf', 100),
         actor,

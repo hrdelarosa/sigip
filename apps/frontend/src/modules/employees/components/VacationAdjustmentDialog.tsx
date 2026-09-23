@@ -93,7 +93,7 @@ export function VacationAdjustmentDialog({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field data-invalid={Boolean(errors.year)} className="gap-1.5">
-          <FieldLabel htmlFor="vacation-adjustment-year">Año</FieldLabel>
+          <FieldLabel htmlFor="vacation-adjustment-year">Año de inicio</FieldLabel>
           <Input
             id="vacation-adjustment-year"
             type="number"

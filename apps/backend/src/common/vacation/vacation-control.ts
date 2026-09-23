@@ -48,13 +48,21 @@ export function getVacationPeriodDates(
 ): { startDate: Date; endDate: Date } {
   return period === 'FIRST'
     ? {
-        startDate: new Date(Date.UTC(year, 0, 1)),
-        endDate: new Date(Date.UTC(year, 5, 30)),
+        startDate: new Date(Date.UTC(year, 3, 1)),
+        endDate: new Date(Date.UTC(year, 8, 30)),
       }
     : {
-        startDate: new Date(Date.UTC(year, 6, 1)),
-        endDate: new Date(Date.UTC(year, 11, 31)),
+        startDate: new Date(Date.UTC(year, 9, 1)),
+        endDate: new Date(Date.UTC(year + 1, 2, 31)),
       };
+}
+
+export function getVacationPeriodYear(
+  date: Date,
+  period: VacationPeriod,
+): number {
+  const year = date.getUTCFullYear();
+  return period === 'SECOND' && date.getUTCMonth() < 3 ? year - 1 : year;
 }
 
 export function isDateInVacationPeriod(
@@ -62,7 +70,7 @@ export function isDateInVacationPeriod(
   period: VacationPeriod,
 ): boolean {
   const { startDate, endDate } = getVacationPeriodDates(
-    date.getUTCFullYear(),
+    getVacationPeriodYear(date, period),
     period,
   );
   return date >= startDate && date <= endDate;
@@ -96,8 +104,9 @@ export function getCurrentVacationPeriod(reference: Date): {
   endDate: Date;
   daysRemaining: number;
 } {
-  const year = reference.getUTCFullYear();
-  const period = reference.getUTCMonth() < 6 ? 'FIRST' : 'SECOND';
+  const month = reference.getUTCMonth();
+  const period = month >= 3 && month <= 8 ? 'FIRST' : 'SECOND';
+  const year = getVacationPeriodYear(reference, period);
   const dates = getVacationPeriodDates(year, period);
 
   return {

@@ -81,7 +81,7 @@ export function EmployeeVacationControl({
             >
               <SelectTrigger
                 className="w-28"
-                aria-label="Año de saldos vacacionales"
+                aria-label="Año de inicio de los periodos vacacionales"
               >
                 <SelectValue />
               </SelectTrigger>

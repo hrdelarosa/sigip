@@ -18,11 +18,11 @@ describe('buildEmployeeControls', () => {
     vacationDates: [
       {
         code: 'VACACIONES_SEGUNDO_PERIODO',
-        date: new Date('2026-08-03T00:00:00.000Z'),
+        date: new Date('2026-12-03T00:00:00.000Z'),
       },
       {
         code: 'VACACIONES_SEGUNDO_PERIODO',
-        date: new Date('2026-08-04T00:00:00.000Z'),
+        date: new Date('2027-01-04T00:00:00.000Z'),
       },
     ],
     justificationDates: [
@@ -53,7 +53,7 @@ describe('buildEmployeeControls', () => {
     const result = buildEmployeeControls(
       employee,
       snapshot,
-      new Date('2026-08-28T00:00:00.000Z'),
+      new Date('2027-01-28T00:00:00.000Z'),
     );
     const current = result.vacationControl.years
       .find((year) => year.year === 2026)
@@ -66,6 +66,11 @@ describe('buildEmployeeControls', () => {
       consumedDays: 5,
       remainingDays: 5,
       status: 'AVAILABLE',
+    });
+    expect(result.vacationControl.currentYear).toBe(2026);
+    expect(current).toMatchObject({
+      startDate: '2026-10-01',
+      endDate: '2027-03-31',
     });
   });
 
