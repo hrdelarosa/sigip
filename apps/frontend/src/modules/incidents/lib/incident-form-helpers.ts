@@ -6,6 +6,7 @@ import type {
   UpdateIncidentInput,
 } from '../types/incident.types'
 import type { IncidentFormValues } from '../schemas/incident-form.schema'
+import { isOrdinaryVacation } from './vacation-date-range'
 
 export function getIncidentFormDefaultValues(
   incident?: Incident,
@@ -41,7 +42,18 @@ export function getIncidentFormDefaultValues(
     assignmentEffectiveTo: incident.assignment?.effectiveTo ?? null,
     issuedDate: incident.issuedDate,
     receivedAt: format(new Date(incident.receivedAt), "yyyy-MM-dd'T'HH:mm"),
-    referenceYear: incident.referenceYear ? String(incident.referenceYear) : '',
+    referenceYear: incident.referenceYear
+      ? String(incident.referenceYear)
+      : isOrdinaryVacation(incident.incidentType.code)
+        ? String(
+            getVacationPeriodYear(
+              new Date(`${incident.occurrences[0].startDate}T00:00:00.000Z`),
+              incident.incidentType.code === 'VACACIONES_SEGUNDO_PERIODO'
+                ? 'SECOND'
+                : 'FIRST',
+            ),
+          )
+        : '',
     observations: incident.observations ?? '',
     occurrences: incident.occurrences.map((occurrence) => ({
       startDate: occurrence.startDate,
@@ -50,6 +62,11 @@ export function getIncidentFormDefaultValues(
     file: null,
     commissionAnnex: null,
   }
+}
+
+function getVacationPeriodYear(date: Date, period: 'FIRST' | 'SECOND'): number {
+  const year = date.getUTCFullYear()
+  return period === 'SECOND' && date.getUTCMonth() < 3 ? year - 1 : year
 }
 
 export function toIncidentCreateRequest(

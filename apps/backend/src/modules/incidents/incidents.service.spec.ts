@@ -8,7 +8,6 @@ import {
   DuplicateIncidentOccurrenceError,
   IncidentVacationDayLimitError,
   InvalidIncidentTemporalModeError,
-  IncidentVacationOutsidePeriodError,
   IncidentVacationNotEligibleError,
   IncidentVacationPeriodNotAvailableError,
   InvalidIncidentAssignmentError,
@@ -167,6 +166,62 @@ describe('IncidentsService', () => {
     expect(repository.create.mock.calls[0]?.[0].occurrences).toHaveLength(10);
   });
 
+  it('stores the selected period year even when it differs from the occurrence year', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-15T12:00:00.000Z'));
+    repository.findCreationContext.mockResolvedValue(
+      buildMultipleDateCreationContext('VACACIONES_PRIMER_PERIODO'),
+    );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      {
+        ...buildCreateDto(),
+        referenceYear: 2025,
+        occurrences: [{ startDate: '2026-08-14' }],
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(2025);
+  });
+
+  it('allows a historical vacation without an assignment covering its dates', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-25T12:00:00.000Z'));
+    const context = buildMultipleDateCreationContext(
+      'VACACIONES_PRIMER_PERIODO',
+    );
+    repository.findCreationContext.mockResolvedValue({
+      ...context,
+      hasApplicableAssignment: false,
+      assignment: null,
+    });
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      {
+        ...buildCreateDto(),
+        referenceYear: 2024,
+        occurrences: [{ startDate: '2024-07-15' }],
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
+
+    expect(repository.create.mock.calls[0]?.[0].incident.employeeAssignmentId)
+      .toBeNull();
+  });
+
   it('accepts second-period dates on both sides of the year boundary', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-15T12:00:00.000Z'));
     repository.findCreationContext.mockResolvedValue(
@@ -237,23 +292,29 @@ describe('IncidentsService', () => {
     expect(repository.update).not.toHaveBeenCalled();
   });
 
-  it('rejects vacation dates outside the selected institutional period', async () => {
+  it('accepts dates outside the selected vacation period calendar window', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-25T12:00:00.000Z'));
     repository.findCreationContext.mockResolvedValue(
       buildMultipleDateCreationContext('VACACIONES_PRIMER_PERIODO'),
     );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'form.pdf',
+      storagePath: 'incidents/id/form.pdf',
+      contentHash: 'form-hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
 
-    await expect(
-      service.create(
-        {
-          ...buildCreateDto(),
-          occurrences: [{ startDate: '2026-10-10' }],
-        },
-        buildFile('formato.pdf', 100),
-        actor,
-      ),
-    ).rejects.toBeInstanceOf(IncidentVacationOutsidePeriodError);
+    await service.create(
+      {
+        ...buildCreateDto(),
+        referenceYear: 2025,
+        occurrences: [{ startDate: '2026-01-06' }],
+      },
+      buildFile('formato.pdf', 100),
+      actor,
+    );
 
-    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(2025);
   });
 
   it('rejects vacation before six months of institutional seniority', async () => {
@@ -441,6 +502,7 @@ function buildCreateDto() {
     employeeAssignmentId: 'assignment-id',
     incidentTypeId: 'type-id',
     receivedAt: '2026-08-14T12:00:00.000Z',
+    referenceYear: 2026,
     occurrences: [{ startDate: '2026-08-14' }],
   };
 }
