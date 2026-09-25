@@ -99,7 +99,8 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     if (!period || targetOccurrences.length === 0) return;
 
     const year =
-      referenceYear ?? getVacationPeriodYear(targetOccurrences[0].startDate, period);
+      referenceYear ??
+      getVacationPeriodYear(targetOccurrences[0].startDate, period);
     const { startDate, endDate } = getVacationPeriodDates(year, period);
     const incidentConditions = [
       eq(incidents.employeeId, uuidToBuffer(employeeId)),

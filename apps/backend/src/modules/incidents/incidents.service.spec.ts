@@ -188,7 +188,9 @@ describe('IncidentsService', () => {
       actor,
     );
 
-    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(2025);
+    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(
+      2025,
+    );
   });
 
   it('allows a historical vacation without an assignment covering its dates', async () => {
@@ -218,8 +220,9 @@ describe('IncidentsService', () => {
       actor,
     );
 
-    expect(repository.create.mock.calls[0]?.[0].incident.employeeAssignmentId)
-      .toBeNull();
+    expect(
+      repository.create.mock.calls[0]?.[0].incident.employeeAssignmentId,
+    ).toBeNull();
   });
 
   it('accepts second-period dates on both sides of the year boundary', async () => {
@@ -314,7 +317,9 @@ describe('IncidentsService', () => {
       actor,
     );
 
-    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(2025);
+    expect(repository.create.mock.calls[0]?.[0].incident.referenceYear).toBe(
+      2025,
+    );
   });
 
   it('rejects vacation before six months of institutional seniority', async () => {
