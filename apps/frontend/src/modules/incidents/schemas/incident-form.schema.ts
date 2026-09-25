@@ -50,6 +50,14 @@ export const incidentFormSchema = z
   .superRefine((values, context) => {
     const occurrences = values.occurrences
 
+    if (isOrdinaryVacation(values.incidentTypeCode) && !values.referenceYear) {
+      context.addIssue({
+        code: 'custom',
+        path: ['referenceYear'],
+        message: 'Seleccione el año del periodo vacacional',
+      })
+    }
+
     if (values.hasAssignments && !values.employeeAssignmentId) {
       context.addIssue({
         code: 'custom',
@@ -109,6 +117,7 @@ export const incidentFormSchema = z
       }
 
       if (
+        !isOrdinaryVacation(values.incidentTypeCode) &&
         values.assignmentEffectiveFrom &&
         (occurrence.start < values.assignmentEffectiveFrom ||
         (values.assignmentEffectiveTo &&

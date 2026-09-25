@@ -64,10 +64,13 @@ export function IncidentOccurrencesField({
     name: 'assignmentEffectiveTo',
   })
   const occurrences = useWatch({ control, name: 'occurrences' })
-  const disabledDates = buildAssignmentDateConstraints(
-    assignmentEffectiveFrom,
-    assignmentEffectiveTo,
-  )
+  const ordinaryVacation = isOrdinaryVacation(incidentTypeCode)
+  const disabledDates = ordinaryVacation
+    ? undefined
+    : buildAssignmentDateConstraints(
+        assignmentEffectiveFrom,
+        assignmentEffectiveTo,
+      )
   const { fields, append, remove, replace } = useFieldArray({
     control,
     name: 'occurrences',
@@ -75,7 +78,6 @@ export function IncidentOccurrencesField({
   const multiple = temporalMode === 'MULTIPLE_DATES'
   const range = temporalMode === 'DATE_RANGE'
   const vacation = incidentTypeCode.startsWith('VACACIONES_')
-  const ordinaryVacation = isOrdinaryVacation(incidentTypeCode)
   const occurrenceLimit = ordinaryVacation ? MAX_VACATION_DAYS : 366
   const [vacationCaptureMode, setVacationCaptureMode] =
     useState<VacationCaptureMode>('INDIVIDUAL')

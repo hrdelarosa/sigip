@@ -67,8 +67,6 @@ import {
   assertVacationBalance,
 } from '../incident-control-validation';
 
-const ORDINARY_CODES = Object.keys(ORDINARY_VACATION_CODES);
-
 @Injectable()
 export class DrizzleIncidentsRepository implements IncidentsRepository {
   constructor(
@@ -95,18 +93,32 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
     excludeIncidentId?: string,
     targetOccurrences = occurrences,
     officeId?: string,
+    referenceYear?: number | null,
   ): Promise<void> {
     const period = getVacationPeriodFromCode(incidentTypeCode);
     if (!period || targetOccurrences.length === 0) return;
 
-    const year = getVacationPeriodYear(targetOccurrences[0].startDate, period);
+    const year =
+      referenceYear ??
+      getVacationPeriodYear(targetOccurrences[0].startDate, period);
     const { startDate, endDate } = getVacationPeriodDates(year, period);
     const incidentConditions = [
       eq(incidents.employeeId, uuidToBuffer(employeeId)),
       eq(incidents.status, 'REGISTERED' as const),
-      inArray(incidentTypes.code, ORDINARY_CODES),
-      gte(incidentOccurrences.startDate, startDate),
-      lte(incidentOccurrences.startDate, endDate),
+      inArray(
+        incidentTypes.code,
+        Object.entries(ORDINARY_VACATION_CODES)
+          .filter(([, value]) => value === period)
+          .map(([code]) => code),
+      ),
+      or(
+        eq(incidents.referenceYear, year),
+        and(
+          isNull(incidents.referenceYear),
+          gte(incidentOccurrences.startDate, startDate),
+          lte(incidentOccurrences.startDate, endDate),
+        ),
+      )!,
     ];
     if (excludeIncidentId) {
       incidentConditions.push(
@@ -360,6 +372,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           undefined,
           undefined,
           data.officeId,
+          data.incident.referenceYear,
         );
         await this.validateJustificationControl(
           tx,
@@ -755,6 +768,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           id,
           undefined,
           officeId,
+          data.referenceYear ?? existing.referenceYear,
         );
       } else {
         await this.validateVacationControl(
@@ -765,6 +779,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           id,
           existing.occurrences,
           officeId,
+          existing.referenceYear,
         );
         await this.validateVacationControl(
           tx,
@@ -774,6 +789,7 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           id,
           undefined,
           officeId,
+          data.referenceYear ?? existing.referenceYear,
         );
       }
       await this.validateJustificationControl(

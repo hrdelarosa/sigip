@@ -26,8 +26,8 @@ import {
   IncidentVacationDayLimitError,
   IncidentVacationHireDateRequiredError,
   IncidentVacationNotEligibleError,
-  IncidentVacationOutsidePeriodError,
   IncidentVacationPeriodNotAvailableError,
+  IncidentVacationReferenceYearRequiredError,
   InvalidIncidentAppointmentScopeError,
   InvalidIncidentAssignmentError,
   InvalidIncidentDateError,
@@ -43,10 +43,8 @@ import type { UploadedMemoryFile } from '../../common/types/uploaded-memory-file
 import {
   getVacationPeriodFromCode,
   getVacationPeriodDates,
-  getCurrentVacationPeriod,
   getVacationPeriodYear,
   institutionalCalendarDate,
-  isDateInVacationPeriod,
   isVacationDateEligible,
 } from '../../common/vacation/vacation-control';
 
@@ -196,35 +194,17 @@ export class IncidentsService {
     incidentTypeCode: string,
     hireDate: Date | null,
     occurrences: IncidentOccurrenceData[],
+    referenceYear?: number | null,
   ): void {
     const period = getVacationPeriodFromCode(incidentTypeCode);
     if (!period) return;
     if (!hireDate) throw new IncidentVacationHireDateRequiredError();
 
-    const years = new Set(
-      occurrences.map((occurrence) =>
-        getVacationPeriodYear(occurrence.startDate, period),
-      ),
-    );
-    const currentPeriod = getCurrentVacationPeriod(institutionalCalendarDate());
-    const selectedYear = occurrences[0]
-      ? getVacationPeriodYear(occurrences[0].startDate, period)
-      : undefined;
-    if (
-      years.size !== 1 ||
-      occurrences.some(
-        (occurrence) => !isDateInVacationPeriod(occurrence.startDate, period),
-      )
-    ) {
-      throw new IncidentVacationOutsidePeriodError(
-        period,
-        selectedYear,
-        currentPeriod.period,
-        currentPeriod.year,
-      );
+    const selectedYear = referenceYear ?? undefined;
+    if (selectedYear === undefined) {
+      throw new IncidentVacationReferenceYearRequiredError();
     }
-
-    const year = getVacationPeriodYear(occurrences[0].startDate, period);
+    const year = selectedYear;
     const { startDate } = getVacationPeriodDates(year, period);
     if (institutionalCalendarDate() < startDate) {
       throw new IncidentVacationPeriodNotAvailableError(year, period);
@@ -360,13 +340,20 @@ export class IncidentsService {
       throw new InvalidIncidentAssignmentError();
     }
 
-    if (!hasApplicableAssignment && dto.employeeAssignmentId) {
+    if (
+      !hasApplicableAssignment &&
+      dto.employeeAssignmentId &&
+      !getVacationPeriodFromCode(context.incidentType?.code ?? '')
+    ) {
       throw new InvalidIncidentAssignmentError();
     }
 
     if (!context.incidentType || !context.incidentType.isActive) {
       throw new IncidentTypeNotAvailableError();
     }
+    const ordinaryVacation = Boolean(
+      getVacationPeriodFromCode(context.incidentType.code),
+    );
 
     if (!context.formDocumentType) {
       throw new IncidentFormDocumentTypeMissingError();
@@ -380,7 +367,7 @@ export class IncidentsService {
       throw new CommissionDocumentTypeMissingError();
     }
 
-    if (context.assignment) {
+    if (context.assignment && hasApplicableAssignment) {
       this.validateAppointmentScope(
         context.incidentType.appointmentScope,
         context.assignment.appointmentType,
@@ -397,9 +384,10 @@ export class IncidentsService {
       context.incidentType.code,
       context.employee.hireDate,
       occurrences,
+      dto.referenceYear ?? null,
     );
 
-    if (context.assignment) {
+    if (context.assignment && hasApplicableAssignment) {
       this.validateAssignmentCoverage(
         context.assignment.effectiveFrom,
         context.assignment.effectiveTo,
@@ -458,7 +446,11 @@ export class IncidentsService {
         incident: {
           id: incidentId,
           employeeId: dto.employeeId,
-          employeeAssignmentId: dto.employeeAssignmentId ?? null,
+          employeeAssignmentId: hasApplicableAssignment
+            ? (dto.employeeAssignmentId ?? null)
+            : ordinaryVacation
+              ? null
+              : (dto.employeeAssignmentId ?? null),
           incidentTypeId: dto.incidentTypeId,
           issuedDate: this.parseNullableDate(dto.issuedDate),
           receivedAt: this.parseDateTime(dto.receivedAt),
@@ -562,7 +554,7 @@ export class IncidentsService {
       }
     }
 
-    if (context.assignment) {
+    if (context.assignment && hasApplicableAssignment) {
       this.validateAppointmentScope(
         context.incidentType.appointmentScope,
         context.assignment.appointmentType,
@@ -575,13 +567,19 @@ export class IncidentsService {
     );
     this.validateTemporalMode(context.incidentType.temporalMode, occurrences);
     this.validateVacationDayLimit(context.incidentType.code, occurrences);
+    const vacationPeriod = getVacationPeriodFromCode(context.incidentType.code);
     this.validateVacationEligibility(
       context.incidentType.code,
       context.employee?.hireDate ?? null,
       occurrences,
+      dto.referenceYear ??
+        current.referenceYear ??
+        (vacationPeriod && occurrences[0]
+          ? getVacationPeriodYear(occurrences[0].startDate, vacationPeriod)
+          : null),
     );
 
-    if (context.assignment) {
+    if (context.assignment && hasApplicableAssignment) {
       this.validateAssignmentCoverage(
         context.assignment.effectiveFrom,
         context.assignment.effectiveTo,

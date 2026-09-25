@@ -66,6 +66,30 @@ describe('incidentFormSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts historical vacation dates before the selected assignment began', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      incidentTypeCode: 'VACACIONES_PRIMER_PERIODO',
+      referenceYear: '2024',
+      occurrences: [{ startDate: '2024-07-15', endDate: null }],
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('requires a selected period year for ordinary vacations', () => {
+    const result = incidentFormSchema.safeParse({
+      ...baseValues,
+      incidentTypeCode: 'VACACIONES_PRIMER_PERIODO',
+      referenceYear: '',
+      occurrences: [{ startDate: '2026-08-14', endDate: null }],
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.some((issue) => issue.path.join('.') === 'referenceYear'))
+      .toBe(true)
+  })
+
   it('rejects more than 10 days for an ordinary vacation period', () => {
     const result = incidentFormSchema.safeParse({
       ...baseValues,

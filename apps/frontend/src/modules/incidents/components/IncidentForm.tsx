@@ -96,6 +96,7 @@ export function IncidentForm({
               register={register}
               disabled={isPending}
               context={context}
+              incidentTypeCode={incidentTypeCode}
             />
           </CardContent>
         </Card>
