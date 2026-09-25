@@ -13,6 +13,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { isOrdinaryVacation } from '../lib/vacation-date-range'
 import type { IncidentFormValues } from '../schemas/incident-form.schema'
 import type { IncidentContextFieldsState } from './IncidentContextFields'
 import { IncidentTypeField } from './IncidentContextFields'
@@ -26,11 +27,13 @@ export function IncidentMetadataFields({
   register,
   disabled,
   context,
+  incidentTypeCode,
 }: {
   control: Control<IncidentFormValues>
   register: UseFormRegister<IncidentFormValues>
   disabled?: boolean
   context: IncidentContextFieldsState
+  incidentTypeCode: string
 }) {
   const { errors } = useFormState({
     control,
@@ -89,24 +92,28 @@ export function IncidentMetadataFields({
           )}
         />
 
-        <Field data-invalid={Boolean(errors.referenceYear)} className="gap-1.5">
-          <FieldLabel htmlFor="incident-reference-year">
-            Año de referencia{' '}
-            <span className="font-normal text-muted-foreground">(opcional)</span>
-          </FieldLabel>
-          <Input
-            id="incident-reference-year"
-            type="number"
-            min={2000}
-            max={2100}
-            inputMode="numeric"
-            placeholder="Ej. 2026"
-            disabled={disabled}
-            aria-invalid={Boolean(errors.referenceYear)}
-            {...register('referenceYear')}
-          />
-          <FieldError>{errors.referenceYear?.message}</FieldError>
-        </Field>
+        {isOrdinaryVacation(incidentTypeCode) ? (
+          <Field data-invalid={Boolean(errors.referenceYear)} className="gap-1.5">
+            <FieldLabel htmlFor="incident-reference-year">
+              Año del periodo vacacional
+            </FieldLabel>
+            <Input
+              id="incident-reference-year"
+              type="number"
+              min={2000}
+              max={2100}
+              inputMode="numeric"
+              placeholder="Ej. 2025"
+              disabled={disabled}
+              aria-invalid={Boolean(errors.referenceYear)}
+              {...register('referenceYear')}
+            />
+            <FieldError>{errors.referenceYear?.message}</FieldError>
+            <FieldDescription>
+              Seleccione el año del periodo al que se cargarán estos días.
+            </FieldDescription>
+          </Field>
+        ) : null}
       </FieldGroup>
     </div>
   )

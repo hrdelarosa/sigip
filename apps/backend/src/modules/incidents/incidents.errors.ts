@@ -64,36 +64,9 @@ export class IncidentVacationHireDateRequiredError extends BadRequestException {
   }
 }
 
-export class IncidentVacationOutsidePeriodError extends BadRequestException {
-  constructor(
-    selectedPeriod?: 'FIRST' | 'SECOND',
-    selectedYear?: number,
-    currentPeriod?: 'FIRST' | 'SECOND',
-    currentYear?: number,
-  ) {
-    if (
-      selectedPeriod &&
-      selectedYear &&
-      currentPeriod &&
-      currentYear &&
-      selectedYear === currentYear &&
-      selectedPeriod !== currentPeriod
-    ) {
-      const selectedLabel =
-        selectedPeriod === 'FIRST'
-          ? 'primer periodo (abril a septiembre)'
-          : 'segundo periodo (octubre a marzo del año siguiente)';
-      const currentLabel =
-        currentPeriod === 'FIRST'
-          ? 'primer periodo (abril a septiembre)'
-          : 'segundo periodo (octubre a marzo del año siguiente)';
-      super(
-        `No es posible registrar vacaciones del ${selectedLabel} de ${selectedYear}, porque actualmente nos encontramos en el ${currentLabel} de ${currentYear}.`,
-      );
-      return;
-    }
-
-    super('Las fechas de vacaciones deben pertenecer al periodo seleccionado');
+export class IncidentVacationReferenceYearRequiredError extends BadRequestException {
+  constructor() {
+    super('Debe seleccionar el año del periodo vacacional');
   }
 }
 
