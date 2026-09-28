@@ -21,11 +21,12 @@ import {
   FieldLegend,
   FieldSet,
 } from '@/components/ui/field'
-import {
-  buildAssignmentDateConstraints,
-} from '../lib/incident-date-constraints'
+import { buildAssignmentDateConstraints } from '../lib/incident-date-constraints'
 import { IncidentDatePickerField } from './IncidentDatePickerField'
-import { isOrdinaryVacation, MAX_VACATION_DAYS } from '../lib/vacation-date-range'
+import {
+  isOrdinaryVacation,
+  MAX_VACATION_DAYS,
+} from '../lib/vacation-date-range'
 import {
   VacationDateCapture,
   type VacationCaptureMode,
@@ -139,8 +140,8 @@ export function IncidentOccurrencesField({
             />
           ) : null}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium mb-1.5">
+          <div className="flex flex-col gap-3 sm:flex-row items-center sm:justify-between mb-2.5">
+            <div className="flex items-center gap-2 text-sm font-medium">
               <CalendarDaysIcon className="size-4" aria-hidden="true" />
               Fechas de aplicación
             </div>
@@ -159,7 +160,7 @@ export function IncidentOccurrencesField({
           </div>
 
           <FieldGroup
-            className={`${multiple ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'} ${vacation && vacationCaptureMode === 'RANGE' ? 'hidden' : ''} mb-3`}
+            className={`${multiple ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3' : 'grid gap-3'} ${vacation && vacationCaptureMode === 'RANGE' ? 'hidden' : ''} mb-3`}
           >
             {fields.map((field, index) => {
               const startError = errors.occurrences?.[index]?.startDate?.message
@@ -169,7 +170,7 @@ export function IncidentOccurrencesField({
                 <div
                   key={field.id}
                   className={cn(
-                    'grid min-w-0 gap-3 rounded-lg border bg-muted/20 p-4',
+                    'grid min-w-0 gap-3 rounded-lg border bg-muted/20 p-4 relative',
                     range ? 'sm:grid-cols-2' : multiple ? '' : '',
                   )}
                 >
@@ -191,6 +192,7 @@ export function IncidentOccurrencesField({
                         disabled={disabled}
                         errorMessage={startError}
                         disabledDates={disabledDates}
+                        className="gap-3.5"
                       />
                     )}
                   />
@@ -218,7 +220,7 @@ export function IncidentOccurrencesField({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="justify-self-end"
+                      className="justify-self-end absolute top-2 right-2"
                       onClick={() => remove(index)}
                       disabled={disabled}
                       aria-label={`Quitar fecha ${index + 1}`}
@@ -237,8 +239,12 @@ export function IncidentOccurrencesField({
             </FieldError>
             {multiple ? (
               <span>
-                {occurrences.filter((occurrence) => occurrence.startDate).length}
-                {ordinaryVacation ? ` de ${MAX_VACATION_DAYS}` : ''} días capturados
+                {
+                  occurrences.filter((occurrence) => occurrence.startDate)
+                    .length
+                }
+                {ordinaryVacation ? ` de ${MAX_VACATION_DAYS}` : ''} días
+                capturados
               </span>
             ) : null}
           </div>

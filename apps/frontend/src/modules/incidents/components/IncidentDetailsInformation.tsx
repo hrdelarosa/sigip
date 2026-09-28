@@ -151,7 +151,7 @@ export function IncidentDetailsInformation({
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
             {incident.occurrences.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Sin fechas registradas.
