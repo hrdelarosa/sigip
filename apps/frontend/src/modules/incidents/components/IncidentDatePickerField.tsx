@@ -1,6 +1,19 @@
 import { DatePicker } from '@/components/ui/date-picker'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+
+interface Props {
+  id: string
+  label: React.ReactNode
+  value: string | null | undefined
+  onChange: (value: string) => void
+  disabled?: boolean
+  errorMessage?: string
+  placeholder?: string
+  disabledDates?: React.ComponentProps<typeof DatePicker>['disabledDates']
+  className?: string
+}
 
 export function IncidentDatePickerField({
   id,
@@ -11,20 +24,15 @@ export function IncidentDatePickerField({
   errorMessage,
   placeholder = 'Seleccione una fecha',
   disabledDates,
-}: {
-  id: string
-  label: React.ReactNode
-  value: string | null | undefined
-  onChange: (value: string) => void
-  disabled?: boolean
-  errorMessage?: string
-  placeholder?: string
-  disabledDates?: React.ComponentProps<typeof DatePicker>['disabledDates']
-}) {
+  className,
+}: Props) {
   const errorId = `${id}-error`
 
   return (
-    <Field data-invalid={Boolean(errorMessage)} className="gap-1.5">
+    <Field
+      data-invalid={Boolean(errorMessage)}
+      className={cn('gap-1.5', className)}
+    >
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <DatePicker
         id={id}
@@ -79,7 +87,9 @@ export function IncidentReceivedAtField({
         <DatePicker
           id={id}
           value={date}
-          onValueChange={(nextDate) => onChange(combineReceivedAt(nextDate, time))}
+          onValueChange={(nextDate) =>
+            onChange(combineReceivedAt(nextDate, time))
+          }
           disabled={disabled}
           placeholder="Seleccione fecha"
           aria-invalid={Boolean(errorMessage)}
