@@ -101,3 +101,42 @@ export interface IncidentsReportResponse {
 
   items: IncidentsReportItemResponse[]
 }
+
+export type VacationReportPeriod = 'FIRST' | 'SECOND' | 'BOTH'
+
+export interface VacationsReportFilters {
+  year: number
+  period: VacationReportPeriod
+  officeId?: string
+}
+
+export interface VacationReportPeriodBalanceResponse {
+  period: 'FIRST' | 'SECOND'
+  entitlementDays: number
+  incidentDays: number
+  adjustmentDays: number
+  consumedDays: number
+  remainingDays: number
+  status: 'NOT_ELIGIBLE' | 'NOT_STARTED' | 'AVAILABLE' | 'EXPIRED'
+}
+
+export interface VacationReportEmployeeResponse {
+  id: string
+  employeeNumber: string
+  fullName: string
+  office: { id: string; name: string }
+  hireDate: string | null
+  periods: VacationReportPeriodBalanceResponse[]
+}
+
+export interface VacationsReportResponse {
+  year: number
+  period: VacationReportPeriod
+  generatedAt: string
+  totalEmployees: number
+  totals: {
+    firstPeriodRemainingDays: number
+    secondPeriodRemainingDays: number
+  }
+  items: VacationReportEmployeeResponse[]
+}

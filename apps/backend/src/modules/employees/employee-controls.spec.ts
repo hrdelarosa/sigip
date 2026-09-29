@@ -19,10 +19,12 @@ describe('buildEmployeeControls', () => {
       {
         code: 'VACACIONES_SEGUNDO_PERIODO',
         date: new Date('2026-12-03T00:00:00.000Z'),
+        referenceYear: null,
       },
       {
         code: 'VACACIONES_SEGUNDO_PERIODO',
         date: new Date('2027-01-04T00:00:00.000Z'),
+        referenceYear: null,
       },
     ],
     justificationDates: [
@@ -88,5 +90,36 @@ describe('buildEmployeeControls', () => {
       used: 2,
       remaining: 1,
     });
+  });
+
+  it('assigns vacation consumption to the explicit reference year', () => {
+    const result = buildEmployeeControls(
+      employee,
+      {
+        vacationDates: [
+          {
+            code: 'VACACIONES_SEGUNDO_PERIODO',
+            date: new Date('2026-05-12T00:00:00.000Z'),
+            referenceYear: 2025,
+          },
+        ],
+        justificationDates: [],
+        adjustments: [],
+      },
+      new Date('2026-09-28T00:00:00.000Z'),
+    );
+    const year2025 = result.vacationControl.years.find(
+      (item) => item.year === 2025,
+    );
+    const year2026 = result.vacationControl.years.find(
+      (item) => item.year === 2026,
+    );
+
+    expect(
+      year2025?.periods.find((item) => item.period === 'SECOND')?.incidentDays,
+    ).toBe(1);
+    expect(
+      year2026?.periods.find((item) => item.period === 'SECOND')?.incidentDays,
+    ).toBe(0);
   });
 });

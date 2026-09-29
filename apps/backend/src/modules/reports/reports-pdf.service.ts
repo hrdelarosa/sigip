@@ -5,6 +5,7 @@ import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 
 import type { IncidentsReportModel } from './models/incidents-report.model';
+import type { VacationsReportModel } from './models/vacations-report.model';
 
 const PAGE_MARGIN = 42;
 const FOOTER_MARGIN = 30;
@@ -76,6 +77,151 @@ export class ReportsPdfService {
 
     doc.end();
 
+    return result;
+  }
+
+  async generateVacationsReport(report: VacationsReportModel): Promise<Buffer> {
+    const doc = new PDFDocument({
+      size: 'LETTER',
+      layout: 'landscape',
+      margin: PAGE_MARGIN,
+      info: {
+        Title: 'Reporte de saldos vacacionales',
+        Author: 'Sistema de Gestión de Incidencias de Personal - INM Guerrero',
+        Subject: `Año ${report.year}`,
+        Creator: 'SIGIP',
+      },
+    });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const result = new Promise<Buffer>((resolve, reject) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+    });
+
+    this.renderInstitutionalHeader(doc);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(12)
+      .fillColor(COLORS.text)
+      .text('REPORTE DE SALDOS VACACIONALES', { align: 'center' });
+    doc
+      .font('Helvetica')
+      .fontSize(8)
+      .fillColor(COLORS.muted)
+      .text(
+        `AÑO DE CARGO: ${report.year} · EMPLEADOS ACTIVOS: ${report.totalEmployees}`,
+        {
+          align: 'center',
+        },
+      );
+    const totalParts: string[] = [];
+    if (report.period !== 'SECOND') {
+      totalParts.push(
+        `PRIMER PERIODO: ${report.totals.firstPeriodRemainingDays} DÍAS`,
+      );
+    }
+    if (report.period !== 'FIRST') {
+      totalParts.push(
+        `SEGUNDO PERIODO: ${report.totals.secondPeriodRemainingDays} DÍAS`,
+      );
+    }
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(8)
+      .fillColor(COLORS.text)
+      .text(totalParts.join(' · '), { align: 'center' });
+    doc.moveDown(1);
+
+    const periods: Array<'FIRST' | 'SECOND'> =
+      report.period === 'BOTH' ? ['FIRST', 'SECOND'] : [report.period];
+    const periodLabels = {
+      FIRST: 'Primer periodo',
+      SECOND: 'Segundo periodo',
+    } as const;
+    const periodWidth = periods.length === 2 ? 195 : 390;
+    const columns = [
+      { label: 'No. empleado', width: 60 },
+      { label: 'Nombre', width: 150 },
+      { label: 'Oficina', width: 105 },
+      ...periods.map((period) => ({
+        label: periodLabels[period],
+        width: periodWidth,
+      })),
+    ];
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+    const scale =
+      contentWidth / columns.reduce((total, column) => total + column.width, 0);
+    const rowHeight = 34;
+    const renderHeader = () => {
+      const top = doc.y;
+      let x = PAGE_MARGIN;
+      columns.forEach((column) => {
+        const width = column.width * scale;
+        doc
+          .rect(x, top, width, rowHeight)
+          .fillAndStroke(COLORS.light, COLORS.border);
+        doc
+          .fillColor(COLORS.text)
+          .font('Helvetica-Bold')
+          .fontSize(7)
+          .text(column.label, x + 3, top + 7, {
+            width: width - 6,
+            lineBreak: false,
+          });
+        x += width;
+      });
+      doc.y = top + rowHeight;
+    };
+    renderHeader();
+
+    for (const employee of report.items) {
+      if (doc.y + rowHeight > doc.page.height - PAGE_MARGIN) {
+        doc.addPage();
+        renderHeader();
+      }
+      const cells = [
+        employee.employeeNumber,
+        employee.fullName,
+        employee.office.name,
+        ...periods.map((period) => {
+          const balance = employee.periods.find(
+            (item) => item.period === period,
+          );
+          if (!balance) return '—';
+          const status = {
+            NOT_ELIGIBLE: 'Aún no elegible',
+            NOT_STARTED: 'Próximo',
+            AVAILABLE: 'Disponible',
+            EXPIRED: 'Vencido',
+          }[balance.status];
+          return `${balance.remainingDays} días disponibles\n${balance.consumedDays} consumidos de ${balance.entitlementDays} · ${status}`;
+        }),
+      ];
+      const top = doc.y;
+      let x = PAGE_MARGIN;
+      cells.forEach((value, index) => {
+        const width = columns[index].width * scale;
+        doc
+          .rect(x, top, width, rowHeight)
+          .strokeColor(COLORS.border)
+          .lineWidth(0.35)
+          .stroke();
+        doc
+          .fillColor(COLORS.text)
+          .font('Helvetica')
+          .fontSize(index < 3 ? 7 : 6.5)
+          .text(value, x + 4, top + 5, {
+            width: width - 8,
+            height: rowHeight - 10,
+            lineBreak: true,
+            ellipsis: true,
+          });
+        x += width;
+      });
+      doc.y = top + rowHeight;
+    }
+    doc.end();
     return result;
   }
 

@@ -11,8 +11,10 @@ import { ApiError } from '@/lib/api/api-error'
 import { useOrganizationalUnits } from '@/modules/administration/organizational-units/hooks/useOrganizationalUnits'
 import { hasPermission, useAuth } from '@/modules/auth'
 import { incidentTypesQueryOptions } from '@/modules/incidents/queries/incident-query-options'
+import { useOffices } from '@/modules/administration/offices/hooks/useOffices'
 
 import { downloadIncidentsReport } from '../api/reports.api'
+import { downloadVacationsReport, getVacationsReport } from '../api/vacations-report.api'
 import { ReportFilters } from '../components/ReportFilters'
 import { ReportPreview, type ReportPreviewFilters } from '../components/ReportPreview'
 import { useIncidentsReport } from '../hooks/use-incidents-report'
@@ -22,9 +24,16 @@ import {
   type ReportsFilterState,
 } from '../lib/report-filters'
 import { reportSearchParams } from '../queries/report-search-params'
+import { VacationsReportFilters, type VacationsFilterState } from '../components/VacationsReportFilters'
+import { VacationsReportPreview } from '../components/VacationsReportPreview'
 
 export function ReportsPage() {
   const auth = useAuth()
+  const [reportType, setReportType] = useState<'incidents' | 'vacations'>('incidents')
+  const [vacationFilters, setVacationFilters] = useState<VacationsFilterState>({
+    year: new Date().getFullYear(),
+    period: 'BOTH',
+  })
   const [filters, setFilters] = useQueryStates(reportSearchParams)
   const state: ReportsFilterState = {
     period: filters.period,
@@ -39,8 +48,19 @@ export function ReportsPage() {
   }
   const [previewEnabled, setPreviewEnabled] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const report = useIncidentsReport(state, previewEnabled)
+  const [vacationDownloading, setVacationDownloading] = useState(false)
+  const report = useIncidentsReport(
+    state,
+    previewEnabled && reportType === 'incidents',
+  )
   const canExport = hasPermission(auth.data?.permissions, 'reports:export')
+  const canChooseOffice = hasPermission(auth.data?.permissions, 'offices:access-all')
+  const offices = useOffices()
+  const vacations = useQuery({
+    queryKey: ['reports', 'vacations', vacationFilters],
+    queryFn: ({ signal }) => getVacationsReport(vacationFilters, signal),
+    enabled: reportType === 'vacations' && previewEnabled,
+  })
   const isValid = isReportFilterValid(state)
 
   const typesQuery = useQuery(
@@ -90,6 +110,18 @@ export function ReportsPage() {
     }
   }
 
+  async function handleVacationDownload() {
+    setVacationDownloading(true)
+    try {
+      await downloadVacationsReport(vacationFilters)
+      toast.success('Reporte de saldos vacacionales generado correctamente')
+    } catch (error) {
+      toast.error(getDownloadErrorMessage(error))
+    } finally {
+      setVacationDownloading(false)
+    }
+  }
+
   function handleChange(next: ReportsFilterState) {
     void setFilters(next)
     setPreviewEnabled(false)
@@ -99,10 +131,15 @@ export function ReportsPage() {
     <>
       <PageHeader
         title="Reportes"
-        description="Genera reportes de incidencias de personal por quincena, mes, año o periodo personalizado."
+        description="Consulta incidencias de personal o los saldos actuales de vacaciones de los empleados activos."
       />
 
-      <ReportFilters
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Tipo de reporte">
+        <Button variant={reportType === 'incidents' ? 'default' : 'outline'} onClick={() => { setReportType('incidents'); setPreviewEnabled(false) }}>Incidencias</Button>
+        <Button variant={reportType === 'vacations' ? 'default' : 'outline'} onClick={() => { setReportType('vacations'); setPreviewEnabled(false) }}>Saldos vacacionales</Button>
+      </div>
+
+      {reportType === 'incidents' ? <ReportFilters
         value={state}
         onChange={handleChange}
         onPreview={() => setPreviewEnabled(true)}
@@ -118,10 +155,27 @@ export function ReportsPage() {
           void typesQuery.refetch()
           void unitsQuery.refetch()
         }}
-      />
+      /> : <VacationsReportFilters
+        value={vacationFilters}
+        onChange={(value) => { setVacationFilters(value); setPreviewEnabled(false) }}
+        onPreview={() => setPreviewEnabled(true)}
+        onDownload={handleVacationDownload}
+        canExport={canExport}
+        downloading={vacationDownloading}
+        canChooseOffice={canChooseOffice}
+        officeItems={(offices.data ?? []).map((office) => ({ value: office.id, label: office.name }))}
+      />}
 
-      {previewEnabled ? (
+      {previewEnabled && reportType === 'incidents' ? (
         <ReportResult report={report} filters={previewFilters} />
+      ) : null}
+      {previewEnabled && reportType === 'vacations' ? (
+        vacations.isPending ? <ReportPreviewSkeleton /> : vacations.isError ? (
+          <div className="rounded-xl bg-card p-6 text-sm text-muted-foreground" role="alert">
+            No fue posible generar la vista previa del reporte de vacaciones.{' '}
+            <button type="button" className="font-medium underline" onClick={() => void vacations.refetch()}>Reintentar</button>
+          </div>
+        ) : <VacationsReportPreview report={vacations.data} />
       ) : null}
     </>
   )

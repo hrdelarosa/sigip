@@ -15,7 +15,11 @@ export interface EmployeeVacationAdjustmentModel {
 }
 
 export interface EmployeeControlSnapshot {
-  vacationDates: Array<{ code: string; date: Date }>;
+  vacationDates: Array<{
+    code: string;
+    date: Date;
+    referenceYear: number | null;
+  }>;
   justificationDates: Array<{ code: string; date: Date }>;
   adjustments: EmployeeVacationAdjustmentModel[];
 }

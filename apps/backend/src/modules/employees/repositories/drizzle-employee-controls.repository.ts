@@ -221,7 +221,11 @@ export class DrizzleEmployeeControlsRepository implements EmployeeControlsReposi
     officeId?: string,
   ) {
     const rows = await this.db
-      .select({ code: incidentTypes.code, date: incidentOccurrences.startDate })
+      .select({
+        code: incidentTypes.code,
+        date: incidentOccurrences.startDate,
+        referenceYear: incidents.referenceYear,
+      })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
       .innerJoin(incidentTypes, eq(incidents.incidentTypeId, incidentTypes.id))
