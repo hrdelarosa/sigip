@@ -9,6 +9,9 @@ Cliente web de SIGIP construido con React 19, Vite 8, TypeScript, Tailwind CSS 4
 - Administrar roles, permisos, usuarios, estructura organizacional, empleados y asignaciones.
 - Consultar y revocar sesiones desde las acciones de cada usuario.
 - Consultar la auditoría y presentar valores anteriores/nuevos.
+- Consultar el panel operativo, gestionar incidencias y sus PDF privados, y generar reportes de incidencias y saldos vacacionales con vista previa y descarga PDF.
+
+En **Reportes** se elige entre **Incidencias** y **Saldos vacacionales**. El segundo muestra empleados activos por año de cargo, periodo y oficina autorizada; la tabla compacta reúne los periodos en una sola fila por empleado. Consulte `docs/Manual_Usuario_SIGIP.md` para instrucciones de uso y lectura de saldos.
 
 ## Estructura
 

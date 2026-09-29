@@ -9,6 +9,14 @@ API de SIGIP construida con NestJS 11, TypeScript, Drizzle ORM y MySQL 8.4.
 - Persistir datos mediante Drizzle y UUIDv7 almacenados como `BINARY(16)`.
 - Autenticar con sesiones opacas del lado del servidor y autorizar por permisos.
 - Mantener una bitácora de auditoría append-only.
+- Calcular saldos vacacionales por año de cargo y periodo y generar reportes JSON/PDF protegidos por permisos y alcance de oficina.
+
+## Reportes disponibles
+
+- `GET /api/reports/incidents` y `/api/reports/incidents/pdf`: incidencias por quincena, mes, año o intervalo personalizado; filtros por tipo, unidad y canceladas.
+- `GET /api/reports/vacations` y `/api/reports/vacations/pdf`: saldo vigente de empleados activos con `year` y `period=FIRST|SECOND|BOTH`; `officeId` sólo amplía o restringe la consulta de usuarios con `offices:access-all`. La consulta requiere `reports:read` y la descarga requiere además `reports:export`.
+
+Las vacaciones se descuentan del año de cargo de la incidencia, aunque los días se hayan disfrutado en otro año. El saldo contempla incidencias activas y ajustes; las canceladas no consumen días.
 
 ## Estructura
 

@@ -5,8 +5,8 @@
 | Control | Información |
 |---|---|
 | Institución | Oficina de Representación del Instituto Nacional de Migración en Guerrero |
-| Versión del manual | 1.0 |
-| Fecha de actualización | 22 de septiembre de 2026 |
+| Versión del manual | 1.1 |
+| Fecha de actualización | 28 de septiembre de 2026 |
 | Dirigido a | Administradores, supervisores, operadores de Recursos Humanos y capturistas |
 
 ---
@@ -330,7 +330,7 @@ Reglas principales:
 
 ### 5.8 Control vacacional
 
-El expediente presenta por año y periodo:
+El expediente presenta por **año de cargo** y periodo:
 
 - derecho total;
 - días consumidos por incidencias;
@@ -340,6 +340,8 @@ El expediente presenta por año y periodo:
 - fecha desde la que el empleado cumple la antigüedad requerida.
 
 Los estados posibles son **Sin derecho todavía**, **Próximo**, **Disponible** y **Vencido**.
+
+El primer periodo va del 1 de abril al 30 de septiembre; el segundo, del 1 de octubre al 31 de marzo del año siguiente. Cada uno concede hasta 10 días, sin acumulación, después de seis meses desde la fecha de ingreso institucional. El año al que se carga una incidencia de vacaciones puede ser distinto del año de sus fechas disfrutadas: consulte el **año de cargo** al revisar saldos anteriores.
 
 #### Registrar un ajuste vacacional
 
@@ -435,8 +437,10 @@ Para vacaciones ordinarias puede agregar días individuales o generar los días 
 
 - De manera predeterminada se excluyen sábados y domingos.
 - Active la opción correspondiente sólo cuando deba incluir fines de semana.
-- Cada periodo concede hasta 10 días.
-- El derecho se habilita después de cumplir la antigüedad configurada.
+- Seleccione el **primer o segundo periodo** y el **año de cargo**: el consumo se descontará de ese saldo, incluso si los días disfrutados corresponden a otro año calendario.
+- El primer periodo va de abril a septiembre y el segundo de octubre a marzo del año siguiente; cada uno concede hasta 10 días sin acumulación.
+- El derecho se habilita después de seis meses desde el ingreso institucional.
+- Se pueden registrar fechas históricas para imputar vacaciones de forma retroactiva.
 - No se permiten fechas vacacionales duplicadas entre incidencias activas.
 - Una incidencia cancelada deja de consumir saldo.
 
@@ -561,17 +565,19 @@ La versión actual no ofrece al usuario:
 
 **Perfiles:** Administrador, Supervisor y Operador de Recursos Humanos.
 
-### 8.1 Tipos de periodo
+La pantalla **Reportes** ofrece **Incidencias** y **Saldos vacacionales**. Seleccione el tipo antes de configurar los filtros; las opciones de cada uno son independientes.
+
+### 8.1 Reporte de incidencias: tipos de periodo
 
 - **Quincenal:** primera quincena, días 1 al 15; segunda quincena, día 16 al fin de mes.
 - **Mensual:** un mes y año.
 - **Anual:** un año completo.
 - **Personalizado:** fecha inicial y final, con una extensión máxima de un año.
 
-### 8.2 Generar una vista previa
+### 8.2 Vista previa de incidencias
 
 1. Abra **Reportes**.
-2. Seleccione el tipo de periodo.
+2. Seleccione **Incidencias** y el tipo de periodo.
 3. Complete quincena, mes y año, o las fechas personalizadas.
 4. Si lo requiere, filtre por tipo de incidencia.
 5. Si lo requiere, filtre por unidad organizacional.
@@ -581,7 +587,7 @@ La versión actual no ofrece al usuario:
 
 ![Configuración de un reporte](assets/manual/07-configurar-reporte.png)
 
-_Figura 8. Configuración del periodo, filtros, vista previa y generación del PDF._
+_Figura 8. Filtros del reporte de incidencias; el reporte vacacional tiene controles diferentes._
 
 La vista previa presenta:
 
@@ -592,7 +598,7 @@ La vista previa presenta:
 - distribución por unidad, cuando aplica;
 - detalle de empleado, unidad, tipo, periodo y estado.
 
-### 8.3 Descargar el PDF
+### 8.3 Descargar el PDF de incidencias
 
 1. Configure y revise los filtros.
 2. Seleccione **Generar PDF**.
@@ -601,13 +607,44 @@ La vista previa presenta:
 
 Si el botón no aparece, la cuenta no tiene permiso de exportación.
 
-### 8.4 Consideraciones
+### 8.4 Consideraciones del reporte de incidencias
 
 - En un periodo personalizado, ambas fechas son obligatorias.
 - La fecha inicial no puede ser posterior a la final.
 - El periodo personalizado no puede superar un año.
 - De forma predeterminada, las incidencias canceladas no se incluyen.
 - Los reportes respetan el alcance de oficina de la cuenta.
+
+### 8.5 Reporte de saldos vacacionales
+
+Este reporte permite consultar **el saldo vigente al generar la consulta**, no el saldo que se tenía en una fecha pasada. Incluye a los **empleados activos** de las oficinas que su cuenta puede consultar, incluso cuando no hayan registrado vacaciones. Los empleados inactivos no aparecen, aunque seleccione un año anterior.
+
+1. Abra **Reportes** y seleccione **Saldos vacacionales**.
+2. Elija el **Año de cargo** que desea consultar. Es el año al que se imputó el consumo, no necesariamente el año en que se disfrutaron los días.
+3. En **Periodo vacacional**, elija **Ambos periodos**, **Primer periodo** o **Segundo periodo**. El primero comprende del 1 de abril al 30 de septiembre; el segundo, del 1 de octubre al 31 de marzo del año siguiente.
+4. Si tiene permiso para consultar todas las oficinas, seleccione una en **Oficina** o mantenga **Todas las oficinas**. Si no dispone de ese permiso, el reporte se limita automáticamente a su oficina y el selector no aparece.
+5. Seleccione **Vista previa**. Revise las cifras generales y el detalle por empleado.
+6. Si dispone del permiso de exportación, seleccione **Generar PDF** para descargar el mismo reporte con los filtros elegidos.
+
+![Filtros del reporte vacacional: año de cargo, periodo y oficina](assets/manual/11-reporte-vacaciones-filtros.png)
+
+_Figura 8a. Configuración del reporte de saldos vacacionales. El selector de oficina aparece según los permisos del usuario._
+
+La vista previa muestra el total de empleados activos y los días restantes acumulados por periodo. En la tabla aparece **una fila por empleado**, con nombre, número, oficina y, para cada periodo seleccionado, un resumen como `8 / 10 días` y `2 usados · Disponible`. El PDF presenta los datos por empleado y periodo en formato institucional. Si cambia los filtros, vuelva a seleccionar **Vista previa** para actualizarla.
+
+![Vista previa de saldos vacacionales con indicadores y detalle por empleado](assets/manual/12-reporte-vacaciones-vista-previa.png)
+
+_Figura 8b. Vista previa con datos ficticios para explicar los saldos y estados de ambos periodos._
+
+**Interpretación de los saldos:**
+
+- Los días usados incluyen las incidencias de vacaciones **registradas y no canceladas**, además de los ajustes históricos del control vacacional. Los ajustes se reflejan en el cálculo, aunque no tengan una columna propia en la vista previa.
+- Cada periodo concede como máximo **10 días** si se cumple la antigüedad. Una incidencia cancelada deja de consumirlos. Los días no se acumulan entre periodos.
+- **Disponible** indica el periodo vigente; **Próximo**, uno que aún no inicia; **No elegible**, que no se ha cumplido la antigüedad requerida; y **Vencido**, un periodo concluido. En la tabla puede aparecer un saldo de 10 días junto a **No elegible**: representa un saldo calculado o proyectado, **no días utilizables hoy**.
+- Los saldos de periodos vencidos permanecen visibles para consulta histórica, pero **no se suman a los indicadores de saldo restante**. Los indicadores sí incluyen saldos de periodos próximos o aún no elegibles: consulte siempre el estado antes de interpretarlos como días utilizables hoy.
+- El saldo de un año anterior refleja las incidencias y correcciones conocidas **hoy**; no es una reconstrucción del estado que tenía ese año. Para revisar movimientos y motivos de ajuste, abra el **Control vacacional** del expediente del empleado.
+
+> **Ejemplo:** si una incidencia se cargó al segundo periodo de 2025 y los días se disfrutaron en 2026, el consumo aparece al consultar **Año de cargo 2025 → Segundo periodo**.
 
 ---
 
@@ -865,7 +902,7 @@ Recorrido recomendado:
 
 1. Consulte **Inicio** para revisar el estado diario.
 2. Use **Empleados** e **Incidencias** para verificar expedientes sin modificarlos.
-3. Abra **Reportes**, configure el periodo y revise la vista previa.
+3. Abra **Reportes**, elija **Incidencias** o **Saldos vacacionales**, configure los filtros y revise la vista previa.
 4. Exporte el PDF cuando necesite presentar información.
 5. Use **Auditoría** para confirmar actores, fechas y cambios registrados.
 
@@ -959,7 +996,7 @@ La cuenta puede no tener permiso o la incidencia puede estar cancelada. El Captu
 
 ### 14.8 El reporte no se genera
 
-Revise el periodo y los filtros. Para un periodo personalizado, capture ambas fechas, mantenga el orden correcto y no exceda un año. Si sólo falta el botón PDF, la cuenta puede tener consulta sin permiso de exportación.
+Revise el tipo de reporte y sus filtros. Para **Incidencias** con periodo personalizado, capture ambas fechas en orden y no exceda un año. Para **Saldos vacacionales**, compruebe el año de cargo, el periodo y, si aparece, la oficina. Si no hay empleados en el detalle, verifique que haya empleados activos en la oficina consultada. Si sólo falta el botón PDF, la cuenta puede tener consulta sin permiso de exportación.
 
 ### 14.9 La sesión terminó inesperadamente
 

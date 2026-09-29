@@ -1,6 +1,6 @@
 # Esquema propuesto de base de datos
 
-> Estado: propuesta de diseño. Este documento no implica que la base de datos, el ORM o las migraciones ya estén implementados.
+> **Documento histórico de diseño:** MySQL, Drizzle, los esquemas y las migraciones ya están implementados. Algunos nombres, reglas y fases de esta propuesta pueden diferir de la implementación actual. Para el modelo vigente y el estado de los módulos consulte `Contexto_Maestro_SIGIP_v4.md` y `apps/backend/src/database/schema/`. Los reportes de incidencias y de saldos vacacionales son consultas derivadas; no requieren tabla propia. El saldo vacacional se calcula por empleado, año de cargo y periodo a partir de incidencias activas y ajustes.
 
 ## 1. Objetivo
 

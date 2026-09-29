@@ -13,7 +13,7 @@ apps/
   backend/        NestJS, Drizzle ORM, MySQL y TypeScript
 packages/
   shared/         Contratos compartidos entre frontend y backend
-docs/             Contexto maestro y documentación de base de datos
+docs/             Contexto maestro, manuales y documentación de base de datos
 docker-compose.yml  MySQL local para desarrollo
 ```
 
@@ -110,9 +110,13 @@ son exclusivamente para desarrollo.
 - Login, logout, restauración de sesión y autorización por permisos.
 - Sesiones opacas revocables con expiración inactiva y absoluta; su administración se realiza desde cada usuario.
 - Auditoría persistente con filtros, detalle y valores anteriores/nuevos.
-- Fase activa: tipos de incidencia.
+- Incidencias y documentos privados: alta, edición, cancelación, consulta y descarga protegida; control de vacaciones ordinarias y justificaciones.
+- Panel operativo con indicadores, ausencias, tendencias y reincorporaciones.
+- Reporte de incidencias con filtros temporales, vista previa y PDF; reporte de saldos vacacionales por año de cargo, periodo y oficina autorizada para empleados activos.
+- Pendiente: administración visual de tipos documentales, otros anexos opcionales e integración restante de auditoría administrativa.
 
 Consulta `docs/Contexto_Maestro_SIGIP_v4.md` antes de planear nuevas funcionalidades.
+Para el uso cotidiano, consulte `docs/Manual_Usuario_SIGIP.md` o los manuales Word en `docs/`.
 
 ## Desarrollo
 

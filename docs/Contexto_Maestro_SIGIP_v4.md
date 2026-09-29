@@ -4,9 +4,9 @@
 
 **Estado:** vigente
 
-**Última actualización:** 28 de agosto de 2026
+**Última actualización:** 28 de septiembre de 2026
 
-**Fase activa:** tipos de incidencia
+**Fase activa:** tipos documentales e integración transversal restante de auditoría
 
 ## 1. Propósito del documento
 
@@ -457,7 +457,7 @@ GET /api/reports/vacations/pdf?year=2026&period=BOTH&officeId=<uuid>
 
 La vista JSON requiere `reports:read`. La descarga PDF requiere simultáneamente `reports:read` y `reports:export`. El reporte de incidencias acepta un periodo `FORTNIGHT` (con `fortnight` `FIRST`/`SECOND` y `month`/`year`), `MONTH` (con `month`/`year`), `YEAR` (con `year`) o `CUSTOM` (con `startDate`/`endDate`), además de filtros opcionales por tipo de incidencia y unidad organizacional y la inclusión de canceladas. El periodo personalizado no puede superar un año. El endpoint `pdf` devuelve el reporte como descarga PDF en formato carta vertical (612×792) con el membrete institucional `modules/reports/assets/institutional-header.jpeg` (copiado a `dist` vía `nest-cli.json`), encabezado de carta con fecha y destinatario y una plantilla documental sobria en blanco, negro y grises. El resumen, las distribuciones por tipo y unidad y el detalle utilizan jerarquía tipográfica institucional, líneas finas y tablas sin colores de estado; el detalle se pagina sin cascada con encabezados repetidos.
 
-El reporte vacacional requiere `year` y `period` (`FIRST`, `SECOND` o `BOTH`); `officeId` es opcional y sólo se puede seleccionar con `offices:access-all`. Los usuarios sin ese permiso quedan limitados a su propia oficina incluso si construyen la petición manualmente. La vista y el PDF incluyen sólo empleados activos y reflejan el saldo vigente al generarse, no una fotografía histórica. El periodo concede hasta 10 días sujeto a la elegibilidad por antigüedad, y muestra consumos de incidencias activas más ajustes. Las incidencias con año de cargo explícito se imputan a ese año aunque sus fechas sean de otro año; registros antiguos sin año explícito conservan la imputación deducida de las fechas del periodo. Los saldos vencidos se muestran como referencia histórica con estado `EXPIRED` y no se suman a los totales de días disponibles.
+El reporte vacacional requiere `year` y `period` (`FIRST`, `SECOND` o `BOTH`); `officeId` es opcional y sólo se puede seleccionar con `offices:access-all`. Los usuarios sin ese permiso quedan limitados a su propia oficina incluso si construyen la petición manualmente. La vista y el PDF incluyen sólo empleados activos y reflejan el saldo vigente al generarse, no una fotografía histórica. El periodo concede hasta 10 días sujeto a la elegibilidad por antigüedad, y muestra consumos de incidencias activas más ajustes. Las incidencias con año de cargo explícito se imputan a ese año aunque sus fechas sean de otro año; registros antiguos sin año explícito conservan la imputación deducida de las fechas del periodo. La vista previa resume cada empleado en una fila con `restantes / derecho`, días usados y estado por periodo, sin desglose visual de ajustes; el PDF presenta también un solo renglón por empleado y los periodos seleccionados. Los saldos vencidos se muestran como referencia histórica con estado `EXPIRED` y no se suman a los indicadores de saldo restante. Los indicadores sí incluyen periodos próximos o aún no elegibles: siempre debe consultarse el estado antes de interpretarlos como días utilizables hoy.
 
 ## 11. Fase actual del desarrollo
 

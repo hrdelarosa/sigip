@@ -1,5 +1,7 @@
 # Implementación completa del módulo de incidencias de SIGIP
 
+> **Nota de vigencia:** este documento conserva el análisis y los ejemplos de diseño del módulo de incidencias. El módulo ya está implementado; para las reglas vigentes de captura, año de cargo, saldos vacacionales y reportes consulte `Contexto_Maestro_SIGIP_v4.md`. Para el uso de la interfaz consulte `Manual_Usuario_SIGIP.md`.
+
 ## 1. Decisiones de dominio que utilizará esta implementación
 
 Antes del código, estas son las decisiones que voy a considerar como base.
