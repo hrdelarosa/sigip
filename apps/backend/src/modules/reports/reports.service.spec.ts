@@ -1,5 +1,6 @@
 import { ReportsService } from './reports.service';
 import { GetIncidentsReportDto } from './dto/get-incidents-report.dto';
+import { GetVacationsReportDto } from './dto/get-vacations-report.dto';
 import type { ReportIncidentModel } from './models/incidents-report.model';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 
@@ -21,6 +22,9 @@ describe('ReportsService', () => {
     ];
     const repository = {
       findIncidents: jest.fn().mockResolvedValue(items),
+      findVacationEmployees: jest.fn(),
+      findVacationIncidents: jest.fn(),
+      findVacationAdjustments: jest.fn(),
     };
     const service = new ReportsService(repository);
     const filters = Object.assign(new GetIncidentsReportDto(), {
@@ -72,7 +76,12 @@ describe('ReportsService', () => {
   });
 
   it('returns zero average and empty distributions with no incidents', async () => {
-    const repository = { findIncidents: jest.fn().mockResolvedValue([]) };
+    const repository = {
+      findIncidents: jest.fn().mockResolvedValue([]),
+      findVacationEmployees: jest.fn(),
+      findVacationIncidents: jest.fn(),
+      findVacationAdjustments: jest.fn(),
+    };
     const service = new ReportsService(repository);
     const filters = Object.assign(new GetIncidentsReportDto(), {
       period: 'YEAR',
@@ -99,6 +108,9 @@ describe('ReportsService', () => {
     incident.position = null;
     const repository = {
       findIncidents: jest.fn().mockResolvedValue([incident]),
+      findVacationEmployees: jest.fn(),
+      findVacationIncidents: jest.fn(),
+      findVacationAdjustments: jest.fn(),
     };
     const service = new ReportsService(repository);
     const filters = Object.assign(new GetIncidentsReportDto(), {
@@ -116,6 +128,63 @@ describe('ReportsService', () => {
         percentage: 100,
       },
     ]);
+  });
+
+  it('builds current vacation balances by assigned year and period', async () => {
+    const repository = {
+      findIncidents: jest.fn(),
+      findVacationEmployees: jest.fn().mockResolvedValue([
+        {
+          id: 'employee-id',
+          employeeNumber: '001',
+          fullName: 'Persona',
+          officeId: 'office-id',
+          officeName: 'Oficina',
+          hireDate: new Date('2020-01-01T00:00:00.000Z'),
+        },
+      ]),
+      findVacationIncidents: jest.fn().mockResolvedValue([
+        {
+          employeeId: 'employee-id',
+          code: 'VACACIONES_SEGUNDO_PERIODO',
+          referenceYear: 2025,
+          date: new Date('2026-05-12T00:00:00.000Z'),
+        },
+      ]),
+      findVacationAdjustments: jest.fn().mockResolvedValue([
+        {
+          employeeId: 'employee-id',
+          year: 2025,
+          period: 'SECOND',
+          daysDelta: 2,
+        },
+      ]),
+    };
+    const service = new ReportsService(repository);
+    const report = await service.getVacationsReport(
+      Object.assign(new GetVacationsReportDto(), {
+        year: 2025,
+        period: 'BOTH',
+      }),
+      { ...actor, permissions: ['offices:access-all'] },
+    );
+
+    expect(report.items[0].periods).toEqual([
+      expect.objectContaining({
+        period: 'FIRST',
+        entitlementDays: 10,
+        remainingDays: 10,
+      }),
+      expect.objectContaining({
+        period: 'SECOND',
+        entitlementDays: 10,
+        incidentDays: 1,
+        adjustmentDays: 2,
+        remainingDays: 7,
+      }),
+    ]);
+    expect(report.totals.secondPeriodRemainingDays).toBe(0);
+    expect(repository.findVacationEmployees).toHaveBeenCalledWith(undefined);
   });
 });
 

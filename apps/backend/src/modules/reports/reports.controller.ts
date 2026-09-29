@@ -4,6 +4,7 @@ import type { IncidentsReportResponse } from '@sigip/shared';
 
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { GetIncidentsReportDto } from './dto/get-incidents-report.dto';
+import { GetVacationsReportDto } from './dto/get-vacations-report.dto';
 import { ReportsPdfService } from './reports-pdf.service';
 import { ReportsService } from './reports.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -25,6 +26,32 @@ export class ReportsController {
     const report = await this.reportsService.getIncidentsReport(filters, actor);
 
     return this.reportsService.toResponse(report);
+  }
+
+  @Get('vacations')
+  async getVacationsReport(
+    @Query() filters: GetVacationsReportDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+  ) {
+    return this.reportsService.getVacationsReport(filters, actor);
+  }
+
+  @Get('vacations/pdf')
+  @RequirePermissions('reports:read', 'reports:export')
+  async downloadVacationsReport(
+    @Query() filters: GetVacationsReportDto,
+    @CurrentUser() actor: AuthenticatedUserModel,
+    @Res() response: Response,
+  ): Promise<void> {
+    const report = await this.reportsService.getVacationsReport(filters, actor);
+    const pdf = await this.pdfService.generateVacationsReport(report);
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="reporte-saldos-vacacionales-${report.year}.pdf"`,
+    );
+    response.setHeader('Content-Length', String(pdf.length));
+    response.end(pdf);
   }
 
   @Get('incidents/pdf')

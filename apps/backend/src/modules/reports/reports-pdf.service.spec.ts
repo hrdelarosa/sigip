@@ -2,6 +2,7 @@ import { inflateSync } from 'node:zlib';
 
 import { ReportsPdfService } from './reports-pdf.service';
 import type { IncidentsReportModel } from './models/incidents-report.model';
+import type { VacationsReportModel } from './models/vacations-report.model';
 
 describe('ReportsPdfService', () => {
   const service = new ReportsPdfService();
@@ -162,6 +163,48 @@ describe('ReportsPdfService', () => {
     expect(text).toContain('DISTRIBUCIÓN POR TIPO');
     expect(text).toMatch(/DETALLE DE\s+INCIDENCIAS/);
     expect(text).not.toContain('SIGIP - INM Guerrero');
+  });
+
+  it('generates a landscape PDF containing vacation balances', async () => {
+    const vacationReport: VacationsReportModel = {
+      year: 2026,
+      period: 'BOTH',
+      generatedAt: '2026-09-28T00:00:00.000Z',
+      totalEmployees: 1,
+      totals: { firstPeriodRemainingDays: 8, secondPeriodRemainingDays: 10 },
+      items: [
+        {
+          id: 'employee-id',
+          employeeNumber: 'EMP001',
+          fullName: 'María García López',
+          office: { id: 'office-id', name: 'Oficina Guerrero' },
+          hireDate: '2020-01-01',
+          periods: [
+            {
+              period: 'FIRST',
+              entitlementDays: 10,
+              incidentDays: 2,
+              adjustmentDays: 0,
+              consumedDays: 2,
+              remainingDays: 8,
+              status: 'AVAILABLE',
+            },
+          ],
+        },
+      ],
+    };
+
+    const pdf = await service.generateVacationsReport(vacationReport);
+
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pdf.toString('latin1')).toContain('/MediaBox [0 0 792 612]');
+    const text = extractTextOps(pdf.toString('latin1'))
+      .map((operation) => operation.text)
+      .join(' ');
+    expect(text).toContain('REPORTE DE SALDOS VACACIONALES');
+    expect(text).toContain('PRIMER PERIODO: 8 DÍAS');
+    expect(text).toContain('EMP001');
+    expect(text).toContain('Disponible');
   });
 
   it('draws every cell of a detail row at the same height (no cascade)', async () => {

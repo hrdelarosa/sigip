@@ -51,12 +51,11 @@ function buildVacationPeriodBalance(
   snapshot: EmployeeControlSnapshot,
 ): EmployeeVacationPeriodBalanceResponse {
   const { startDate, endDate } = getVacationPeriodDates(year, period);
-  const incidentDays = snapshot.vacationDates.filter(
-    (item) =>
-      getVacationPeriodFromCode(item.code) === period &&
-      item.date >= startDate &&
-      item.date <= endDate,
-  ).length;
+  const incidentDays = snapshot.vacationDates.filter((item) => {
+    if (getVacationPeriodFromCode(item.code) !== period) return false;
+    if (item.referenceYear !== null) return item.referenceYear === year;
+    return item.date >= startDate && item.date <= endDate;
+  }).length;
   const adjustments = snapshot.adjustments.filter(
     (adjustment) => adjustment.year === year && adjustment.period === period,
   );
@@ -108,9 +107,10 @@ export function buildEmployeeControls(
   snapshot.vacationDates.forEach((item) => {
     const period = getVacationPeriodFromCode(item.code);
     years.add(
-      period
-        ? getVacationPeriodYear(item.date, period)
-        : item.date.getUTCFullYear(),
+      item.referenceYear ??
+        (period
+          ? getVacationPeriodYear(item.date, period)
+          : item.date.getUTCFullYear()),
     );
   });
   snapshot.adjustments.forEach((item) => years.add(item.year));
