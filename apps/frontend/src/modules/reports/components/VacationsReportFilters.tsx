@@ -69,7 +69,13 @@ export function VacationsReportFilters({
             <Field>
               <FieldLabel htmlFor="vacation-report-office">Oficina</FieldLabel>
               <Select value={value.officeId ?? ''} onValueChange={(officeId) => onChange({ ...value, officeId: officeId || undefined })}>
-                <SelectTrigger id="vacation-report-office"><SelectValue placeholder="Todas las oficinas" /></SelectTrigger>
+                <SelectTrigger id="vacation-report-office">
+                  <SelectValue placeholder="Todas las oficinas">
+                    {value.officeId
+                      ? officeItems.find((office) => office.value === value.officeId)?.label ?? 'Oficina seleccionada'
+                      : undefined}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Todas las oficinas</SelectItem>
                   {officeItems.map((office) => <SelectItem key={office.value} value={office.value}>{office.label}</SelectItem>)}
