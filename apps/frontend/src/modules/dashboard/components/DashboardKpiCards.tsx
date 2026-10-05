@@ -1,6 +1,7 @@
 import type { UseQueryResult } from '@tanstack/react-query'
 import {
   ActivityIcon,
+  ArrowUpRightIcon,
   CalendarRangeIcon,
   CalendarOffIcon,
   UsersIcon,
@@ -14,9 +15,10 @@ import { DashboardError } from './DashboardStates'
 
 interface Props {
   summaryQuery: UseQueryResult<DashboardSummaryResponse>
+  onViewAbsences: () => void
 }
 
-export function DashboardKpiCards({ summaryQuery }: Props) {
+export function DashboardKpiCards({ summaryQuery, onViewAbsences }: Props) {
   if (summaryQuery.isPending) {
     return <DashboardKpiSkeleton />
   }
@@ -37,7 +39,11 @@ export function DashboardKpiCards({ summaryQuery }: Props) {
       <KpiCard
         label="Personal activo"
         value={summary.activeEmployees}
-        description={summary.newEmployeesThisMonth > 0 ? `+${summary.newEmployeesThisMonth} este mes` : undefined}
+        description={
+          summary.newEmployeesThisMonth > 0
+            ? `+${summary.newEmployeesThisMonth} este mes`
+            : undefined
+        }
         icon={UsersIcon}
       />
       <KpiCard
@@ -45,6 +51,7 @@ export function DashboardKpiCards({ summaryQuery }: Props) {
         value={summary.absentToday}
         description={`${summary.absenceRate}% del personal activo`}
         icon={CalendarOffIcon}
+        onClick={onViewAbsences}
       />
       <KpiCard
         label="Incidencias activas"
@@ -67,26 +74,41 @@ function KpiCard({
   value,
   description,
   icon: Icon,
+  onClick,
 }: {
   label: string
   value: number
   description?: string
   icon: LucideIcon
+  onClick?: () => void
 }) {
   return (
-    <Card className="relative overflow-hidden py-0 shadow-xs">
+    <Card className={`relative overflow-hidden py-0 shadow-xs ${onClick ? 'transition-colors hover:bg-muted/30' : ''}`}>
       <CardContent className="flex items-start justify-between gap-4 p-5">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+            {label}
+            {onClick ? <ArrowUpRightIcon className="size-3.5" aria-hidden="true" /> : null}
+          </p>
           <p className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">
             {value}
           </p>
-          {description ? <p className="mt-2 text-xs text-muted-foreground">{description}</p> : null}
+          {description ? (
+            <p className="mt-2 text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
         <div className="rounded-lg bg-muted p-2.5 text-muted-foreground">
           <Icon className="size-5" aria-hidden="true" />
         </div>
       </CardContent>
+      {onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`Ver detalle de ${label.toLowerCase()}: ${value} personas`}
+          className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:outline-none"
+        />
+      ) : null}
     </Card>
   )
 }

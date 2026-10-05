@@ -1,14 +1,15 @@
 import { useState } from 'react'
 
+import { ActiveIncidentsCard } from '../components/ActiveIncidentsCard'
+import { ActiveIncidentsSheet } from '../components/ActiveIncidentsSheet'
+import { DashboardKpiCards } from '../components/DashboardKpiCards'
 import { DashboardPeriodFilter } from '../components/DashboardPeriodFilter'
 import { IncidentTrendChart } from '../components/IncidentTrendChart'
 import { IncidentsByTypeChart } from '../components/IncidentsByTypeChart'
-import { ActiveIncidentsCard } from '../components/ActiveIncidentsCard'
-import { DashboardKpiCards } from '../components/DashboardKpiCards'
 import { RecentIncidentsTable } from '../components/RecentIncidentsTable'
 import { UpcomingReturnsCard } from '../components/UpcomingReturnsCard'
-import { useDashboardPage, type DashboardTrendPeriod } from '../hooks/useDashboardPage'
 import { VacationPeriodCard } from '../components/VacationPeriodCard'
+import { useDashboardPage, type DashboardTrendPeriod } from '../hooks/useDashboardPage'
 
 export function DashboardPage() {
   const [period, setPeriod] = useState<DashboardTrendPeriod>('6m')
@@ -28,7 +29,15 @@ export function DashboardPage() {
         <DashboardPeriodFilter value={period} onChange={setPeriod} />
       </div>
 
-      <DashboardKpiCards summaryQuery={page.summaryQuery} />
+      <DashboardKpiCards
+        summaryQuery={page.summaryQuery}
+        onViewAbsences={() => page.setAbsencesOpen(true)}
+      />
+      <ActiveIncidentsSheet
+        query={page.activeIncidentsQuery}
+        open={page.absencesOpen}
+        onOpenChange={page.setAbsencesOpen}
+      />
       <VacationPeriodCard summaryQuery={page.summaryQuery} />
 
       <div className="grid gap-4 xl:grid-cols-5">
@@ -43,7 +52,7 @@ export function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ActiveIncidentsCard query={page.activeIncidentsQuery} />
-        
+
         <UpcomingReturnsCard query={page.upcomingReturnsQuery} />
       </div>
 
