@@ -4,6 +4,7 @@ import {
   ALL_REPORT_FILTERS_VALUE,
   buildIncidentsReportFilters,
   fromReportFilterSelectValue,
+  toReportSearchParams,
   toReportFilterSelectValue,
 } from './report-filters'
 
@@ -36,5 +37,22 @@ describe('report filter select values', () => {
   it('preserves a selected office id', () => {
     expect(fromReportFilterSelectValue('office-id')).toBe('office-id')
     expect(toReportFilterSelectValue('office-id')).toBe('office-id')
+  })
+})
+
+describe('toReportSearchParams', () => {
+  it('clears optional URL parameters when their filters are unset', () => {
+    const params = toReportSearchParams({
+      period: 'MONTH',
+      fortnight: 'FIRST',
+      month: 10,
+      year: 2026,
+      includeCancelled: false,
+    })
+
+    expect(params.officeId).toBeNull()
+    expect(params.incidentTypeId).toBeNull()
+    expect(params.startDate).toBeNull()
+    expect(params.endDate).toBeNull()
   })
 })

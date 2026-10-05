@@ -28,6 +28,16 @@ export function fromReportFilterSelectValue(value: string | null): string | null
   return value === ALL_REPORT_FILTERS_VALUE ? null : value
 }
 
+export function toReportSearchParams(state: ReportsFilterState) {
+  return {
+    ...state,
+    startDate: state.startDate ?? null,
+    endDate: state.endDate ?? null,
+    incidentTypeId: state.incidentTypeId ?? null,
+    officeId: state.officeId ?? null,
+  }
+}
+
 const now = new Date()
 
 export function defaultReportsFilterState(): ReportsFilterState {
