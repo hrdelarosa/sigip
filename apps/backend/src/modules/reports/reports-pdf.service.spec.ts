@@ -185,6 +185,74 @@ describe('ReportsPdfService', () => {
     expect(text).not.toContain('SIGIP - INM Guerrero');
   });
 
+  it('starts each distribution and detail heading at the content margin', async () => {
+    const pdf = await service.generate(report);
+    const headings = extractTextOps(pdf.toString('latin1')).filter(({ text }) =>
+      [
+        'DISTRIBUCIÓN POR TIPO',
+        'DISTRIBUCIÓN POR UNIDAD ORGANIZACIONAL',
+        'DETALLE DE INCIDENCIAS',
+      ].includes(text),
+    );
+
+    expect(headings).toHaveLength(3);
+    expect(headings.map(({ x }) => x)).toEqual([50, 50, 50]);
+  });
+
+  it('keeps a short report on one page without an empty trailing page', async () => {
+    const singleIncidentReport: IncidentsReportModel = {
+      ...report,
+      summary: {
+        totalIncidents: 1,
+        totalEmployees: 1,
+        registeredIncidents: 1,
+        cancelledIncidents: 0,
+        averageIncidentsPerEmployee: 1,
+        byType: [report.summary.byType[0]],
+        byOrganizationalUnit: [report.summary.byOrganizationalUnit[0]],
+      },
+      items: [report.items[0]],
+    };
+
+    const pdf = await service.generate(singleIncidentReport);
+    const pdfText = pdf.toString('latin1');
+    const pages = [...pdfText.matchAll(/\/MediaBox\s*\[0 0 612 792\]/g)];
+    const text = extractTextOps(pdfText)
+      .map((operation) => operation.text)
+      .join(' ');
+
+    expect(pages).toHaveLength(1);
+    expect(text).toContain('Página 1 de 1');
+  });
+
+  it('paginates long reports and numbers only pages containing report content', async () => {
+    const longReport: IncidentsReportModel = {
+      ...report,
+      items: Array.from({ length: 40 }, (_, index) => ({
+        ...report.items[0],
+        incidentId: `incident-${index}`,
+        employee: {
+          ...report.items[0].employee,
+          id: `employee-${index}`,
+          employeeNumber: `EMP${String(index).padStart(3, '0')}`,
+        },
+      })),
+    };
+
+    const pdf = await service.generate(longReport);
+    const pdfText = pdf.toString('latin1');
+    const pages = [...pdfText.matchAll(/\/MediaBox\s*\[0 0 612 792\]/g)];
+    const pageFooters = extractTextOps(pdfText)
+      .map((operation) => operation.text)
+      .filter((text) => text.includes('Página'));
+
+    expect(pages.length).toBeGreaterThan(1);
+    expect(pageFooters).toHaveLength(pages.length);
+    expect(pageFooters.at(-1)).toContain(
+      `Página ${pages.length} de ${pages.length}`,
+    );
+  });
+
   it('generates a landscape PDF containing vacation balances', async () => {
     const vacationReport: VacationsReportModel = {
       year: 2026,
