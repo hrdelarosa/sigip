@@ -69,15 +69,6 @@ export class DrizzleReportsRepository extends ReportsRepository {
       );
     }
 
-    if (options.organizationalUnitId) {
-      conditions.push(
-        eq(
-          employeeAssignments.organizationalUnitId,
-          uuidToBuffer(options.organizationalUnitId),
-        ),
-      );
-    }
-
     if (options.officeId) {
       conditions.push(eq(employees.officeId, uuidToBuffer(options.officeId)));
     }
@@ -88,6 +79,8 @@ export class DrizzleReportsRepository extends ReportsRepository {
         employeeId: employees.id,
         employeeNumber: employees.employeeNumber,
         employeeName: employees.fullName,
+        officeId: offices.id,
+        officeName: offices.name,
         organizationalUnitId: organizationalUnits.id,
         organizationalUnitName: organizationalUnits.name,
         positionId: positions.id,
@@ -104,6 +97,7 @@ export class DrizzleReportsRepository extends ReportsRepository {
       })
       .from(incidents)
       .innerJoin(employees, eq(incidents.employeeId, employees.id))
+      .innerJoin(offices, eq(employees.officeId, offices.id))
       .leftJoin(
         employeeAssignments,
         eq(incidents.employeeAssignmentId, employeeAssignments.id),
@@ -140,6 +134,10 @@ export class DrizzleReportsRepository extends ReportsRepository {
             id: bufferToUuid(row.employeeId),
             employeeNumber: row.employeeNumber,
             fullName: row.employeeName,
+          },
+          office: {
+            id: bufferToUuid(row.officeId),
+            name: row.officeName,
           },
           organizationalUnit:
             row.organizationalUnitId && row.organizationalUnitName

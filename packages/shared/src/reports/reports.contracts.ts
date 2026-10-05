@@ -29,7 +29,7 @@ export interface IncidentsReportFilters {
   startDate?: string
   endDate?: string
   incidentTypeId?: string
-  organizationalUnitId?: string
+  officeId?: string
   includeCancelled?: boolean
 }
 

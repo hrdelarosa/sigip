@@ -3,6 +3,7 @@ import { GetIncidentsReportDto } from './dto/get-incidents-report.dto';
 import { GetVacationsReportDto } from './dto/get-vacations-report.dto';
 import type { ReportIncidentModel } from './models/incidents-report.model';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('ReportsService', () => {
   const actor: AuthenticatedUserModel = {
@@ -94,6 +95,51 @@ describe('ReportsService', () => {
     expect(report.summary.averageIncidentsPerEmployee).toBe(0);
     expect(report.summary.byType).toEqual([]);
     expect(report.summary.byOrganizationalUnit).toEqual([]);
+  });
+
+  it('filters an incidents report by office for users with cross-office access', async () => {
+    const repository = {
+      findIncidents: jest.fn().mockResolvedValue([]),
+      findVacationEmployees: jest.fn(),
+      findVacationIncidents: jest.fn(),
+      findVacationAdjustments: jest.fn(),
+    };
+    const service = new ReportsService(repository);
+    const filters = Object.assign(new GetIncidentsReportDto(), {
+      period: 'YEAR',
+      year: 2026,
+      officeId: 'selected-office-id',
+    });
+
+    const report = await service.getIncidentsReport(filters, {
+      ...actor,
+      permissions: ['offices:access-all'],
+    });
+
+    expect(repository.findIncidents).toHaveBeenCalledWith(
+      expect.objectContaining({ officeId: 'selected-office-id' }),
+    );
+    expect(report.filters?.officeId).toBe('selected-office-id');
+  });
+
+  it('rejects a selected office outside a user office scope', async () => {
+    const repository = {
+      findIncidents: jest.fn().mockResolvedValue([]),
+      findVacationEmployees: jest.fn(),
+      findVacationIncidents: jest.fn(),
+      findVacationAdjustments: jest.fn(),
+    };
+    const service = new ReportsService(repository);
+    const filters = Object.assign(new GetIncidentsReportDto(), {
+      period: 'YEAR',
+      year: 2026,
+      officeId: 'other-office-id',
+    });
+
+    await expect(service.getIncidentsReport(filters, actor)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(repository.findIncidents).not.toHaveBeenCalled();
   });
 
   it('groups incidents without an assignment under No asignado', async () => {

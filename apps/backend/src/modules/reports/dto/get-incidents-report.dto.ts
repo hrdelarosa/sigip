@@ -53,7 +53,7 @@ export class GetIncidentsReportDto {
 
   @IsOptional()
   @IsUUID()
-  organizationalUnitId?: string;
+  officeId?: string;
 
   @IsOptional()
   @Transform(({ value }) => parseOptionalBoolean(value))

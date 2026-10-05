@@ -19,6 +19,10 @@ export interface ReportIncidentModel {
     employeeNumber: string;
     fullName: string;
   };
+  office?: {
+    id: string;
+    name: string;
+  };
   organizationalUnit: {
     id: string;
     name: string;
@@ -43,7 +47,7 @@ export interface IncidentsReportModel {
   period: ReportDatePeriodModel;
   filters?: {
     incidentTypeId?: string;
-    organizationalUnitId?: string;
+    officeId?: string;
     includeCancelled: boolean;
   };
   summary: {

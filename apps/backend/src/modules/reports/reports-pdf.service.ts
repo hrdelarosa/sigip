@@ -412,14 +412,11 @@ export class ReportsPdfService {
         `Tipo de incidencia: ${item?.incidentType.name ?? 'Aplicado'}`,
       );
     }
-    if (filters.organizationalUnitId) {
+    if (filters.officeId) {
       const item = report.items.find(
-        (candidate) =>
-          candidate.organizationalUnit?.id === filters.organizationalUnitId,
+        (candidate) => candidate.office?.id === filters.officeId,
       );
-      labels.push(
-        `Unidad organizacional: ${item?.organizationalUnit?.name ?? 'Aplicado'}`,
-      );
+      labels.push(`Oficina: ${item?.office?.name ?? 'Aplicada'}`);
     }
     if (filters.includeCancelled) labels.push('Incluye canceladas: Sí');
 

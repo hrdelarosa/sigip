@@ -69,8 +69,8 @@ function buildQuery(filters: IncidentsReportFilters): string {
     params.set('incidentTypeId', filters.incidentTypeId)
   }
 
-  if (filters.organizationalUnitId) {
-    params.set('organizationalUnitId', filters.organizationalUnitId)
+  if (filters.officeId) {
+    params.set('officeId', filters.officeId)
   }
 
   if (filters.includeCancelled) {

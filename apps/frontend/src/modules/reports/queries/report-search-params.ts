@@ -18,6 +18,6 @@ export const reportSearchParams = {
   startDate: parseAsString,
   endDate: parseAsString,
   incidentTypeId: parseAsString,
-  organizationalUnitId: parseAsString,
+  officeId: parseAsString,
   includeCancelled: parseAsBoolean.withDefault(false),
 }
