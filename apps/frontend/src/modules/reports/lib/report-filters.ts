@@ -18,6 +18,16 @@ export interface ReportsFilterState {
   includeCancelled: boolean
 }
 
+export const ALL_REPORT_FILTERS_VALUE = '__all_report_filters__'
+
+export function toReportFilterSelectValue(value?: string): string {
+  return value || ALL_REPORT_FILTERS_VALUE
+}
+
+export function fromReportFilterSelectValue(value: string | null): string | null {
+  return value === ALL_REPORT_FILTERS_VALUE ? null : value
+}
+
 const now = new Date()
 
 export function defaultReportsFilterState(): ReportsFilterState {
