@@ -5,8 +5,8 @@
 | Control | Información |
 |---|---|
 | Institución | Oficina de Representación del Instituto Nacional de Migración en Guerrero |
-| Versión del manual | 1.1 |
-| Fecha de actualización | 28 de septiembre de 2026 |
+| Versión del manual | 1.2 |
+| Fecha de actualización | 5 de octubre de 2026 |
 | Dirigido a | Administradores, supervisores, operadores de Recursos Humanos y capturistas |
 
 ---
@@ -580,14 +580,10 @@ La pantalla **Reportes** ofrece **Incidencias** y **Saldos vacacionales**. Selec
 2. Seleccione **Incidencias** y el tipo de periodo.
 3. Complete quincena, mes y año, o las fechas personalizadas.
 4. Si lo requiere, filtre por tipo de incidencia.
-5. Si lo requiere, filtre por unidad organizacional.
+5. Si tiene permiso para consultar todas las oficinas, seleccione una oficina específica o mantenga **Todas las oficinas**. Si ya había seleccionado una oficina, elegir **Todas las oficinas** quita ese filtro. Si no tiene el permiso, el selector no aparece y el reporte se limita a su oficina.
 6. Active **Incluir canceladas** sólo cuando deban formar parte del reporte.
 7. Seleccione **Vista previa**.
 8. Revise el resumen y el detalle.
-
-![Configuración de un reporte](assets/manual/07-configurar-reporte.png)
-
-_Figura 8. Filtros del reporte de incidencias; el reporte vacacional tiene controles diferentes._
 
 La vista previa presenta:
 
@@ -595,8 +591,10 @@ La vista previa presenta:
 - trabajadores involucrados;
 - promedio de incidencias por trabajador;
 - distribución por tipo;
-- distribución por unidad, cuando aplica;
+- distribución por unidad organizacional dentro del alcance seleccionado;
 - detalle de empleado, unidad, tipo, periodo y estado.
+
+El filtro por oficina determina qué incidencias se consultan; la distribución por unidad organizacional resume las incidencias que quedaron dentro del alcance elegido.
 
 ### 8.3 Descargar el PDF de incidencias
 
@@ -613,7 +611,10 @@ Si el botón no aparece, la cuenta no tiene permiso de exportación.
 - La fecha inicial no puede ser posterior a la final.
 - El periodo personalizado no puede superar un año.
 - De forma predeterminada, las incidencias canceladas no se incluyen.
-- Los reportes respetan el alcance de oficina de la cuenta.
+- Con permiso `offices:access-all`, **Todas las oficinas** deja el reporte sin filtro de oficina; seleccionar una oficina limita la vista previa y el PDF a esa oficina.
+- Sin permiso `offices:access-all`, el selector no se muestra y el backend limita los resultados a la oficina de la cuenta, aunque se intente enviar otra oficina manualmente.
+- Si ya había una oficina seleccionada, elegir **Todas las oficinas** elimina ese filtro y actualiza la vista previa siguiente.
+- El PDF presenta secciones y tablas alineadas, repite el encabezado de las tablas cuando hay varias páginas y no agrega una página vacía después del contenido.
 
 ### 8.5 Reporte de saldos vacacionales
 
@@ -628,13 +629,13 @@ Este reporte permite consultar **el saldo vigente al generar la consulta**, no e
 
 ![Filtros del reporte vacacional: año de cargo, periodo y oficina](assets/manual/11-reporte-vacaciones-filtros.png)
 
-_Figura 8a. Configuración del reporte de saldos vacacionales. El selector de oficina aparece según los permisos del usuario._
+_Figura 8. Configuración del reporte de saldos vacacionales. El selector de oficina aparece según los permisos del usuario._
 
 La vista previa muestra el total de empleados activos y los días restantes acumulados por periodo. En la tabla aparece **una fila por empleado**, con nombre, número, oficina y, para cada periodo seleccionado, un resumen como `8 / 10 días` y `2 usados · Disponible`. El PDF presenta los datos por empleado y periodo en formato institucional. Si cambia los filtros, vuelva a seleccionar **Vista previa** para actualizarla.
 
 ![Vista previa de saldos vacacionales con indicadores y detalle por empleado](assets/manual/12-reporte-vacaciones-vista-previa.png)
 
-_Figura 8b. Vista previa con datos ficticios para explicar los saldos y estados de ambos periodos._
+_Figura 9. Vista previa con datos ficticios para explicar los saldos y estados de ambos periodos._
 
 **Interpretación de los saldos:**
 
@@ -742,7 +743,7 @@ El listado muestra fecha, acción, entidad y actor.
 
 ![Búsqueda y filtros de auditoría](assets/manual/09-filtros-auditoria.png)
 
-_Figura 9. Controles de búsqueda y filtros del historial de auditoría._
+_Figura 10. Controles de búsqueda y filtros del historial de auditoría._
 
 ### 10.2 Detalle de un evento
 
@@ -793,7 +794,7 @@ Reglas:
 
 ![Formulario para crear un usuario](assets/manual/10-crear-usuario.png)
 
-_Figura 10. Alta de una cuenta con rol, oficina y contraseña temporal._
+_Figura 11. Alta de una cuenta con rol, oficina y contraseña temporal._
 
 ### 11.3 Editar un usuario
 
