@@ -25,16 +25,14 @@ const unitConfig = {
 
 export function ReportDistributionCharts({
   summary,
-  hideUnitChart,
 }: {
   summary: IncidentsReportResponse['summary']
-  hideUnitChart: boolean
 }) {
   const hasTypeData = summary.byType.length > 0
   const hasUnitData = summary.byOrganizationalUnit.length > 0
 
   return (
-    <div className={`grid gap-4 ${hideUnitChart ? '' : 'lg:grid-cols-2'}`}>
+    <div className="grid gap-4 lg:grid-cols-2">
       <DistributionChart
         title="Incidencias por tipo"
         description="Distribución de las incidencias del periodo."
@@ -42,18 +40,16 @@ export function ReportDistributionCharts({
         config={typeConfig}
         hasData={hasTypeData}
       />
-      {!hideUnitChart ? (
-        <DistributionChart
-          title="Incidencias por unidad"
-          description="Distribución dentro de las unidades organizacionales."
-          data={summary.byOrganizationalUnit.map((item) => ({
-            ...item,
-            label: item.name,
-          }))}
-          config={unitConfig}
-          hasData={hasUnitData}
-        />
-      ) : null}
+      <DistributionChart
+        title="Incidencias por unidad"
+        description="Distribución dentro de las unidades organizacionales."
+        data={summary.byOrganizationalUnit.map((item) => ({
+          ...item,
+          label: item.name,
+        }))}
+        config={unitConfig}
+        hasData={hasUnitData}
+      />
     </div>
   )
 }

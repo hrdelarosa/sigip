@@ -9,7 +9,6 @@ export interface FindIncidentReportOptions {
   startDate: Date;
   endDate: Date;
   incidentTypeId?: string;
-  organizationalUnitId?: string;
   includeCancelled: boolean;
   officeId?: string;
 }

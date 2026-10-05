@@ -31,6 +31,15 @@ export class ReportsService {
     filters: GetIncidentsReportDto,
     actor: AuthenticatedUserModel,
   ): Promise<IncidentsReportModel> {
+    const officeScope = getOfficeScope(actor);
+    if (
+      !officeScope.canAccessAllOffices &&
+      filters.officeId &&
+      filters.officeId !== officeScope.officeId
+    ) {
+      throw new ForbiddenException();
+    }
+
     const period = resolveReportPeriod({
       period: filters.period,
       fortnight: filters.fortnight,
@@ -44,18 +53,17 @@ export class ReportsService {
       startDate: period.startDate,
       endDate: period.endDate,
       incidentTypeId: filters.incidentTypeId,
-      organizationalUnitId: filters.organizationalUnitId,
       includeCancelled: filters.includeCancelled ?? false,
-      officeId: getOfficeScope(actor).canAccessAllOffices
-        ? undefined
-        : actor.office.id,
+      officeId: officeScope.canAccessAllOffices
+        ? filters.officeId
+        : officeScope.officeId,
     });
 
     return {
       period,
       filters: {
         incidentTypeId: filters.incidentTypeId,
-        organizationalUnitId: filters.organizationalUnitId,
+        officeId: filters.officeId,
         includeCancelled: filters.includeCancelled ?? false,
       },
       summary: this.buildSummary(items),

@@ -7,7 +7,7 @@ import { ReportSummaryCards } from './ReportSummaryCards'
 
 export interface ReportPreviewFilters {
   incidentTypeLabel?: string
-  organizationalUnitLabel?: string
+  officeLabel?: string
   includeCancelled: boolean
 }
 
@@ -24,7 +24,6 @@ export function ReportPreview({
       <ReportSummaryCards summary={report.summary} />
       <ReportDistributionCharts
         summary={report.summary}
-        hideUnitChart={Boolean(filters.organizationalUnitLabel)}
       />
       <ReportIncidentsTable items={report.items} />
     </div>

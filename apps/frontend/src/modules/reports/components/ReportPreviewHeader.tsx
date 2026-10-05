@@ -12,13 +12,13 @@ export function ReportPreviewHeader({
   report: IncidentsReportResponse
   filters: {
     incidentTypeLabel?: string
-    organizationalUnitLabel?: string
+    officeLabel?: string
     includeCancelled: boolean
   }
 }) {
   const badges = [
     filters.incidentTypeLabel,
-    filters.organizationalUnitLabel,
+    filters.officeLabel,
     filters.includeCancelled ? 'Incluye canceladas' : undefined,
   ].filter(Boolean) as string[]
 

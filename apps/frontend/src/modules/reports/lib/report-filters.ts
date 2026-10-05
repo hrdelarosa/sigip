@@ -14,7 +14,7 @@ export interface ReportsFilterState {
   startDate?: string
   endDate?: string
   incidentTypeId?: string
-  organizationalUnitId?: string
+  officeId?: string
   includeCancelled: boolean
 }
 
@@ -42,8 +42,8 @@ export function buildIncidentsReportFilters(
     filters.incidentTypeId = state.incidentTypeId
   }
 
-  if (state.organizationalUnitId) {
-    filters.organizationalUnitId = state.organizationalUnitId
+  if (state.officeId) {
+    filters.officeId = state.officeId
   }
 
   if (state.period === 'CUSTOM') {

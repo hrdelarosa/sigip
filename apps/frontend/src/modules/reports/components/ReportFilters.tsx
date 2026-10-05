@@ -42,7 +42,8 @@ interface ReportFiltersProps {
   isValid: boolean
   downloading: boolean
   typeItems: Array<{ value: string; label: string }>
-  unitItems: Array<{ value: string; label: string }>
+  officeItems: Array<{ value: string; label: string }>
+  canChooseOffice: boolean
   catalogsLoading: boolean
   catalogsError: boolean
   onRetryCatalogs: () => void
@@ -71,7 +72,8 @@ export function ReportFilters({
   isValid,
   downloading,
   typeItems,
-  unitItems,
+  officeItems,
+  canChooseOffice,
   catalogsLoading,
   catalogsError,
   onRetryCatalogs,
@@ -218,7 +220,7 @@ export function ReportFilters({
           <div className="border-b pb-3">
             <p className="text-sm font-semibold">Filtros adicionales</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Acota los resultados por catálogo o incluye incidencias canceladas.
+              Acota los resultados por tipo u oficina o incluye incidencias canceladas.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -234,20 +236,19 @@ export function ReportFilters({
               }
             />
 
-            <FilterSelect
-              id="report-unit"
-              label="Unidad organizacional"
-              value={value.organizationalUnitId ?? ''}
-              placeholder="Todas las unidades"
-              items={unitItems}
-              disabled={catalogsLoading}
-              onValueChange={(organizationalUnitId) =>
-                onChange({
-                  ...value,
-                  organizationalUnitId: organizationalUnitId || undefined,
-                })
-              }
-            />
+            {canChooseOffice ? (
+              <FilterSelect
+                id="report-office"
+                label="Oficina"
+                value={value.officeId ?? ''}
+                placeholder="Todas las oficinas"
+                items={officeItems}
+                disabled={catalogsLoading}
+                onValueChange={(officeId) =>
+                  onChange({ ...value, officeId: officeId || undefined })
+                }
+              />
+            ) : null}
 
             <label
               htmlFor="report-include-cancelled"

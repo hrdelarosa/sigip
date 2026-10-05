@@ -8,7 +8,6 @@ import PageHeader from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api/api-error'
-import { useOrganizationalUnits } from '@/modules/administration/organizational-units/hooks/useOrganizationalUnits'
 import { hasPermission, useAuth } from '@/modules/auth'
 import { incidentTypesQueryOptions } from '@/modules/incidents/queries/incident-query-options'
 import { useOffices } from '@/modules/administration/offices/hooks/useOffices'
@@ -43,7 +42,7 @@ export function ReportsPage() {
     startDate: filters.startDate ?? undefined,
     endDate: filters.endDate ?? undefined,
     incidentTypeId: filters.incidentTypeId ?? undefined,
-    organizationalUnitId: filters.organizationalUnitId ?? undefined,
+    officeId: filters.officeId ?? undefined,
     includeCancelled: filters.includeCancelled,
   }
   const [previewEnabled, setPreviewEnabled] = useState(false)
@@ -66,8 +65,6 @@ export function ReportsPage() {
   const typesQuery = useQuery(
     incidentTypesQueryOptions({ page: 1, limit: 100, isActive: true }),
   )
-  const unitsQuery = useOrganizationalUnits()
-
   const typeItems = useMemo(
     () =>
       (typesQuery.data?.items ?? []).map((type) => ({
@@ -77,20 +74,21 @@ export function ReportsPage() {
     [typesQuery.data],
   )
 
-  const unitItems = useMemo(
+  const officeItems = useMemo(
     () =>
-      (unitsQuery.data ?? []).map((unit) => ({
-        value: unit.id,
-        label: unit.name,
+      (offices.data ?? []).map((office) => ({
+        value: office.id,
+        label: office.name,
       })),
-    [unitsQuery.data],
+    [offices.data],
   )
 
-  const catalogsLoading = typesQuery.isPending || unitsQuery.isPending
-  const catalogsError = typesQuery.isError || unitsQuery.isError
+  const catalogsLoading =
+    typesQuery.isPending || (canChooseOffice && offices.isPending)
+  const catalogsError = typesQuery.isError || (canChooseOffice && offices.isError)
   const previewFilters: ReportPreviewFilters = {
     incidentTypeLabel: typeItems.find((item) => item.value === state.incidentTypeId)?.label,
-    organizationalUnitLabel: unitItems.find((item) => item.value === state.organizationalUnitId)?.label,
+    officeLabel: officeItems.find((item) => item.value === state.officeId)?.label,
     includeCancelled: state.includeCancelled,
   }
 
@@ -148,12 +146,13 @@ export function ReportsPage() {
         isValid={isValid}
         downloading={downloading}
         typeItems={typeItems}
-        unitItems={unitItems}
+        officeItems={officeItems}
+        canChooseOffice={canChooseOffice}
         catalogsLoading={catalogsLoading}
         catalogsError={catalogsError}
         onRetryCatalogs={() => {
           void typesQuery.refetch()
-          void unitsQuery.refetch()
+          void offices.refetch()
         }}
       /> : <VacationsReportFilters
         value={vacationFilters}

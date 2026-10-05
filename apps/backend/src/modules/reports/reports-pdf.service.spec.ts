@@ -143,6 +143,26 @@ describe('ReportsPdfService', () => {
     expect(text.match(/No asignado/g)).toHaveLength(2);
   });
 
+  it('renders the selected office in the applied PDF filters', async () => {
+    const officeFilteredReport: IncidentsReportModel = {
+      ...report,
+      filters: { officeId: 'office-1', includeCancelled: false },
+      items: [
+        {
+          ...report.items[0],
+          office: { id: 'office-1', name: 'Oficina Acapulco' },
+        },
+      ],
+    };
+
+    const pdf = await service.generate(officeFilteredReport);
+    const text = extractTextOps(pdf.toString('latin1'))
+      .map((operation) => operation.text)
+      .join(' ');
+
+    expect(text).toContain('Oficina: Oficina Acapulco');
+  });
+
   it('uses the institutional portrait letter format', async () => {
     const pdf = await service.generate(report);
 
