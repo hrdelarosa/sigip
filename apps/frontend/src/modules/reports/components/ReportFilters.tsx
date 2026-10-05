@@ -28,8 +28,11 @@ import type { ReportFortnightOption, ReportPeriodType } from '@sigip/shared'
 
 import {
   MONTH_OPTIONS,
+  ALL_REPORT_FILTERS_VALUE,
   buildYearOptions,
   formatPeriodLabel,
+  fromReportFilterSelectValue,
+  toReportFilterSelectValue,
   type ReportsFilterState,
 } from '../lib/report-filters'
 
@@ -385,8 +388,10 @@ function FilterSelect({
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Select
-        value={value}
-        onValueChange={onValueChange}
+        value={toReportFilterSelectValue(value)}
+        onValueChange={(nextValue) =>
+          onValueChange(fromReportFilterSelectValue(nextValue))
+        }
         disabled={disabled}
       >
         <SelectTrigger id={id}>
@@ -397,7 +402,7 @@ function FilterSelect({
         <SelectContent>
           <SelectGroup>
             <SelectLabel>{label}</SelectLabel>
-            <SelectItem value="">{placeholder}</SelectItem>
+            <SelectItem value={ALL_REPORT_FILTERS_VALUE}>{placeholder}</SelectItem>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}

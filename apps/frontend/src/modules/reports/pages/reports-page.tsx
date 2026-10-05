@@ -20,6 +20,7 @@ import { useIncidentsReport } from '../hooks/use-incidents-report'
 import {
   buildIncidentsReportFilters,
   isReportFilterValid,
+  toReportSearchParams,
   type ReportsFilterState,
 } from '../lib/report-filters'
 import { reportSearchParams } from '../queries/report-search-params'
@@ -121,7 +122,7 @@ export function ReportsPage() {
   }
 
   function handleChange(next: ReportsFilterState) {
-    void setFilters(next)
+    void setFilters(toReportSearchParams(next))
     setPreviewEnabled(false)
   }
 
