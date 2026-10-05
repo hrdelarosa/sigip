@@ -8,7 +8,7 @@ import type { IncidentsReportModel } from './models/incidents-report.model';
 import type { VacationsReportModel } from './models/vacations-report.model';
 
 const PAGE_MARGIN = 42;
-const FOOTER_MARGIN = 30;
+const FOOTER_MARGIN = 60;
 const HEADER_IMAGE_FILE = 'institutional-header.jpeg';
 
 type PdfWithOpenImage = PDFKit.PDFDocument & {
@@ -515,13 +515,13 @@ export class ReportsPdfService {
       doc,
       [
         { header: 'No.', fraction: 0.04, align: 'center' },
-        { header: 'No. empleado', fraction: 0.09 },
-        { header: 'Nombre', fraction: 0.2 },
-        { header: 'Unidad', fraction: 0.16 },
-        { header: 'Puesto', fraction: 0.14 },
+        { header: 'No. empleado', fraction: 0.1 },
+        { header: 'Nombre', fraction: 0.18 },
+        { header: 'Unidad', fraction: 0.14 },
+        { header: 'Puesto', fraction: 0.15 },
         { header: 'Tipo', fraction: 0.14 },
         { header: 'Fecha(s)', fraction: 0.17 },
-        { header: 'Estado', fraction: 0.06, align: 'center' },
+        { header: 'Estado', fraction: 0.08, align: 'center' },
       ],
       rows,
       { fontSize: 7 },
@@ -529,22 +529,35 @@ export class ReportsPdfService {
   }
 
   private renderSectionHeading(doc: PDFKit.PDFDocument, title: string): void {
-    if (doc.y + 48 > doc.page.height - FOOTER_MARGIN) {
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+    const headingHeight = 20;
+
+    if (doc.y + headingHeight + 8 > doc.page.height - FOOTER_MARGIN) {
       doc.addPage();
       doc.y = PAGE_MARGIN;
     }
 
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.text).text(title);
+    const top = doc.y;
+    doc.rect(PAGE_MARGIN, top, contentWidth, headingHeight).fill(COLORS.light);
 
-    const lineY = doc.y + 3;
     doc
-      .moveTo(PAGE_MARGIN, lineY)
-      .lineTo(doc.page.width - PAGE_MARGIN, lineY)
-      .strokeColor(COLORS.text)
-      .lineWidth(0.5)
+      .font('Helvetica-Bold')
+      .fontSize(9)
+      .fillColor(COLORS.text)
+      .text(title, PAGE_MARGIN + 8, top + 5, {
+        width: contentWidth - 16,
+        lineBreak: false,
+      });
+
+    doc
+      .moveTo(PAGE_MARGIN, top + headingHeight)
+      .lineTo(doc.page.width - PAGE_MARGIN, top + headingHeight)
+      .strokeColor(COLORS.border)
+      .lineWidth(0.35)
       .stroke();
 
-    doc.y = lineY + 7;
+    doc.x = PAGE_MARGIN;
+    doc.y = top + headingHeight + 8;
   }
 
   /**
@@ -789,7 +802,7 @@ export class ReportsPdfService {
     ) {
       doc.switchToPage(pageIndex);
 
-      const footerY = doc.page.height - 28;
+      const footerY = doc.page.height - PAGE_MARGIN - 12;
       doc
         .moveTo(PAGE_MARGIN, footerY - 5)
         .lineTo(doc.page.width - PAGE_MARGIN, footerY - 5)
