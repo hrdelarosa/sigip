@@ -20,12 +20,14 @@ export interface EmployeeResponse {
 export type EmployeesResponse = PaginatedResponse<EmployeeResponse>;
 
 export interface CreateEmployeeRequest {
+  officeId?: string;
   employeeNumber: string;
   fullName: string;
   hireDate?: string | null;
 }
 
 export interface UpdateEmployeeRequest {
+  officeId?: string;
   employeeNumber?: string;
   fullName?: string;
   hireDate?: string | null;

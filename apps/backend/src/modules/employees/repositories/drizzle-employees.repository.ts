@@ -41,6 +41,8 @@ import type {
 } from '../types/employees.types';
 import { EmployeesRepository } from './employees.repository';
 import { EmployeeHasCurrentOrFutureAssignmentsError } from '../employees.errors';
+import { AuditService } from '../../audit/audit.service';
+import type { EmployeeAuditContext } from '../types/employees.types';
 
 type EmployeeAssignmentDetailsRow = {
   assignment: typeof employeeAssignments.$inferSelect;
@@ -58,6 +60,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
   constructor(
     @Inject(DRIZZLE_DATABASE)
     private readonly db: DrizzleDatabase,
+    private readonly auditService: AuditService,
   ) {}
 
   private toEmployeeModel(row: EmployeeRowWithOffice): EmployeeModel {
@@ -288,7 +291,10 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     return row ? this.toEmployeeModel(row) : null;
   }
 
-  async create(data: CreateEmployeeData): Promise<EmployeeModel> {
+  async create(
+    data: CreateEmployeeData,
+    actor?: EmployeeAuditContext,
+  ): Promise<EmployeeModel> {
     const values = {
       id: uuidToBuffer(data.id),
       officeId: uuidToBuffer(data.officeId),
@@ -298,7 +304,24 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
       status: data.status,
     } satisfies typeof employees.$inferInsert;
 
-    await this.db.insert(employees).values(values);
+    await this.db.transaction(async (tx) => {
+      await tx.insert(employees).values(values);
+      if (actor)
+        await this.auditService.append(
+          {
+            ...actor,
+            action: 'CREATED',
+            entityType: 'EMPLOYEE',
+            entityId: data.id,
+            newValues: {
+              officeId: data.officeId,
+              employeeNumber: data.employeeNumber,
+              fullName: data.fullName,
+            },
+          },
+          tx,
+        );
+    });
 
     const employee = await this.findById(data.id);
 
@@ -312,6 +335,7 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     id: string,
     data: UpdateEmployeeData,
     officeId?: string,
+    actor?: EmployeeAuditContext,
   ): Promise<EmployeeModel | null> {
     const values: Partial<typeof employees.$inferInsert> = {
       updatedAt: data.updatedAt,
@@ -323,18 +347,56 @@ export class DrizzleEmployeesRepository implements EmployeesRepository {
     if (data.fullName !== undefined) values.fullName = data.fullName;
 
     if (data.hireDate !== undefined) values.hireDate = data.hireDate;
+    if (data.officeId !== undefined)
+      values.officeId = uuidToBuffer(data.officeId);
 
-    await this.db
-      .update(employees)
-      .set(values)
-      .where(
-        and(
-          eq(employees.id, uuidToBuffer(id)),
-          officeId ? eq(employees.officeId, uuidToBuffer(officeId)) : undefined,
-        ),
-      );
+    await this.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(employees)
+        .where(
+          and(
+            eq(employees.id, uuidToBuffer(id)),
+            officeId
+              ? eq(employees.officeId, uuidToBuffer(officeId))
+              : undefined,
+          ),
+        )
+        .for('update');
+      if (!current) return;
+      if (
+        data.officeId !== undefined &&
+        !current.officeId.equals(uuidToBuffer(data.officeId))
+      ) {
+        await tx
+          .update(employeeAssignments)
+          .set({ officeId: uuidToBuffer(data.officeId) })
+          .where(eq(employeeAssignments.employeeId, uuidToBuffer(id)));
+      }
+      await tx
+        .update(employees)
+        .set(values)
+        .where(eq(employees.id, uuidToBuffer(id)));
+      if (actor)
+        await this.auditService.append(
+          {
+            ...actor,
+            action: 'UPDATED',
+            entityType: 'EMPLOYEE',
+            entityId: id,
+            oldValues: { officeId: bufferToUuid(current.officeId) },
+            newValues: {
+              officeId: data.officeId ?? bufferToUuid(current.officeId),
+            },
+          },
+          tx,
+        );
+    });
 
-    return this.findById(id, officeId);
+    return this.findById(
+      id,
+      data.officeId === undefined ? officeId : undefined,
+    );
   }
 
   async updateStatus(

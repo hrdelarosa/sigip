@@ -26,11 +26,15 @@ export abstract class EmployeesRepository {
     employeeNumber: string,
     officeId?: string,
   ): Promise<EmployeeModel | null>;
-  abstract create(data: CreateEmployeeData): Promise<EmployeeModel>;
+  abstract create(
+    data: CreateEmployeeData,
+    auditContext?: import('../types/employees.types').EmployeeAuditContext,
+  ): Promise<EmployeeModel>;
   abstract update(
     id: string,
     data: UpdateEmployeeData,
     officeId?: string,
+    auditContext?: import('../types/employees.types').EmployeeAuditContext,
   ): Promise<EmployeeModel | null>;
   abstract updateStatus(
     id: string,

@@ -5,12 +5,17 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
 } from 'class-validator';
 import { trimString } from './employee-dto.transforms';
 
 export class CreateEmployeeDto implements CreateEmployeeRequest {
+  @IsOptional()
+  @IsUUID('7')
+  officeId?: string;
+
   @Transform(trimString)
   @IsString()
   @IsNotEmpty()

@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsNotEmpty,
   IsString,
+  IsUUID,
   Length,
   Matches,
   ValidateIf,
@@ -11,6 +12,10 @@ import {
 import { trimString } from './employee-dto.transforms';
 
 export class UpdateEmployeeDto implements UpdateEmployeeRequest {
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @IsUUID('7')
+  officeId?: string;
+
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @Transform(trimString)
   @IsString()

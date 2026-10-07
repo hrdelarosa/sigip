@@ -8,6 +8,12 @@
 
 **Fase activa:** tipos documentales e integración transversal restante de auditoría
 
+### Oficina de empleados
+
+El alta permite seleccionar oficina (por omisión, la oficina del actor; selección de otra oficina requiere `offices:access-all`). La edición admite cambiar oficina como corrección retrospectiva completa: se actualizan `employees.officeId` y todas sus asignaciones, conservando IDs y demás datos. Incidencias y documentos relacionados no se modifican; su historial se clasifica según la oficina actual del empleado. El cambio se audita en la misma transacción. Una oficina destino debe existir y estar activa.
+
+El selector de oficina del alta y edición consulta `GET /api/employees/office-options`, no el catálogo general: basta `employees:create` o `employees:update`, sin requerir `catalogs:read`. Devuelve sólo oficinas activas dentro del alcance del actor (su oficina o todas con `offices:access-all`). El endpoint general de oficinas conserva `catalogs:read`; el backend valida siempre alcance y oficina destino.
+
 ## 1. Propósito del documento
 
 Este archivo concentra las decisiones vigentes del proyecto y debe utilizarse como contexto principal para continuar el análisis, diseño e implementación del sistema en futuras conversaciones.
