@@ -166,13 +166,13 @@ export const commissionAnnexSchema = z
 
 export const createIncidentFormSchema = incidentFormSchema.superRefine(
   (values, context) => {
-    if (!values.file) {
+    if (!values.file && values.incidentTypeCode !== 'COMISION') {
       context.addIssue({
         code: 'custom',
         path: ['file'],
         message: 'Seleccione un archivo PDF',
       })
-    } else {
+    } else if (values.file) {
       const fileResult = incidentFileSchema.safeParse(values.file)
 
       if (!fileResult.success) {

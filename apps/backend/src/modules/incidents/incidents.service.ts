@@ -19,6 +19,7 @@ import {
   IncidentEmployeeNotFoundError,
   IncidentFormDocumentTypeMissingError,
   IncidentFormRequiredError,
+  CommissionIncidentFormNotAllowedError,
   IncidentNotFoundError,
   IncidentOutsideAssignmentPeriodError,
   IncidentPersistenceError,
@@ -38,7 +39,10 @@ import { IncidentsRepository } from './repositories/incidents.repository';
 import { getOfficeScope } from '../../common/authorization/office-scope';
 import { DocumentsRepository } from '../documents/repositories/documents.repository';
 
-import type { IncidentOccurrenceData } from './types/incidents.types';
+import type {
+  CreateIncidentData,
+  IncidentOccurrenceData,
+} from './types/incidents.types';
 import type { UploadedMemoryFile } from '../../common/types/uploaded-memory-file.type';
 import {
   getVacationPeriodFromCode,
@@ -291,10 +295,6 @@ export class IncidentsService {
     actor: AuthenticatedUserModel,
     commissionAnnex?: UploadedMemoryFile,
   ) {
-    if (!file) {
-      throw new IncidentFormRequiredError();
-    }
-
     const scope = getOfficeScope(actor);
     const officeId = scope.canAccessAllOffices ? undefined : scope.officeId;
     const occurrences = this.normalizeOccurrences(dto.occurrences);
@@ -355,7 +355,17 @@ export class IncidentsService {
       getVacationPeriodFromCode(context.incidentType.code),
     );
 
-    if (!context.formDocumentType) {
+    const isCommission = context.incidentType.code === 'COMISION';
+
+    if (isCommission && file) {
+      throw new CommissionIncidentFormNotAllowedError();
+    }
+
+    if (!isCommission && !file) {
+      throw new IncidentFormRequiredError();
+    }
+
+    if (!isCommission && !context.formDocumentType) {
       throw new IncidentFormDocumentTypeMissingError();
     }
 
@@ -399,16 +409,17 @@ export class IncidentsService {
     const storedPaths: string[] = [];
 
     try {
-      const formDocumentId = generateUuidV7();
-      const storedForm = await this.storage.storeIncidentDocument(
-        incidentId,
-        formDocumentId,
-        file,
-      );
-      storedPaths.push(storedForm.storagePath);
+      const documents: CreateIncidentData['documents'] = [];
 
-      const documents = [
-        {
+      if (file && context.formDocumentType) {
+        const formDocumentId = generateUuidV7();
+        const storedForm = await this.storage.storeIncidentDocument(
+          incidentId,
+          formDocumentId,
+          file,
+        );
+        storedPaths.push(storedForm.storagePath);
+        documents.push({
           id: formDocumentId,
           documentTypeId: context.formDocumentType.id,
           originalName: file.originalname,
@@ -418,8 +429,8 @@ export class IncidentsService {
           sizeBytes: file.size,
           contentHash: storedForm.contentHash,
           uploadedBy: actor.userId,
-        },
-      ];
+        });
+      }
 
       if (commissionAnnex && context.commissionDocumentType) {
         const annexDocumentId = generateUuidV7();

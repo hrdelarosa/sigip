@@ -10,6 +10,7 @@ import {
   InvalidIncidentTemporalModeError,
   IncidentVacationNotEligibleError,
   IncidentVacationPeriodNotAvailableError,
+  IncidentFormRequiredError,
   InvalidIncidentAssignmentError,
 } from './incidents.errors';
 import { IncidentsService } from './incidents.service';
@@ -105,6 +106,64 @@ describe('IncidentsService', () => {
 
     expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('creates a commission incident without documents and without format configuration', async () => {
+    repository.findCreationContext.mockResolvedValue({
+      ...buildCreationContext('COMISION'),
+      formDocumentType: null,
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(buildCreateDto(), undefined, actor);
+
+    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ documents: [] }),
+    );
+  });
+
+  it('still requires a format for non-commission incidents', async () => {
+    repository.findCreationContext.mockResolvedValue(
+      buildCreationContext('PERMISO'),
+    );
+
+    await expect(
+      service.create(buildCreateDto(), undefined, actor),
+    ).rejects.toBeInstanceOf(IncidentFormRequiredError);
+
+    expect(storage.storeIncidentDocument).not.toHaveBeenCalled();
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('creates a commission incident with only the optional commission letter', async () => {
+    repository.findCreationContext.mockResolvedValue(
+      buildCreationContext('COMISION'),
+    );
+    storage.storeIncidentDocument.mockResolvedValue({
+      storedName: 'stored.pdf',
+      storagePath: 'path',
+      contentHash: 'hash',
+    });
+    repository.create.mockResolvedValue(buildIncident());
+
+    await service.create(
+      buildCreateDto(),
+      undefined,
+      actor,
+      buildFile('oficio.pdf', 100),
+    );
+
+    expect(storage.storeIncidentDocument).toHaveBeenCalledTimes(1);
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documents: [
+          expect.objectContaining({
+            documentTypeId: 'commission-document-type-id',
+          }),
+        ],
+      }),
+    );
   });
 
   it.each(['VACACIONES_PRIMER_PERIODO', 'VACACIONES_SEGUNDO_PERIODO'])(
@@ -396,26 +455,20 @@ describe('IncidentsService', () => {
     expect(repository.update).not.toHaveBeenCalled();
   });
 
-  it('stores the optional commission annex with the principal form', async () => {
+  it('stores only the optional commission annex', async () => {
     repository.findCreationContext.mockResolvedValue(
       buildCreationContext('COMISION'),
     );
-    storage.storeIncidentDocument
-      .mockResolvedValueOnce({
-        storedName: 'form.pdf',
-        storagePath: 'incidents/id/form.pdf',
-        contentHash: 'form-hash',
-      })
-      .mockResolvedValueOnce({
-        storedName: 'annex.pdf',
-        storagePath: 'incidents/id/annex.pdf',
-        contentHash: 'annex-hash',
-      });
+    storage.storeIncidentDocument.mockResolvedValueOnce({
+      storedName: 'annex.pdf',
+      storagePath: 'incidents/id/annex.pdf',
+      contentHash: 'annex-hash',
+    });
     repository.create.mockResolvedValue(buildIncident());
 
     await service.create(
       buildCreateDto(),
-      buildFile('formato.pdf', 100),
+      undefined,
       actor,
       buildFile('oficio.pdf', 200),
     );
@@ -424,18 +477,12 @@ describe('IncidentsService', () => {
     const createData = repository.create.mock.calls[0]?.[0];
     expect(createData).toBeDefined();
     if (!createData) throw new Error('Expected incident creation data');
-    expect(createData.documents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          documentTypeId: 'form-document-type-id',
-          originalName: 'formato.pdf',
-        }),
-        expect.objectContaining({
-          documentTypeId: 'commission-document-type-id',
-          originalName: 'oficio.pdf',
-        }),
-      ]),
-    );
+    expect(createData.documents).toEqual([
+      expect.objectContaining({
+        documentTypeId: 'commission-document-type-id',
+        originalName: 'oficio.pdf',
+      }),
+    ]);
   });
 
   it('rejects a commission annex for another incident type', async () => {

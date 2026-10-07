@@ -180,6 +180,14 @@ describe('createIncidentFormSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts commission creation without a format or commission letter', () => {
+    const result = createIncidentFormSchema.safeParse({
+      ...createValues,
+      incidentTypeCode: 'COMISION',
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('rejects a format file larger than 10 MB', () => {
     const result = createIncidentFormSchema.safeParse({
       ...createValues,

@@ -118,6 +118,10 @@ export function useIncidentContextFields(
     setValue('incidentTypeId', value ?? '', { shouldValidate: true })
     setValue('incidentTypeCode', incidentType?.code ?? '')
 
+    if (incidentType?.code === 'COMISION') {
+      setValue('file', null, { shouldValidate: true })
+    }
+
     if (incidentType?.code !== 'COMISION') {
       setValue('commissionAnnex', null)
     }
