@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import type {
   EmployeeAssignmentResponse,
@@ -53,12 +54,32 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUserModel } from '../auth/models/authenticated-user.model';
 import { CreateVacationAdjustmentDto } from './dto/create-vacation-adjustment.dto';
+import { OfficesService } from '../offices/offices.service';
+import { EmployeeOfficeOptionsGuard } from './employee-office-options.guard';
 
 @Controller('employees')
 @ApiTags('Employees')
 @RequirePermissions('employees:read')
 export class EmployeesController {
-  constructor(private readonly employeesService: EmployeesService) {}
+  constructor(
+    private readonly employeesService: EmployeesService,
+    private readonly officesService: OfficesService,
+  ) {}
+
+  @Get('office-options')
+  @RequirePermissions()
+  @UseGuards(EmployeeOfficeOptionsGuard)
+  async findOfficeOptions(@CurrentUser() actor: AuthenticatedUserModel) {
+    const offices = await this.officesService.findAll();
+    return offices
+      .filter(
+        (office) =>
+          office.isActive &&
+          (actor.permissions.includes('offices:access-all') ||
+            office.id === actor.office.id),
+      )
+      .map(({ id, name, code }) => ({ id, name, code }));
+  }
 
   @Get()
   @ApiOperation({ summary: 'Listar empleados con paginación y filtros' })

@@ -4,10 +4,15 @@ import { EmployeesService } from './employees.service';
 import { EmployeesRepository } from './repositories/employees.repository';
 import { EmployeeControlsRepository } from './repositories/employee-controls.repository';
 import { VacationAdjustmentBalanceError } from './employees.errors';
+import { OfficesService } from '../offices/offices.service';
+import { EmployeeNotFoundError } from './employees.errors';
 
 describe('EmployeesService controls', () => {
   const employeesRepository = {
     findById: jest.fn(),
+    findByEmployeeNumber: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
     findAssignmentsByEmployeeId: jest.fn(),
     createAssignment: jest.fn(),
   };
@@ -15,6 +20,7 @@ describe('EmployeesService controls', () => {
     findSnapshot: jest.fn(),
     createVacationAdjustment: jest.fn(),
   };
+  const officesService = { ensureActive: jest.fn().mockResolvedValue({}) };
   const actor: AuthenticatedUserModel = {
     userId: 'user-id',
     sessionId: 'session-id',
@@ -34,6 +40,10 @@ describe('EmployeesService controls', () => {
         EmployeesService,
         { provide: EmployeesRepository, useValue: employeesRepository },
         { provide: EmployeeControlsRepository, useValue: controlsRepository },
+        {
+          provide: OfficesService,
+          useValue: officesService,
+        },
       ],
     }).compile();
     service = module.get(EmployeesService);
@@ -136,5 +146,144 @@ describe('EmployeesService controls', () => {
         positionId: 'position-id',
       }),
     );
+  });
+
+  it('creates an employee in the requested office only with global office access', async () => {
+    const globalActor = {
+      ...actor,
+      permissions: ['employees:create', 'offices:access-all'],
+    };
+    employeesRepository.create.mockResolvedValue({ id: 'new-id' });
+    await service.create(
+      {
+        officeId: 'target-office',
+        employeeNumber: '002',
+        fullName: 'Nueva Persona',
+      },
+      globalActor,
+    );
+    expect(employeesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ officeId: 'target-office' }),
+      expect.objectContaining({ userId: actor.userId }),
+    );
+  });
+
+  it('defaults a compatible create request to the actor office', async () => {
+    employeesRepository.create.mockResolvedValue({ id: 'new-id' });
+    await service.create(
+      { employeeNumber: '004', fullName: 'Default office' },
+      actor,
+    );
+    expect(employeesRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({ officeId: 'office-id' }),
+      expect.any(Object),
+    );
+  });
+
+  it('rejects a local actor requesting another office', async () => {
+    await expect(
+      service.create(
+        {
+          officeId: 'other-office',
+          employeeNumber: '002',
+          fullName: 'Nueva Persona',
+        },
+        actor,
+      ),
+    ).rejects.toThrow('No puedes administrar empleados de otra oficina');
+    expect(employeesRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('does not reset an employee office when update omits officeId', async () => {
+    const current = {
+      id: 'employee-id',
+      officeId: 'different-current-office',
+      employeeNumber: '001',
+      fullName: 'Persona',
+    };
+    employeesRepository.findById.mockResolvedValue(current);
+    employeesRepository.update.mockResolvedValue(current);
+    await service.update(
+      'employee-id',
+      { fullName: 'Persona editada' },
+      { ...actor, permissions: ['employees:update', 'offices:access-all'] },
+    );
+    expect(employeesRepository.update).toHaveBeenCalledWith(
+      'employee-id',
+      expect.objectContaining({ officeId: undefined }),
+      undefined,
+      expect.any(Object),
+    );
+  });
+
+  it('does not reset office B when a global actor from office A edits employee B', async () => {
+    const employeeB = {
+      id: 'employee-id',
+      officeId: 'office-b',
+      employeeNumber: '001',
+      fullName: 'Persona',
+    };
+    employeesRepository.findById.mockResolvedValue(employeeB);
+    employeesRepository.update.mockResolvedValue(employeeB);
+
+    await service.update(
+      'employee-id',
+      { fullName: 'Editado' },
+      {
+        ...actor,
+        office: { id: 'office-a', code: 'A', name: 'A' },
+        permissions: ['employees:update', 'offices:access-all'],
+      },
+    );
+
+    expect(employeesRepository.update).toHaveBeenCalledWith(
+      'employee-id',
+      expect.objectContaining({ officeId: undefined }),
+      undefined,
+      expect.any(Object),
+    );
+  });
+
+  it('requires access to the employee source office before changing its office', async () => {
+    employeesRepository.findById.mockResolvedValue(null);
+    await expect(
+      service.update('employee-id', { officeId: 'office-b' }, actor),
+    ).rejects.toBeInstanceOf(EmployeeNotFoundError);
+    expect(officesService.ensureActive).not.toHaveBeenCalled();
+  });
+
+  it('rejects a local actor changing an employee to a different destination office', async () => {
+    employeesRepository.findById.mockResolvedValue({
+      id: 'employee-id',
+      officeId: 'office-id',
+      employeeNumber: '001',
+      fullName: 'Persona',
+    });
+    await expect(
+      service.update('employee-id', { officeId: 'office-b' }, actor),
+    ).rejects.toThrow('No puedes administrar empleados de otra oficina');
+    expect(officesService.ensureActive).not.toHaveBeenCalled();
+    expect(employeesRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('checks that a requested destination office is active', async () => {
+    const globalActor = {
+      ...actor,
+      permissions: ['employees:create', 'offices:access-all'],
+    };
+    officesService.ensureActive.mockRejectedValueOnce(
+      new Error('office unavailable'),
+    );
+    await expect(
+      service.create(
+        {
+          officeId: 'inactive-office',
+          employeeNumber: '003',
+          fullName: 'Persona',
+        },
+        globalActor,
+      ),
+    ).rejects.toThrow('office unavailable');
+    expect(employeesRepository.create).not.toHaveBeenCalled();
   });
 });

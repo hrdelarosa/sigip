@@ -11,6 +11,7 @@ const optionalDate = z
   .transform((value) => value || null)
 
 export const createEmployeeFormSchema = z.object({
+  officeId: z.string().uuid('Seleccione una oficina válida'),
   employeeNumber: z
     .string()
     .trim()

@@ -23,10 +23,16 @@ export interface CreateEmployeeData {
 }
 
 export interface UpdateEmployeeData {
+  officeId?: string;
   employeeNumber?: string;
   fullName?: string;
   hireDate?: Date | null;
   updatedAt: Date;
+}
+
+export interface EmployeeAuditContext {
+  userId: string;
+  sessionId: string;
 }
 
 export interface CreateEmployeeAssignmentData {

@@ -11,18 +11,27 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { useValidatedForm } from '@/hooks/useValidatedForm'
 import { useCreateEmployee } from '../hooks/useCreateEmployee'
 import { EmployeeDatePickerField } from './EmployeeDatePickerField'
+import { useEmployeeOfficeOptions } from '../hooks/useEmployeeOfficeOptions'
+import { UserOfficeField } from '@/modules/administration/users/components/UserOfficeField'
+import { useAuth, hasPermission } from '@/modules/auth/hooks/useAuth'
 
 export default function EmployeeCreate() {
   const [open, setOpen] = useState(false)
   const createMutation = useCreateEmployee()
+  const officesQuery = useEmployeeOfficeOptions()
+  const auth = useAuth()
+  const canChooseOffice = hasPermission(auth.data?.permissions, 'offices:access-all')
+  const availableOffices = officesQuery.data ?? []
   const { register, handleSubmit, errors, reset, control } = useValidatedForm({
     formSchema: createEmployeeFormSchema,
     defaultValues: {
+      officeId: auth.data?.office.id ?? '',
       employeeNumber: '',
       fullName: '',
       hireDate: '',
     },
-    onSubmit: (data) => {
+      onSubmit: (data) => {
+        if (!canChooseOffice) data.officeId = auth.data?.office.id ?? ''
       createMutation.mutate(
         { input: data },
         {
@@ -86,6 +95,9 @@ export default function EmployeeCreate() {
           {errors.employeeNumber?.message}
         </FieldError>
       </Field>
+
+      <Controller name="officeId" control={control} render={({ field, fieldState }) => <UserOfficeField id="employee-office" offices={canChooseOffice ? availableOffices : availableOffices.filter((office) => office.id === auth.data?.office.id)} value={field.value} onChange={field.onChange} error={fieldState.error?.message} disabled={createMutation.isPending || !canChooseOffice || officesQuery.isError || officesQuery.isPending} nameOnly />} />
+      {officesQuery.isError ? <div role="alert">No se pudieron cargar las oficinas. <Button type="button" variant="link" onClick={() => officesQuery.refetch()}>Reintentar</Button></div> : null}
 
       <Field data-invalid={!!errors.fullName} className="gap-1.5">
         <FieldLabel htmlFor="employee-full-name">Nombre completo</FieldLabel>

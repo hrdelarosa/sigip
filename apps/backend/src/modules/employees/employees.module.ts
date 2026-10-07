@@ -6,12 +6,15 @@ import { EmployeesRepository } from './repositories/employees.repository';
 import { AuditModule } from '../audit/audit.module';
 import { EmployeeControlsRepository } from './repositories/employee-controls.repository';
 import { DrizzleEmployeeControlsRepository } from './repositories/drizzle-employee-controls.repository';
+import { OfficesModule } from '../offices/offices.module';
+import { EmployeeOfficeOptionsGuard } from './employee-office-options.guard';
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, OfficesModule],
   controllers: [EmployeesController],
   providers: [
     EmployeesService,
+    EmployeeOfficeOptionsGuard,
     {
       provide: EmployeesRepository,
       useClass: DrizzleEmployeesRepository,

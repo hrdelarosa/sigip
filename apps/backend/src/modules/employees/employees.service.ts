@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 
 import { generateUuidV7 } from '../../common/utils/generate-uuid-v7.util';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -38,12 +38,14 @@ import { institutionalCalendarDate } from '../../common/vacation/vacation-contro
 import { CreateVacationAdjustmentDto } from './dto/create-vacation-adjustment.dto';
 import { VacationAdjustmentBalanceError } from './employees.errors';
 import { getOfficeScope } from '../../common/authorization/office-scope';
+import { OfficesService } from '../offices/offices.service';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     private readonly employeesRepository: EmployeesRepository,
     private readonly employeeControlsRepository: EmployeeControlsRepository,
+    private readonly officesService: OfficesService,
   ) {}
 
   private parseDate(value: string): Date {
@@ -240,18 +242,28 @@ export class EmployeesService {
   ): Promise<EmployeeModel> {
     const employeeNumber = dto.employeeNumber.trim();
     const fullName = dto.fullName.trim();
+    const scope = getOfficeScope(actor);
+    const officeId = dto.officeId ?? scope.officeId;
+    if (!scope.canAccessAllOffices && officeId !== scope.officeId)
+      throw new ForbiddenException(
+        'No puedes administrar empleados de otra oficina',
+      );
+    await this.officesService.ensureActive(officeId);
 
     await this.ensureEmployeeNumberAvailable(employeeNumber);
 
     try {
-      return await this.employeesRepository.create({
-        id: generateUuidV7(),
-        officeId: getOfficeScope(actor).officeId,
-        employeeNumber,
-        fullName,
-        hireDate: this.parseNullableDate(dto.hireDate),
-        status: 'ACTIVE',
-      });
+      return await this.employeesRepository.create(
+        {
+          id: generateUuidV7(),
+          officeId,
+          employeeNumber,
+          fullName,
+          hireDate: this.parseNullableDate(dto.hireDate),
+          status: 'ACTIVE',
+        },
+        { userId: actor.userId, sessionId: actor.sessionId },
+      );
     } catch (error) {
       this.handleEmployeePersistenceError(error, employeeNumber);
     }
@@ -265,13 +277,22 @@ export class EmployeesService {
     if (
       dto.employeeNumber === undefined &&
       dto.fullName === undefined &&
-      dto.hireDate === undefined
+      dto.hireDate === undefined &&
+      dto.officeId === undefined
     ) {
       throw new EmptyEmployeeUpdateError();
     }
 
     const scope = getOfficeScope(actor);
     const current = await this.findById(id, actor);
+    const targetOfficeId = dto.officeId ?? current.officeId;
+    if (dto.officeId !== undefined) {
+      if (!scope.canAccessAllOffices && targetOfficeId !== scope.officeId)
+        throw new ForbiddenException(
+          'No puedes administrar empleados de otra oficina',
+        );
+      await this.officesService.ensureActive(targetOfficeId);
+    }
     const employeeNumber = dto.employeeNumber?.trim();
 
     if (employeeNumber && employeeNumber !== current.employeeNumber) {
@@ -285,6 +306,7 @@ export class EmployeesService {
         id,
         {
           employeeNumber,
+          officeId: dto.officeId,
           fullName: dto.fullName?.trim(),
           hireDate:
             dto.hireDate !== undefined
@@ -293,6 +315,7 @@ export class EmployeesService {
           updatedAt: new Date(),
         },
         scope.canAccessAllOffices ? undefined : scope.officeId,
+        { userId: actor.userId, sessionId: actor.sessionId },
       );
     } catch (error) {
       this.handleEmployeePersistenceError(
