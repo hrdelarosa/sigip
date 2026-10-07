@@ -21,7 +21,7 @@ export function useIncidentSubmit(
   async function submit(values: IncidentFormValues) {
     if (!incident) {
       const file = values.file
-      if (!file) return
+      if (!file && values.incidentTypeCode !== 'COMISION') return
 
       try {
         const created = await createMutation.mutateAsync({
@@ -30,7 +30,9 @@ export function useIncidentSubmit(
           commissionAnnex: values.commissionAnnex ?? undefined,
         })
         toast.success('Incidencia registrada', {
-          description: `El formato de ${created.employee.fullName} quedó resguardado.`,
+          description: file
+            ? `El formato de ${created.employee.fullName} quedó resguardado.`
+            : `La comisión de ${created.employee.fullName} quedó registrada.`,
         })
         onSuccess(created)
       } catch (error) {

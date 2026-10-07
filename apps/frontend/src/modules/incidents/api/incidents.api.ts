@@ -122,14 +122,14 @@ export function createIncident({
   commissionAnnex,
 }: {
   input: CreateIncidentInput
-  file: File
+  file: File | null
   commissionAnnex?: File
 }): Promise<Incident> {
   const formData = new FormData()
 
   formData.append('data', JSON.stringify(input))
 
-  formData.append('file', file)
+  if (file) formData.append('file', file)
   if (commissionAnnex) formData.append('commissionAnnex', commissionAnnex)
 
   return apiRequest<Incident>('/incidents', {

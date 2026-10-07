@@ -97,7 +97,7 @@ export class IncidentsController {
     const file = validatePdfUpload(
       files?.file?.[0],
       MAX_INCIDENT_FILE_SIZE,
-      true,
+      false,
       'El formato de incidencia',
     );
     const commissionAnnex = validatePdfUpload(

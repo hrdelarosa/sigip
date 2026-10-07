@@ -407,20 +407,22 @@ export class DrizzleIncidentsRepository implements IncidentsRepository {
           })),
         );
 
-        await tx.insert(documents).values(
-          data.documents.map((document) => ({
-            id: uuidToBuffer(document.id),
-            incidentId: uuidToBuffer(data.incident.id),
-            documentTypeId: uuidToBuffer(document.documentTypeId),
-            originalName: document.originalName,
-            storedName: document.storedName,
-            storagePath: document.storagePath,
-            mimeType: document.mimeType,
-            sizeBytes: document.sizeBytes,
-            contentHash: document.contentHash,
-            uploadedBy: uuidToBuffer(document.uploadedBy),
-          })),
-        );
+        if (data.documents.length > 0) {
+          await tx.insert(documents).values(
+            data.documents.map((document) => ({
+              id: uuidToBuffer(document.id),
+              incidentId: uuidToBuffer(data.incident.id),
+              documentTypeId: uuidToBuffer(document.documentTypeId),
+              originalName: document.originalName,
+              storedName: document.storedName,
+              storagePath: document.storagePath,
+              mimeType: document.mimeType,
+              sizeBytes: document.sizeBytes,
+              contentHash: document.contentHash,
+              uploadedBy: uuidToBuffer(document.uploadedBy),
+            })),
+          );
+        }
 
         await this.auditService.append(
           {

@@ -53,6 +53,10 @@ describe('downloadIncidentDocument', () => {
 })
 
 describe('createIncident', () => {
+  beforeEach(() => {
+    apiRequestMock.mockReset()
+  })
+
   it('appends the optional commission annex to the multipart request', () => {
     apiRequestMock.mockResolvedValue({})
     const file = new File(['pdf'], 'formato.pdf', { type: 'application/pdf' })
@@ -74,6 +78,47 @@ describe('createIncident', () => {
 
     const options = apiRequestMock.mock.calls[0]?.[1] as { body: FormData }
     expect(options.body.get('file')).toBe(file)
+    expect(options.body.get('commissionAnnex')).toBe(commissionAnnex)
+  })
+
+  it('omits absent format and annex from the multipart request', () => {
+    apiRequestMock.mockResolvedValue({})
+    void createIncident({
+      input: {
+        employeeId: 'employee-id',
+        employeeAssignmentId: undefined,
+        incidentTypeId: 'type-id',
+        receivedAt: '2026-08-14T12:00:00.000Z',
+        occurrences: [{ startDate: '2026-08-14' }],
+      },
+      file: null,
+    })
+
+    const options = apiRequestMock.mock.calls[0]?.[1] as { body: FormData }
+    expect(options.body.get('file')).toBeNull()
+    expect(options.body.get('commissionAnnex')).toBeNull()
+    expect([...options.body.keys()]).toEqual(['data'])
+  })
+
+  it('omits only the absent format when a commission annex is present', () => {
+    apiRequestMock.mockResolvedValue({})
+    const commissionAnnex = new File(['pdf'], 'oficio.pdf', {
+      type: 'application/pdf',
+    })
+    void createIncident({
+      input: {
+        employeeId: 'employee-id',
+        employeeAssignmentId: undefined,
+        incidentTypeId: 'type-id',
+        receivedAt: '2026-08-14T12:00:00.000Z',
+        occurrences: [{ startDate: '2026-08-14' }],
+      },
+      file: null,
+      commissionAnnex,
+    })
+
+    const options = apiRequestMock.mock.calls[0]?.[1] as { body: FormData }
+    expect(options.body.get('file')).toBeNull()
     expect(options.body.get('commissionAnnex')).toBe(commissionAnnex)
   })
 })

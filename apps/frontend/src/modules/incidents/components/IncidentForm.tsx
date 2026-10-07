@@ -132,7 +132,9 @@ export function IncidentForm({
             <CardDescription>
               {incident
                 ? 'Notas adicionales sobre la incidencia.'
-                : 'Adjunte el formato de incidencia y registre observaciones.'}
+                : incidentTypeCode === 'COMISION'
+                  ? 'Registre observaciones y, si cuenta con él, adjunte el oficio de comisión.'
+                  : 'Adjunte el formato de incidencia y registre observaciones.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
@@ -141,7 +143,7 @@ export function IncidentForm({
               register={register}
               disabled={isPending}
             />
-            {!incident ? (
+            {!incident && incidentTypeCode !== 'COMISION' ? (
               <IncidentFileField control={control} disabled={isPending} />
             ) : null}
             {!incident && incidentTypeCode === 'COMISION' ? (

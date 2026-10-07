@@ -134,6 +134,12 @@ export class IncidentFormRequiredError extends BadRequestException {
   }
 }
 
+export class CommissionIncidentFormNotAllowedError extends BadRequestException {
+  constructor() {
+    super('Las incidencias de Comisión no admiten formato de incidencia');
+  }
+}
+
 export class IncidentFormDocumentTypeMissingError extends BadRequestException {
   constructor() {
     super(
