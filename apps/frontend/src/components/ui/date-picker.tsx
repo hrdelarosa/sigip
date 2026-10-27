@@ -18,6 +18,7 @@ interface DatePickerProps {
   placeholder?: string
   disabled?: boolean
   disabledDates?: React.ComponentProps<typeof Calendar>['disabled']
+  endMonth?: React.ComponentProps<typeof Calendar>['endMonth']
   'aria-invalid'?: boolean
   'aria-describedby'?: string
   buttonClassName?: string
@@ -30,6 +31,7 @@ export function DatePicker({
   placeholder = 'Selecciona una fecha',
   disabled = false,
   disabledDates,
+  endMonth,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
   buttonClassName,
@@ -67,6 +69,7 @@ export function DatePicker({
           selected={selected}
           defaultMonth={selected}
           captionLayout="dropdown"
+          endMonth={endMonth}
           disabled={disabledDates}
           onSelect={(date) => {
             onValueChange(date ? format(date, 'yyyy-MM-dd') : '')
