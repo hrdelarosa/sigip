@@ -360,7 +360,7 @@ Use valores positivos para agregar consumo previo y negativos para corregirlo. E
 
 ### 5.9 Control de justificaciones
 
-Las justificaciones de entrada y salida comparten un máximo de **tres registros activos por empleado y mes**. El expediente muestra cuántos corresponden a entrada, cuántos a salida y cuántos quedan disponibles.
+Las justificaciones de entrada y salida comparten un máximo de **cuatro registros activos por empleado y mes de la fecha de ocurrencia**, también para el cálculo de meses históricos. El expediente muestra cuántos corresponden a entrada, cuántos a salida y cuántos quedan disponibles.
 
 La cancelación de una incidencia libera el espacio que consumía en el límite mensual.
 
@@ -469,7 +469,7 @@ _Figura 7. Tramo final del formulario con fechas, observaciones y carga del form
 
 - Año de referencia: entre 2000 y 2100.
 - Observaciones: máximo 5,000 caracteres.
-- Justificación de entrada y salida: máximo combinado de tres registros activos por empleado y mes.
+- Justificación de entrada y salida: máximo combinado de cuatro registros activos por empleado y mes de la fecha de ocurrencia, incluidos los meses históricos.
 
 ### 6.7 Consultar el expediente de una incidencia
 

@@ -38,7 +38,7 @@ export function EmployeeJustificationControl({
           <h2>Justificaciones de entrada y salida</h2>
         </CardTitle>
         <CardDescription>
-          Ambas modalidades comparten un máximo de 3 registros por mes.
+          Ambas modalidades comparten un máximo de 4 registros por mes.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -54,7 +54,7 @@ export function EmployeeJustificationControl({
             </div>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-semibold tabular-nums">
-                {current.used}/3
+                {current.used}/4
               </span>
               <Badge variant={current.remaining === 0 ? 'destructive' : 'secondary'}>
                 {current.remaining} disponibles
@@ -78,7 +78,7 @@ export function EmployeeJustificationControl({
                       Entrada {month.entryCount} · Salida {month.exitCount}
                     </p>
                   </div>
-                  <span className="font-medium tabular-nums">{month.used}/3</span>
+                  <span className="font-medium tabular-nums">{month.used}/4</span>
                 </div>
               ))}
             </div>

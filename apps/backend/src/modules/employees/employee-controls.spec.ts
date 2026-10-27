@@ -88,8 +88,39 @@ describe('buildEmployeeControls', () => {
       entryCount: 1,
       exitCount: 1,
       used: 2,
-      remaining: 1,
+      remaining: 2,
     });
+  });
+
+  it('uses the four-record limit for historical months and an empty current month', () => {
+    const result = buildEmployeeControls(
+      employee,
+      {
+        ...snapshot,
+        justificationDates: [
+          ...snapshot.justificationDates,
+          {
+            code: 'JUSTIFICACION_ENTRADA',
+            date: new Date('2026-08-07T00:00:00.000Z'),
+          },
+          {
+            code: 'JUSTIFICACION_SALIDA',
+            date: new Date('2026-08-08T00:00:00.000Z'),
+          },
+          {
+            code: 'JUSTIFICACION_ENTRADA',
+            date: new Date('2026-07-01T00:00:00.000Z'),
+          },
+        ],
+      },
+      new Date('2026-09-28T00:00:00.000Z'),
+    );
+
+    expect(result.justificationControl.months).toEqual([
+      { month: '2026-09', entryCount: 0, exitCount: 0, used: 0, remaining: 4 },
+      { month: '2026-08', entryCount: 2, exitCount: 2, used: 4, remaining: 0 },
+      { month: '2026-07', entryCount: 1, exitCount: 0, used: 1, remaining: 3 },
+    ]);
   });
 
   it('assigns vacation consumption to the explicit reference year', () => {
