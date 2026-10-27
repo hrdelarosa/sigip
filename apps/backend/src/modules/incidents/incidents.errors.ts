@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { MONTHLY_JUSTIFICATION_LIMIT } from '../../common/vacation/vacation-control';
 
 export class IncidentNotFoundError extends NotFoundException {
   constructor(id: string) {
@@ -104,7 +105,9 @@ export class DuplicateActiveVacationDateError extends ConflictException {
 
 export class MonthlyJustificationLimitError extends ConflictException {
   constructor() {
-    super('El empleado ya alcanzó el máximo de 3 justificaciones en el mes');
+    super(
+      `El empleado ya alcanzó el máximo de ${MONTHLY_JUSTIFICATION_LIMIT} justificaciones en el mes`,
+    );
   }
 }
 

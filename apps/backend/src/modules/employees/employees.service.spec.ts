@@ -85,7 +85,7 @@ describe('EmployeesService controls', () => {
     expect(result.controls.justificationControl.months[0]).toMatchObject({
       month: '2026-08',
       used: 0,
-      remaining: 3,
+      remaining: 4,
     });
   });
 
