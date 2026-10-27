@@ -441,6 +441,7 @@ Para vacaciones ordinarias puede agregar días individuales o generar los días 
 - El primer periodo va de abril a septiembre y el segundo de octubre a marzo del año siguiente; cada uno concede hasta 10 días sin acumulación.
 - El derecho se habilita después de seis meses desde el ingreso institucional.
 - Se pueden registrar fechas históricas para imputar vacaciones de forma retroactiva.
+- Los calendarios de disfrute de vacaciones, tanto individuales como por rango, permiten navegar hasta diciembre del año actual + 2 (diciembre de 2028 si está en 2026). Esto no habilita periodos futuros ni cambia el saldo, la antigüedad requerida o el año de cargo: para disfrutar enero de 2027 a cuenta del segundo periodo de 2026, conserve **2026** como año de cargo.
 - No se permiten fechas vacacionales duplicadas entre incidencias activas.
 - Una incidencia cancelada deja de consumir saldo.
 

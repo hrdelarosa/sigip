@@ -36,6 +36,7 @@ export function VacationDateCapture({
   const [rangeEndDate, setRangeEndDate] = useState('')
   const [includeWeekends, setIncludeWeekends] = useState(false)
   const [rangeError, setRangeError] = useState('')
+  const endMonth = new Date(new Date().getFullYear() + 2, 11)
 
   const syncRange = (
     startDate: string,
@@ -132,6 +133,7 @@ export function VacationDateCapture({
               }}
               disabled={disabled}
               disabledDates={disabledDates}
+              endMonth={endMonth}
             />
             <IncidentDatePickerField
               id="vacation-range-end"
@@ -143,6 +145,7 @@ export function VacationDateCapture({
               }}
               disabled={disabled}
               disabledDates={disabledDates}
+              endMonth={endMonth}
             />
           </div>
 

@@ -407,6 +407,8 @@ El saldo se deriva de ocurrencias activas y movimientos manuales en `employee_va
 
 `JUSTIFICACION_ENTRADA` y `JUSTIFICACION_SALIDA` comparten un máximo de tres ocurrencias activas por empleado y mes. Una cancelación libera el cupo. El detalle del empleado muestra el saldo vacacional actual e histórico y el contador mensual actual e histórico de justificaciones.
 
+Los calendarios de disfrute de vacaciones (fechas individuales y rangos) permiten navegar hasta diciembre del año actual + 2, calculado dinámicamente (2028 si el año actual es 2026). Es sólo un límite de navegación de la interfaz: no habilita periodos futuros ni modifica saldos, antigüedad, disponibilidad de periodos o año de cargo. Por ejemplo, enero de 2027 puede cargarse al segundo periodo de 2026 manteniendo el año de cargo 2026. Los demás calendarios conservan sus límites y las restricciones de fechas deshabilitadas no cambian.
+
 ### Document Types
 
 ```http

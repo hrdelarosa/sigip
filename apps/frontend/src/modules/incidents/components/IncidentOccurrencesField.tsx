@@ -79,6 +79,7 @@ export function IncidentOccurrencesField({
   const multiple = temporalMode === 'MULTIPLE_DATES'
   const range = temporalMode === 'DATE_RANGE'
   const vacation = incidentTypeCode.startsWith('VACACIONES_')
+  const endMonth = vacation ? new Date(new Date().getFullYear() + 2, 11) : undefined
   const occurrenceLimit = ordinaryVacation ? MAX_VACATION_DAYS : 366
   const [vacationCaptureMode, setVacationCaptureMode] =
     useState<VacationCaptureMode>('INDIVIDUAL')
@@ -194,6 +195,7 @@ export function IncidentOccurrencesField({
                         disabled={disabled}
                         errorMessage={startError}
                         disabledDates={disabledDates}
+                        endMonth={endMonth}
                         className="gap-3.5"
                       />
                     )}
@@ -212,6 +214,7 @@ export function IncidentOccurrencesField({
                           disabled={disabled}
                           errorMessage={endError}
                           disabledDates={disabledDates}
+                          endMonth={endMonth}
                         />
                       )}
                     />

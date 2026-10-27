@@ -12,6 +12,7 @@ interface Props {
   errorMessage?: string
   placeholder?: string
   disabledDates?: React.ComponentProps<typeof DatePicker>['disabledDates']
+  endMonth?: React.ComponentProps<typeof DatePicker>['endMonth']
   className?: string
 }
 
@@ -24,6 +25,7 @@ export function IncidentDatePickerField({
   errorMessage,
   placeholder = 'Seleccione una fecha',
   disabledDates,
+  endMonth,
   className,
 }: Props) {
   const errorId = `${id}-error`
@@ -41,6 +43,7 @@ export function IncidentDatePickerField({
         disabled={disabled}
         placeholder={placeholder}
         disabledDates={disabledDates}
+        endMonth={endMonth}
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={errorMessage ? errorId : undefined}
         buttonClassName="w-full"
